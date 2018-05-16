@@ -41,6 +41,24 @@ playerPos = V2 0 (-120)
 xmin = -100
 xmax = 100
 
+data Texture = Texture SDL.Texture (V2 CInt)
+
+loadTexture :: SDL.Renderer -> FilePath -> IO Texture
+loadTexture r filePath = do
+  surface <- getDataFileName filePath >>= SDL.loadBMP
+  size <- SDL.surfaceDimensions surface
+  let key = V4 0 maxBound maxBound maxBound
+  SDL.surfaceColorKey surface $= Just key
+  t <- SDL.createTextureFromSurface r surface
+  SDL.freeSurface surface
+  return (Texture t size)
+
+renderTexture :: SDL.Renderer -> Texture -> Point V2 CInt -> Maybe (SDL.Rectangle CInt) -> IO ()
+renderTexture r (Texture t size) xy clip =
+  let dstSize = maybe size (\(SDL.Rectangle _ size') ->  size') clip
+  in SDL.copy r t clip (Just (SDL.Rectangle xy dstSize))
+
+
 initSystems :: System' ()
 initSystems = void $
   newEntity (Player, Position playerPos, Velocity $ V2 0 0)
