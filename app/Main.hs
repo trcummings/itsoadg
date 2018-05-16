@@ -3,11 +3,15 @@
 
 module Main where
 
-import Control.Monad 
+import Control.Monad
+
 import Foreign.C.Types
 import Linear
 import Apecs
-import SDL
+
+import SDL.Vect
+import SDL (($=))
+import qualified SDL
 
 import Paths_itsoadg (getDataFileName)
 
@@ -17,13 +21,16 @@ screenWidth, screenHeight :: CInt
 initialSize = V2 screenWidth screenHeight
 
 newtype Position = Position (V2 Double) deriving Show
-instance Component Position where type Storage Position = Map Position
+instance Component Position where
+  type Storage Position = Map Position
 
 newtype Velocity = Velocity (V2 Double) deriving Show
-instance Component Velocity where type Storage Velocity = Map Velocity
+instance Component Velocity where
+  type Storage Velocity = Map Velocity
 
 data Player = Player deriving Show
-instance Component Player where type Storage Player = Unique Player
+instance Component Player where
+  type Storage Player = Unique Player
 
 makeWorld "World" [''Position, ''Velocity, ''Player]
 
@@ -35,58 +42,57 @@ xmin = -100
 xmax = 100
 
 initSystems :: System' ()
-initSystems = void $ newEntity (Player, Position playerPos, Velocity $ V2 0 0)
+initSystems = void $
+  newEntity (Player, Position playerPos, Velocity $ V2 0 0)
 
 bumpX dirF = cmap $ \(Player, Velocity (V2 x _)) -> Velocity (V2 (x `dirF` playerSpeed) 0)
 bumpY dirF = cmap $ \(Player, Velocity (V2 _ y)) -> Velocity (V2 0 (y `dirF` playerSpeed))
 
 -- x axis
-handleArrowEvent KeycodeA Pressed  = bumpX (-)
-handleArrowEvent KeycodeA Released = bumpX (+)
-handleArrowEvent KeycodeD Pressed  = bumpX (+)
-handleArrowEvent KeycodeD Released = bumpX (-)
+handleArrowEvent SDL.KeycodeA SDL.Pressed  = bumpX (-)
+handleArrowEvent SDL.KeycodeA SDL.Released = bumpX (+)
+handleArrowEvent SDL.KeycodeD SDL.Pressed  = bumpX (+)
+handleArrowEvent SDL.KeycodeD SDL.Released = bumpX (-)
 -- y axis
-handleArrowEvent KeycodeW Pressed  = bumpY (+)
-handleArrowEvent KeycodeW Released = bumpY (-)
-handleArrowEvent KeycodeS Pressed  = bumpY (-)
-handleArrowEvent KeycodeS Released = bumpY (+)
+handleArrowEvent SDL.KeycodeW SDL.Pressed  = bumpY (+)
+handleArrowEvent SDL.KeycodeW SDL.Released = bumpY (-)
+handleArrowEvent SDL.KeycodeS SDL.Pressed  = bumpY (-)
+handleArrowEvent SDL.KeycodeS SDL.Released = bumpY (+)
 handleArrowEvent _ _ = return ()
 
-handleEvent :: Event -> System' ()
+handleEvent :: SDL.Event -> System' ()
 handleEvent event =
-  case eventPayload event of
-    KeyboardEvent keyboardEvent ->
+  case SDL.eventPayload event of
+    SDL.KeyboardEvent keyboardEvent ->
       handleArrowEvent keyCode motion
       where
-        keyCode = keysymKeycode $ keyboardEventKeysym keyboardEvent
-        motion  = keyboardEventKeyMotion keyboardEvent
+        keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
+        motion  = SDL.keyboardEventKeyMotion keyboardEvent
     _ -> return ()
 
-handleEvents :: Renderer -> System' ()
-handleEvents renderer = do
-  events <- pollEvents
+step :: [SDL.Event] -> SDL.Renderer -> System' ()
+step events renderer = do
   mapM handleEvent events
   cmap $ \(Position p, Velocity v) -> Position (p + v)
   cmapM_ $ \(Player, Position p, Velocity v) -> do
-    liftIO $ rendererDrawColor renderer $= V4 0 0 0 0
-    liftIO $ clear renderer
-    liftIO $ present renderer
+    liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 0 0
+    liftIO $ SDL.clear renderer
+    liftIO $ SDL.present renderer
     liftIO $ putStrLn $ show (p, v)
   runGC
 
-appLoop :: Renderer -> World -> IO ()
+appLoop :: SDL.Renderer -> World -> IO ()
 appLoop renderer world = do
-  -- handle events
-  runSystem (handleEvents renderer) world
-  -- loop
+  events <- SDL.pollEvents
+  runSystem (step events renderer) world
   appLoop renderer world
 
 main :: IO ()
 main = do
-  initializeAll
-  window <- createWindow "In the Shadow of a Dead God" defaultWindow { windowInitialSize = initialSize }
-  renderer <- createRenderer window (-1) defaultRenderer
-  
+  SDL.initializeAll
+  window <- SDL.createWindow "In the Shadow of a Dead God" SDL.defaultWindow { SDL.windowInitialSize = initialSize }
+  renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
+
   world <- initWorld
   runSystem initSystems world
   appLoop renderer world
