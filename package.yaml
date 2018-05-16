@@ -1,0 +1,54 @@
+name:                itsoadg
+version:             0.1.0.0
+github:              "githubuser/itsoadg"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2018 Author name here"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+data-files:
+- assets/*.bmp
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/itsoadg#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- sdl2
+- linear
+- apecs >= 0.3.0.2
+
+library:
+  source-dirs: src
+
+executables:
+  itsoadg-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - itsoadg
+
+tests:
+  itsoadg-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - itsoadg
