@@ -10,6 +10,7 @@ import Linear
 import Apecs
 
 import SDL.Vect
+import SDL.Time (ticks)
 import SDL (($=))
 import qualified SDL
 
@@ -36,11 +37,28 @@ data Texture = Texture SDL.Texture (V2 CInt)
 instance Component Texture where
   type Storage Texture = Map Texture
 
-makeWorld "World" [''Position, ''Velocity, ''Player, ''Texture]
+data Gravity = Gravity
+instance Component Gravity where
+  type Storage Gravity = Map Gravity
+
+newtype Time = Time Double deriving Show
+instance Monoid Time where
+  mempty = Time 0
+instance Component Time where
+  type Storage Time = Global Time
+
+makeWorld "World" [
+    ''Position
+  , ''Velocity
+  , ''Player
+  , ''Texture
+  , ''Time
+  , ''Gravity
+  ]
 
 type System' a = System World a
 
-playerSpeed = 1
+playerSpeed = 170
 playerPos = V2 320 240
 spriteSize = V2 32 32
 
@@ -96,25 +114,51 @@ handleEvent event =
         motion  = SDL.keyboardEventKeyMotion keyboardEvent
     _ -> return ()
 
-step :: [SDL.Event] -> SDL.Renderer -> System' ()
-step events renderer = do
+step :: Double -> [SDL.Event] -> SDL.Renderer -> System' ()
+step dT events renderer = do
+  -- update global timer
+  cmap $ \(Time t) -> Time (t + dT)
+
+  -- update velocity based on arrow key presses
   mapM handleEvent events
-  cmap $ \(Position p, Velocity v) -> Position (p + v)
+
+  -- update position based on time and velocity
+  cmap $ \(Position p, Velocity v) -> Position (p + ((round dT) :: CInt) *^ v)
+    -- clamp player position to screen edges
+  cmap $ \(Player, Position (V2 x y)) -> Position $ V2
+    ((min (screenWidth - 32)  . max 0 $ x) :: CInt)
+    ((min (screenHeight - 32) . max 0 $ y) :: CInt)
+
+  -- render "player"
   cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
-    liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 0 0
-    liftIO $ SDL.clear renderer
     liftIO $ renderTexture
       renderer
       (Texture t s)
       (P p)
       (Just $ SDL.Rectangle (P (V2 0 0)) spriteSize)
-    liftIO $ SDL.present renderer
+
+  -- garbage collect. yes, every frame
   runGC
 
 appLoop :: SDL.Renderer -> World -> IO ()
 appLoop renderer world = do
+  -- prep next render
+  liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 0 0
+  liftIO $ SDL.clear renderer
+
+  -- get next time tick from SDL
+  dT <- ticks
+
+  -- collect events from SDL
   events <- SDL.pollEvents
-  runSystem (step events renderer) world
+
+  -- run main system
+  runSystem (step (fromIntegral dT) events renderer) world
+
+  -- run current render
+  liftIO $ SDL.present renderer
+
+  -- loop
   appLoop renderer world
 
 main :: IO ()
