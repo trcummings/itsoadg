@@ -33,6 +33,10 @@ data Player = Player deriving Show
 instance Component Player where
   type Storage Player = Unique Player
 
+data Camera = Camera deriving Show
+instance Component Camera where
+  type Storage Camera = Unique Camera
+
 data Texture = Texture SDL.Texture (V2 CInt)
 instance Component Texture where
   type Storage Texture = Map Texture
@@ -41,11 +45,29 @@ data Gravity = Gravity
 instance Component Gravity where
   type Storage Gravity = Map Gravity
 
-newtype Time = Time Double deriving Show
+-- global timer
+data Time = Time
+  { currentTime :: Double   --miliseconds
+  , stepTime    :: Double } --miliseconds
+  deriving Show
+
+-- accumulator for physics frame time updates
+newtype PhysAccum =
+  PhysAccum Double
+  deriving Show
+
+instance Monoid PhysAccum where
+  mempty = PhysAccum 0
+
+instance Component PhysAccum where
+  type Storage PhysAccum = Global PhysAccum
+
 instance Monoid Time where
-  mempty = Time 0
+  mempty = Time 0 0.1
+
 instance Component Time where
   type Storage Time = Global Time
+
 
 makeWorld "World" [
     ''Position
@@ -53,14 +75,22 @@ makeWorld "World" [
   , ''Player
   , ''Texture
   , ''Time
+  , ''PhysAccum
   , ''Gravity
+  , ''Camera
   ]
 
 type System' a = System World a
 
-playerSpeed = 170
+playerSpeed = 10
 playerPos = V2 320 240
 spriteSize = V2 32 32
+
+fps :: Double
+fps = 60
+
+dT :: Double
+dT = 1000 / fps
 
 
 loadTexture :: SDL.Renderer -> FilePath -> IO Texture
@@ -114,20 +144,60 @@ handleEvent event =
         motion  = SDL.keyboardEventKeyMotion keyboardEvent
     _ -> return ()
 
-step :: Double -> [SDL.Event] -> SDL.Renderer -> System' ()
-step dT events renderer = do
-  -- update global timer
-  cmap $ \(Time t) -> Time (t + dT)
+runPhysics :: Double -> System' ()
+runPhysics dT = do
+  -- update position based on time and velocity
+  cmap $ \(Position p, Velocity v) ->
+    Position $ p + (((round dT) :: CInt) *^ v)
 
+  -- clamp player position to screen edges
+  cmap $ \(Player, Position (V2 x y)) -> Position $ V2
+    ((min (screenWidth  - 32) . max 0 $ x) :: CInt)
+    ((min (screenHeight - 32) . max 0 $ y) :: CInt)
+
+updatePhysicsAccum :: System' ()
+updatePhysicsAccum = do
+  Time _ sT <- get global
+  -- cmapM_ $ \(PhysAccum acc) -> do
+    -- liftIO $ putStr "accumulator: "
+    -- liftIO $ putStrLn $ show acc
+  cmap $ \(PhysAccum acc) -> PhysAccum (sT + acc)
+
+-- update physics multiple times if time step is less than frame update time
+runPhysicsLoop :: System' ()
+runPhysicsLoop = do
+  Time _ fT     <- get global
+  PhysAccum acc <- get global
+  if (acc < dT)
+  then return ()
+  else do
+    -- liftIO $ putStrLn "doing physics!"
+    runPhysics fT
+    cmap $ \(PhysAccum acc2) -> PhysAccum (acc2 - dT)
+    runPhysicsLoop
+
+step :: Double -> [SDL.Event] -> SDL.Renderer -> System' ()
+step nextTime events renderer = do
   -- update velocity based on arrow key presses
   mapM handleEvent events
 
-  -- update position based on time and velocity
-  cmap $ \(Position p, Velocity v) -> Position (p + ((round dT) :: CInt) *^ v)
-    -- clamp player position to screen edges
-  cmap $ \(Player, Position (V2 x y)) -> Position $ V2
-    ((min (screenWidth - 32)  . max 0 $ x) :: CInt)
-    ((min (screenHeight - 32) . max 0 $ y) :: CInt)
+  -- update global timer
+  cmap $ \(Time cT sT) ->
+    Time { currentTime = nextTime, stepTime = min 25 $ nextTime - cT }
+
+  -- cmapM_ $ \(Time cT fT) -> do
+  --   liftIO $ putStrLn "================="
+  --   liftIO $ putStr "before physics: "
+  --   liftIO $ putStrLn $ show fT
+
+  -- update physics
+  updatePhysicsAccum
+  runPhysicsLoop
+
+  -- cmapM_ $ \(Time cT fT) -> do
+  --   liftIO $ putStr "after physics: "
+  --   liftIO $ putStrLn $ show fT
+  --   liftIO $ putStrLn "================="
 
   -- render "player"
   cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
@@ -147,13 +217,13 @@ appLoop renderer world = do
   liftIO $ SDL.clear renderer
 
   -- get next time tick from SDL
-  dT <- ticks
+  nextTime <- ticks
 
   -- collect events from SDL
   events <- SDL.pollEvents
 
   -- run main system
-  runSystem (step (fromIntegral dT) events renderer) world
+  runSystem (step (fromIntegral nextTime) events renderer) world
 
   -- run current render
   liftIO $ SDL.present renderer
