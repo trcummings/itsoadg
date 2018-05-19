@@ -33,6 +33,10 @@ newtype Velocity = Velocity (V2 CInt) deriving Show
 instance Component Velocity where
   type Storage Velocity = Map Velocity
 
+data BoundingBox = BoundingBox (V2 CInt) (V2 CInt)
+instance Component BoundingBox where
+  type Storage BoundingBox = Map BoundingBox
+
 data Player = Player deriving Show
 instance Component Player where
   type Storage Player = Unique Player
@@ -78,6 +82,7 @@ instance Component GlobalTime where
 makeWorld "World" [
     ''Position
   , ''Velocity
+  , ''BoundingBox
   , ''Player
   , ''Texture
   , ''GlobalTime
@@ -147,6 +152,11 @@ initSystems renderer = void $ do
   newEntity ( -- small font
       Position $ V2 0 0
     , Font fontMap )
+
+  newEntity ( -- floor
+      Position $ V2 0 (screenHeight - 20)
+    , BoundingBox (V2 0 0) (V2 screenWidth 20) )
+
 
 bumpX dirF = cmap $ \(Player, Velocity (V2 x _)) ->
   Velocity (V2 (x `dirF` playerSpeed) 0)
@@ -218,6 +228,13 @@ step nextTime events window renderer = do
   -- update physics
   updatePhysicsAccum nextTime
   runPhysicsLoop
+
+  -- render bounding boxes
+  cmapM_ $ \(BoundingBox tl br, Position p) -> do
+    liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
+    liftIO $ SDL.drawRect
+      renderer
+      (Just (SDL.Rectangle (P (tl + p)) (br + p)))
 
   -- render "player"
   cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
