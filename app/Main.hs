@@ -33,7 +33,7 @@ newtype Velocity = Velocity (V2 CInt) deriving Show
 instance Component Velocity where
   type Storage Velocity = Map Velocity
 
-data BoundingBox = BoundingBox (V2 CInt) (V2 CInt)
+newtype BoundingBox = BoundingBox (V2 CInt) -- h x w
 instance Component BoundingBox where
   type Storage BoundingBox = Map BoundingBox
 
@@ -147,6 +147,7 @@ initSystems renderer = void $ do
       Player
     , Position playerPos
     , Velocity $ V2 0 0
+    , BoundingBox spriteSize
     , spriteSheetTexture )
 
   newEntity ( -- small font
@@ -155,7 +156,7 @@ initSystems renderer = void $ do
 
   newEntity ( -- floor
       Position $ V2 0 (screenHeight - 20)
-    , BoundingBox (V2 0 0) (V2 screenWidth 20) )
+    , BoundingBox (V2 screenWidth 20) )
 
 
 bumpX dirF = cmap $ \(Player, Velocity (V2 x _)) ->
@@ -229,13 +230,6 @@ step nextTime events window renderer = do
   updatePhysicsAccum nextTime
   runPhysicsLoop
 
-  -- render bounding boxes
-  cmapM_ $ \(BoundingBox tl br, Position p) -> do
-    liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
-    liftIO $ SDL.drawRect
-      renderer
-      (Just (SDL.Rectangle (P (tl + p)) (br + p)))
-
   -- render "player"
   cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
     liftIO $ renderTexture
@@ -258,6 +252,13 @@ step nextTime events window renderer = do
           (P $ p + (V2 pMod 0))
           (Just $ SDL.Rectangle (P (V2 0 0)) s)
             ) (take 24 textPosMap)
+
+  -- render bounding boxes
+  cmapM_ $ \(BoundingBox (V2 w h), Position (V2 x y)) -> do
+    liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
+    liftIO $ SDL.drawRect
+      renderer
+      (Just $ SDL.Rectangle (P (V2 x y)) (V2 w h) )
 
   -- garbage collect. yes, every frame
   runGC
