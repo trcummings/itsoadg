@@ -12,6 +12,7 @@ extra-source-files:
 
 data-files:
 - assets/*.bmp
+- assets/*.TTF
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -25,6 +26,10 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - sdl2
+- sdl2-ttf
+- text
+- text-conversions
+- containers
 - linear
 - apecs >= 0.3.0.2
 

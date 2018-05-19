@@ -5,12 +5,16 @@ module Main where
 
 import Control.Monad
 
+import Data.Maybe (catMaybes)
 import Foreign.C.Types
 import Linear
 import Apecs
 
+import Data.Text (singleton)
+
 import SDL.Vect
 import SDL.Time (ticks)
+import qualified SDL.Font as TTF
 import SDL (($=))
 import qualified SDL
 
@@ -45,28 +49,30 @@ data Gravity = Gravity
 instance Component Gravity where
   type Storage Gravity = Map Gravity
 
--- global timer
-data Time = Time
-  { currentTime :: Double   --miliseconds
-  , stepTime    :: Double } --miliseconds
-  deriving Show
+data Font = Font [(Char, Texture)]
+instance Component Font where
+  type Storage Font = Map Font
 
 -- accumulator for physics frame time updates
-newtype PhysAccum =
-  PhysAccum Double
+data PhysicsTime = PhysicsTime
+  { time  :: Double
+  , accum :: Double }
   deriving Show
 
-instance Monoid PhysAccum where
-  mempty = PhysAccum 0
+instance Monoid PhysicsTime where
+  mempty = PhysicsTime 0 0
 
-instance Component PhysAccum where
-  type Storage PhysAccum = Global PhysAccum
+instance Component PhysicsTime where
+  type Storage PhysicsTime = Global PhysicsTime
 
-instance Monoid Time where
-  mempty = Time 0 0.1
+-- global timer
+newtype GlobalTime = GlobalTime Double deriving Show
 
-instance Component Time where
-  type Storage Time = Global Time
+instance Monoid GlobalTime where
+  mempty = GlobalTime 0
+
+instance Component GlobalTime where
+  type Storage GlobalTime = Global GlobalTime
 
 
 makeWorld "World" [
@@ -74,15 +80,16 @@ makeWorld "World" [
   , ''Velocity
   , ''Player
   , ''Texture
-  , ''Time
-  , ''PhysAccum
+  , ''GlobalTime
+  , ''PhysicsTime
   , ''Gravity
   , ''Camera
+  , ''Font
   ]
 
 type System' a = System World a
 
-playerSpeed = 10
+playerSpeed = 1
 playerPos = V2 320 240
 spriteSize = V2 32 32
 
@@ -92,30 +99,54 @@ fps = 60
 dT :: Double
 dT = 1000 / fps
 
-
-loadTexture :: SDL.Renderer -> FilePath -> IO Texture
-loadTexture r filePath = do
-  surface <- getDataFileName filePath >>= SDL.loadBMP
+toTexture :: SDL.Renderer -> SDL.Surface -> IO Texture
+toTexture r surface = do
   size <- SDL.surfaceDimensions surface
   let key = V4 0 maxBound maxBound maxBound
   SDL.surfaceColorKey surface $= Just key
   t <- SDL.createTextureFromSurface r surface
+  -- once we've made a texture from the surface, free the surface
   SDL.freeSurface surface
   return (Texture t size)
 
-renderTexture :: SDL.Renderer -> Texture -> Point V2 CInt -> Maybe (SDL.Rectangle CInt) -> IO ()
+loadTexture :: SDL.Renderer -> FilePath -> IO Texture
+loadTexture r filePath = do
+  surface <- getDataFileName filePath >>= SDL.loadBMP
+  toTexture r surface
+
+renderTexture :: SDL.Renderer
+              -> Texture
+              -> Point V2 CInt
+              -> Maybe (SDL.Rectangle CInt)
+              -> IO ()
 renderTexture r (Texture t size) xy clip =
   let dstSize = maybe size (\(SDL.Rectangle _ size') ->  size') clip
   in SDL.copy r t clip (Just (SDL.Rectangle xy dstSize))
 
+initSystems :: SDL.Renderer -> System' ()
+initSystems renderer = void $ do
+  spriteSheetTexture <- liftIO $ loadTexture renderer "assets/red_square.bmp"
+  smallFont <- liftIO $ TTF.load "assets/04B_19__.TTF" 24
+  let characters =  ['a'..'z'] ++ ['A'..'Z']++ ['0'..'9'] ++ [' ', ':', ',']
+  fontMap <- liftIO $ mapM (\c -> do
+        texture <- toTexture renderer =<< TTF.blended
+          smallFont
+          (V4 255 255 255 255)
+          (singleton c)
+        return (c, texture)
+      ) $ characters
+  -- after we convert our font to textures we dont need the resource anymore
+  TTF.free smallFont
 
-initSystems :: Texture -> System' ()
-initSystems t = void $
-  newEntity (
-     Player
-   , Position playerPos
-   , Velocity $ V2 0 0
-   , t)
+  newEntity ( -- player
+      Player
+    , Position playerPos
+    , Velocity $ V2 0 0
+    , spriteSheetTexture )
+
+  newEntity ( -- small font
+      Position $ V2 0 0
+    , Font fontMap )
 
 bumpX dirF = cmap $ \(Player, Velocity (V2 x _)) ->
   Velocity (V2 (x `dirF` playerSpeed) 0)
@@ -155,49 +186,38 @@ runPhysics dT = do
     ((min (screenWidth  - 32) . max 0 $ x) :: CInt)
     ((min (screenHeight - 32) . max 0 $ y) :: CInt)
 
-updatePhysicsAccum :: System' ()
-updatePhysicsAccum = do
-  Time _ sT <- get global
-  -- cmapM_ $ \(PhysAccum acc) -> do
-    -- liftIO $ putStr "accumulator: "
-    -- liftIO $ putStrLn $ show acc
-  cmap $ \(PhysAccum acc) -> PhysAccum (sT + acc)
+updatePhysicsAccum :: Double -> System' ()
+updatePhysicsAccum nextTime = do
+  GlobalTime currentTime <- get global
+  -- update global time
+  cmap $ \(GlobalTime _) -> GlobalTime nextTime
+
+  -- update physics frame time accumulator
+  cmap $ \(PhysicsTime t acc) -> PhysicsTime
+    { time = t
+    -- clamp frameTime at 25ms
+    , accum = acc + (min 25 $ nextTime - currentTime) }
 
 -- update physics multiple times if time step is less than frame update time
 runPhysicsLoop :: System' ()
 runPhysicsLoop = do
-  Time _ fT     <- get global
-  PhysAccum acc <- get global
-  if (acc < dT)
-  then return ()
-  else do
-    -- liftIO $ putStrLn "doing physics!"
-    runPhysics fT
-    cmap $ \(PhysAccum acc2) -> PhysAccum (acc2 - dT)
+  PhysicsTime t acc <- get global
+  when (acc >= dT) $ do
+    runPhysics dT
+    cmap $ \(PhysicsTime t' acc') -> PhysicsTime
+      { time = (t' + dT)
+      , accum = (acc' - dT) }
     runPhysicsLoop
 
-step :: Double -> [SDL.Event] -> SDL.Renderer -> System' ()
-step nextTime events renderer = do
+
+step :: Double -> [SDL.Event] -> SDL.Window -> SDL.Renderer -> System' ()
+step nextTime events window renderer = do
   -- update velocity based on arrow key presses
   mapM handleEvent events
 
-  -- update global timer
-  cmap $ \(Time cT sT) ->
-    Time { currentTime = nextTime, stepTime = min 25 $ nextTime - cT }
-
-  -- cmapM_ $ \(Time cT fT) -> do
-  --   liftIO $ putStrLn "================="
-  --   liftIO $ putStr "before physics: "
-  --   liftIO $ putStrLn $ show fT
-
   -- update physics
-  updatePhysicsAccum
+  updatePhysicsAccum nextTime
   runPhysicsLoop
-
-  -- cmapM_ $ \(Time cT fT) -> do
-  --   liftIO $ putStr "after physics: "
-  --   liftIO $ putStrLn $ show fT
-  --   liftIO $ putStrLn "================="
 
   -- render "player"
   cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
@@ -207,11 +227,26 @@ step nextTime events renderer = do
       (P p)
       (Just $ SDL.Rectangle (P (V2 0 0)) spriteSize)
 
+  -- render small font
+  cmapM_ $ \(Font f, Position p) -> do
+    cmapM_ $ \(Player, Position pp, Velocity pv) -> do
+      let pText = "Player: " ++ (show pp) ++ ", " ++ (show pv)
+          textures = catMaybes (map (\c -> lookup c f) pText)
+          spacingMap = [xy | xy <- [1..700], xy `mod` 14 == 0]
+          textPosMap = zip textures spacingMap
+      mapM_ (\(Texture t s, pMod) -> do
+        liftIO $ renderTexture
+          renderer
+          (Texture t s)
+          (P $ p + (V2 pMod 0))
+          (Just $ SDL.Rectangle (P (V2 0 0)) s)
+            ) (take 24 textPosMap)
+
   -- garbage collect. yes, every frame
   runGC
 
-appLoop :: SDL.Renderer -> World -> IO ()
-appLoop renderer world = do
+appLoop :: SDL.Window -> SDL.Renderer -> World -> IO ()
+appLoop window renderer world = do
   -- prep next render
   liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 0 0
   liftIO $ SDL.clear renderer
@@ -223,21 +258,26 @@ appLoop renderer world = do
   events <- SDL.pollEvents
 
   -- run main system
-  runSystem (step (fromIntegral nextTime) events renderer) world
+  runSystem (step (fromIntegral nextTime) events window renderer) world
 
   -- run current render
   liftIO $ SDL.present renderer
 
   -- loop
-  appLoop renderer world
+  appLoop window renderer world
 
 main :: IO ()
 main = do
-  SDL.initializeAll
-  window <- SDL.createWindow "In the Shadow of a Dead God" SDL.defaultWindow { SDL.windowInitialSize = initialSize }
-  renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
-  spriteSheetTexture <- loadTexture renderer "assets/red_square.bmp"
+  SDL.initializeAll -- initialize all SDL systems
+  TTF.initialize   -- initialize SDL.Font
 
+  -- create window and renderer
+  window <- SDL.createWindow "ITSOADG" SDL.defaultWindow { SDL.windowInitialSize = initialSize }
+  renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
+
+  -- initialize Apecs world & add entities
   world <- initWorld
-  runSystem (initSystems spriteSheetTexture) world
-  appLoop renderer world
+  runSystem (initSystems renderer) world
+
+  -- start loop
+  appLoop window renderer world
