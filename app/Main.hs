@@ -45,6 +45,10 @@ data Camera = Camera deriving Show
 instance Component Camera where
   type Storage Camera = Unique Camera
 
+data Floor = Floor deriving Show
+instance Component Floor where
+  type Storage Floor = Map Floor
+
 data Texture = Texture SDL.Texture (V2 CInt)
 instance Component Texture where
   type Storage Texture = Map Texture
@@ -89,6 +93,7 @@ makeWorld "World" [
   , ''BoundingBox
   , ''Player
   , ''Collisions
+  , ''Floor
   , ''Texture
   , ''GlobalTime
   , ''PhysicsTime
@@ -163,7 +168,8 @@ initSystems renderer = void $ do
     , Font fontMap )
 
   newEntity ( -- floor
-      Position $ V2 0 (screenHeight - 20)
+      Floor
+    , Position $ V2 0 (screenHeight - 20)
     , Collisions []
     , BoundingBox (V2 screenWidth 20) )
 
@@ -202,10 +208,16 @@ aabbIntersection :: V4 CInt -> V4 CInt -> Bool
 aabbIntersection (V4 tlx1 tly1 brx1 bry1) (V4 tlx2 tly2 brx2 bry2) =
   (brx1 >= tlx2) && (tlx1 <= brx2) && (bry1 >= tly2) && (tly1 <= bry2)
 
+handleFloor :: Entity -> System' ()
+handleFloor e = do
+  (_, Position p') <- get e :: System' (Floor, Position)
+  cmap $ \(Player, Velocity (V2 vx _)) -> Velocity $ V2 vx 0
+
 runPhysics :: Double -> System' ()
 runPhysics dT = do
   -- detect collisions
-  aabbs <- getAll :: System World [(BoundingBox, Position, Entity)]
+  aabbs <- getAll :: System' [(BoundingBox, Position, Entity)]
+  -- O(n^2) algorithm, optimize later
   mapM (\(BoundingBox bb, Position p, entity) -> do
       let shouldAABB = aabbIntersection $ toAABB p bb
           actives = filter (\(BoundingBox bb', Position p', e') ->
@@ -215,9 +227,11 @@ runPhysics dT = do
     ) aabbs
 
   -- resolve collisions
-  cmapM_ $ \(Collisions e) -> do
-    when (length e > 0) $ do
-      liftIO $ putStrLn $ show e
+  cmapM_ $ \(Player, Collisions es) -> do
+    -- loop over each collision. if its a wall, if its a floor, else ignore
+    mapM (\e -> do
+     isFloor <- exists e (proxy :: (Floor, Position))
+     when isFloor $ (handleFloor e) ) es
 
   -- clear remaining collisions
   cmap $ \(Collisions _) -> Collisions []
