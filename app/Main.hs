@@ -33,7 +33,7 @@ newtype Velocity = Velocity (V2 CInt) deriving Show
 instance Component Velocity where
   type Storage Velocity = Map Velocity
 
-newtype BoundingBox = BoundingBox (V2 CInt) -- h x w
+newtype BoundingBox = BoundingBox (V2 CInt) deriving Show -- h x w
 instance Component BoundingBox where
   type Storage BoundingBox = Map BoundingBox
 
@@ -56,6 +56,10 @@ instance Component Gravity where
 data Font = Font [(Char, Texture)]
 instance Component Font where
   type Storage Font = Map Font
+
+data Collisions = Collisions [Entity] deriving Show
+instance Component Collisions where
+  type Storage Collisions = Map Collisions
 
 -- accumulator for physics frame time updates
 data PhysicsTime = PhysicsTime
@@ -84,6 +88,7 @@ makeWorld "World" [
   , ''Velocity
   , ''BoundingBox
   , ''Player
+  , ''Collisions
   , ''Texture
   , ''GlobalTime
   , ''PhysicsTime
@@ -130,6 +135,7 @@ renderTexture r (Texture t size) xy clip =
 
 initSystems :: SDL.Renderer -> System' ()
 initSystems renderer = void $ do
+  -- load in assets, convert to textures
   spriteSheetTexture <- liftIO $ loadTexture renderer "assets/red_square.bmp"
   smallFont <- liftIO $ TTF.load "assets/04B_19__.TTF" 24
   let characters =  ['a'..'z'] ++ ['A'..'Z']++ ['0'..'9'] ++ [' ', ':', ',']
@@ -143,11 +149,13 @@ initSystems renderer = void $ do
   -- after we convert our font to textures we dont need the resource anymore
   TTF.free smallFont
 
+  -- entities
   newEntity ( -- player
       Player
     , Position playerPos
     , Velocity $ V2 0 0
     , BoundingBox spriteSize
+    , Collisions []
     , spriteSheetTexture )
 
   newEntity ( -- small font
@@ -156,6 +164,7 @@ initSystems renderer = void $ do
 
   newEntity ( -- floor
       Position $ V2 0 (screenHeight - 20)
+    , Collisions []
     , BoundingBox (V2 screenWidth 20) )
 
 
@@ -186,8 +195,33 @@ handleEvent event =
         motion  = SDL.keyboardEventKeyMotion keyboardEvent
     _ -> return ()
 
+toAABB :: V2 CInt -> V2 CInt -> V4 CInt
+toAABB (V2 x y) (V2 w h) = V4 x y (x + w) (y + h)
+
+aabbIntersection :: V4 CInt -> V4 CInt -> Bool
+aabbIntersection (V4 tlx1 tly1 brx1 bry1) (V4 tlx2 tly2 brx2 bry2) =
+  (brx1 >= tlx2) && (tlx1 <= brx2) && (bry1 >= tly2) && (tly1 <= bry2)
+
 runPhysics :: Double -> System' ()
 runPhysics dT = do
+  -- detect collisions
+  aabbs <- getAll :: System World [(BoundingBox, Position, Entity)]
+  mapM (\(BoundingBox bb, Position p, entity) -> do
+      let shouldAABB = aabbIntersection $ toAABB p bb
+          actives = filter (\(BoundingBox bb', Position p', e') ->
+            (not $ e' == entity) && (shouldAABB $ toAABB p' bb')) aabbs
+          entities = map (\(_, _, e) -> e) actives
+      set entity (Collisions entities)
+    ) aabbs
+
+  -- resolve collisions
+  cmapM_ $ \(Collisions e) -> do
+    when (length e > 0) $ do
+      liftIO $ putStrLn $ show e
+
+  -- clear remaining collisions
+  cmap $ \(Collisions _) -> Collisions []
+
   -- update position based on time and velocity
   cmap $ \(Position p, Velocity v) ->
     Position $ p + (((round dT) :: CInt) *^ v)
@@ -258,7 +292,7 @@ step nextTime events window renderer = do
     liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
     liftIO $ SDL.drawRect
       renderer
-      (Just $ SDL.Rectangle (P (V2 x y)) (V2 w h) )
+      (Just $ SDL.Rectangle (P (V2 x y)) (V2 w h))
 
   -- garbage collect. yes, every frame
   runGC
