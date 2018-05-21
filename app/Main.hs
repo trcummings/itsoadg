@@ -29,9 +29,13 @@ newtype Position = Position (V2 CInt) deriving Show
 instance Component Position where
   type Storage Position = Map Position
 
-newtype Velocity = Velocity (V2 CInt) deriving Show
+newtype Velocity = Velocity (V2 Double) deriving Show
 instance Component Velocity where
   type Storage Velocity = Map Velocity
+
+newtype Acceleration = Acceleration (V2 Double) deriving Show
+instance Component Acceleration where
+  type Storage Acceleration = Map Acceleration
 
 newtype BoundingBox = BoundingBox (V2 CInt) deriving Show -- h x w
 instance Component BoundingBox where
@@ -86,10 +90,10 @@ instance Monoid GlobalTime where
 instance Component GlobalTime where
   type Storage GlobalTime = Global GlobalTime
 
-
 makeWorld "World" [
     ''Position
   , ''Velocity
+  , ''Acceleration
   , ''BoundingBox
   , ''Player
   , ''Collisions
@@ -104,8 +108,10 @@ makeWorld "World" [
 
 type System' a = System World a
 
-playerSpeed = 1
-playerPos = V2 320 240
+playerSpeed = 50
+gravity = 100
+maxSpeed = V2 100 100
+playerPos = V2 320 0
 spriteSize = V2 32 32
 
 fps :: Double
@@ -143,7 +149,7 @@ initSystems renderer = void $ do
   -- load in assets, convert to textures
   spriteSheetTexture <- liftIO $ loadTexture renderer "assets/red_square.bmp"
   smallFont <- liftIO $ TTF.load "assets/04B_19__.TTF" 24
-  let characters =  ['a'..'z'] ++ ['A'..'Z']++ ['0'..'9'] ++ [' ', ':', ',']
+  let characters = ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ [' ', ':', ',', '-', '.']
   fontMap <- liftIO $ mapM (\c -> do
         texture <- toTexture renderer =<< TTF.blended
           smallFont
@@ -159,7 +165,9 @@ initSystems renderer = void $ do
       Player
     , Position playerPos
     , Velocity $ V2 0 0
+    , Acceleration $ V2 0 0
     , BoundingBox spriteSize
+    , Gravity
     , Collisions []
     , spriteSheetTexture )
 
@@ -173,22 +181,14 @@ initSystems renderer = void $ do
     , Collisions []
     , BoundingBox (V2 screenWidth 20) )
 
-
-bumpX dirF = cmap $ \(Player, Velocity (V2 x _)) ->
-  Velocity (V2 (x `dirF` playerSpeed) 0)
-bumpY dirF = cmap $ \(Player, Velocity (V2 _ y)) ->
-  Velocity (V2 0 (y `dirF` playerSpeed))
+-- constant acceleration
+bumpX x = cmap $ \(Player, Acceleration (V2 _ y)) -> Acceleration $ V2 x y
 
 -- x axis
-handleArrowEvent SDL.KeycodeA SDL.Pressed  = bumpX (-)
-handleArrowEvent SDL.KeycodeA SDL.Released = bumpX (+)
-handleArrowEvent SDL.KeycodeD SDL.Pressed  = bumpX (+)
-handleArrowEvent SDL.KeycodeD SDL.Released = bumpX (-)
--- y axis
-handleArrowEvent SDL.KeycodeW SDL.Pressed  = bumpY (-)
-handleArrowEvent SDL.KeycodeW SDL.Released = bumpY (+)
-handleArrowEvent SDL.KeycodeS SDL.Pressed  = bumpY (+)
-handleArrowEvent SDL.KeycodeS SDL.Released = bumpY (-)
+handleArrowEvent SDL.KeycodeA SDL.Pressed  = bumpX (-50)
+handleArrowEvent SDL.KeycodeA SDL.Released = bumpX 0
+handleArrowEvent SDL.KeycodeD SDL.Pressed  = bumpX 50
+handleArrowEvent SDL.KeycodeD SDL.Released = bumpX 0
 handleArrowEvent _ _ = return ()
 
 handleEvent :: SDL.Event -> System' ()
@@ -215,6 +215,10 @@ handleFloor e = do
 
 runPhysics :: Double -> System' ()
 runPhysics dT = do
+  let dTs = (dT / 1000)
+    -- update acceleration based on gravity
+  cmap $ \(Gravity, Acceleration (V2 x _)) -> Acceleration $ V2 x gravity
+
   -- detect collisions
   aabbs <- getAll :: System' [(BoundingBox, Position, Entity)]
   -- O(n^2) algorithm, optimize later
@@ -236,9 +240,12 @@ runPhysics dT = do
   -- clear remaining collisions
   cmap $ \(Collisions _) -> Collisions []
 
+  -- update velocity based on acceleration
+  cmap $ \(Acceleration a, Velocity v) -> Velocity $ v + (a ^* dTs)
+
   -- update position based on time and velocity
-  cmap $ \(Position p, Velocity v) ->
-    Position $ p + (((round dT) :: CInt) *^ v)
+  cmap $ \(Acceleration a, Velocity v, Position p) ->
+    Position $ roundV2 $ (cIntToDouble p) + ((v ^* dTs) + (a ^* (0.5 * dTs ^ 2)))
 
   -- clamp player position to screen edges
   cmap $ \(Player, Position (V2 x y)) -> Position $ V2
@@ -268,6 +275,11 @@ runPhysicsLoop = do
       , accum = (acc' - dT) }
     runPhysicsLoop
 
+roundV2 :: V2 Double -> V2 CInt
+roundV2 (V2 a b) = V2 (round a) (round b)
+
+cIntToDouble :: V2 CInt -> V2 Double
+cIntToDouble (V2 a b) = V2 (fromIntegral a) (fromIntegral b)
 
 step :: Double -> [SDL.Event] -> SDL.Window -> SDL.Renderer -> System' ()
 step nextTime events window renderer = do
@@ -289,7 +301,7 @@ step nextTime events window renderer = do
   -- render small font
   cmapM_ $ \(Font f, Position p) -> do
     cmapM_ $ \(Player, Position pp, Velocity pv) -> do
-      let pText = "Player: " ++ (show pp) ++ ", " ++ (show pv)
+      let pText = "Player: " ++ (show pp) ++ ", " ++ (show $ roundV2 pv)
           textures = catMaybes (map (\c -> lookup c f) pText)
           spacingMap = [xy | xy <- [1..700], xy `mod` 14 == 0]
           textPosMap = zip textures spacingMap
@@ -299,7 +311,7 @@ step nextTime events window renderer = do
           (Texture t s)
           (P $ p + (V2 pMod 0))
           (Just $ SDL.Rectangle (P (V2 0 0)) s)
-            ) (take 24 textPosMap)
+            ) (take 30 textPosMap)
 
   -- render bounding boxes
   cmapM_ $ \(BoundingBox (V2 w h), Position (V2 x y)) -> do
