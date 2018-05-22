@@ -9,8 +9,10 @@ import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe (catMaybes)
 
 import           Game.World (System')
-import           Game.Constants (spriteSize)
-import           Game.Physics (roundV2)
+import           Game.Constants
+  ( Unit(..)
+  , toPixels
+  , spriteSize )
 import           Game.Types
   ( Player(..)
   , Position(..)
@@ -47,18 +49,21 @@ renderTexture r (Texture t size) xy clip =
 
 stepRender :: SDL.Renderer -> System' ()
 stepRender renderer = do
-   -- render "player"
+  -- render "player"
   cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
     liftIO $ renderTexture
       renderer
       (Texture t s)
-      (P p)
-      (Just $ SDL.Rectangle (P (V2 0 0)) spriteSize)
+      (P $ toPixels <$> p)
+      (Just $ SDL.Rectangle (P (V2 0 0)) (toPixels <$> spriteSize))
 
   -- render small font
   cmapM_ $ \(Font f, Position p) -> do
     cmapM_ $ \(Player, Position pp, Velocity pv) -> do
-      let pText = "Player: " ++ (show pp) ++ ", " ++ (show $ roundV2 pv)
+      let pText = "Player: "
+            ++ (show $ toPixels <$> pp)
+            ++ ", "
+            ++ (show $ toPixels <$> pv)
           textures = catMaybes (map (\c -> lookup c f) pText)
           spacingMap = [xy | xy <- [1..700], xy `mod` 14 == 0]
           textPosMap = zip textures spacingMap
@@ -66,16 +71,16 @@ stepRender renderer = do
         liftIO $ renderTexture
           renderer
           (Texture t s)
-          (P $ p + (V2 pMod 0))
+          (P $ (toPixels <$> p) + (V2 pMod 0))
           (Just $ SDL.Rectangle (P (V2 0 0)) s)
-            ) (take 30 textPosMap)
+            ) (take 40 textPosMap)
 
   -- render bounding boxes
   cmapM_ $ \(BoundingBox (V2 w h), Position (V2 x y)) -> do
     liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
     liftIO $ SDL.drawRect
       renderer
-      (Just $ SDL.Rectangle (P (V2 x y)) (V2 w h))
+      (Just $ SDL.Rectangle (P (toPixels <$> V2 x y)) (toPixels <$> V2 w h))
 
 prepNextRender :: SDL.Renderer -> IO ()
 prepNextRender renderer = do

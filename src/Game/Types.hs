@@ -5,20 +5,22 @@ import           Linear (V2)
 import           Apecs (Entity)
 import qualified SDL (Texture)
 
+import           Game.Constants (Unit(..))
+
 newtype Position =
-  Position (V2 CInt)
+  Position (V2 Unit)
   deriving Show
 
 newtype Velocity =
-  Velocity (V2 Double)
+  Velocity (V2 Unit)
   deriving Show
 
 newtype Acceleration =
-  Acceleration (V2 Double)
+  Acceleration (V2 Unit)
   deriving Show
 
 newtype BoundingBox =
-  BoundingBox (V2 CInt)
+  BoundingBox (V2 Unit)
   deriving Show
 
 data Player =

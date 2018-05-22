@@ -21,6 +21,7 @@ import           Game.Render (loadTexture, toTexture)
 import           Game.World (System')
 import           Game.Constants
   ( spriteSize
+  , floorFriction
   , playerPos
   , screenHeight
   , screenWidth )
@@ -74,7 +75,7 @@ initSystems renderer = void $ do
 
   newEntity ( -- floor
       Floor
-    , Position $ V2 0 (screenHeight - 20)
-    , Friction 0.8
+    , Position $ V2 0 (screenHeight - 1)
+    , Friction floorFriction
     , Collisions []
-    , BoundingBox (V2 screenWidth 20) )
+    , BoundingBox (V2 screenWidth 1) )

@@ -1,27 +1,38 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Game.Constants where
 
 import Linear (V2(..))
 import Foreign.C.Types (CInt)
 
-screenWidth, screenHeight :: CInt
-(screenWidth, screenHeight) = (640, 480)
+newtype Unit = Unit Double deriving (Eq, Ord, Show, Num)
 
-initialSize = V2 screenWidth screenHeight
+pixelsPerUnit :: Double
+pixelsPerUnit = 32
 
-playerSpeed :: Double
-playerSpeed = 75
+toPixels :: Unit -> CInt
+toPixels (Unit a) = round (pixelsPerUnit * a)
 
-gravity :: Double
-gravity = 100
+screenWidth, screenHeight :: Unit
+(screenWidth, screenHeight) = (20, 15)
 
-maxSpeed :: Double
-maxSpeed = 100
+initialSize :: V2 CInt
+initialSize = V2 (toPixels screenWidth) (toPixels screenHeight)
 
-playerPos :: V2 CInt
-playerPos = V2 320 0
+playerSpeed :: Unit
+playerSpeed = 20
 
-spriteSize :: V2 CInt
-spriteSize = V2 32 32
+gravity :: Unit
+gravity = 10
+
+maxSpeed :: Unit
+maxSpeed = 30
+
+playerPos :: V2 Unit
+playerPos = V2 10 0
+
+spriteSize :: V2 Unit
+spriteSize = V2 1 1
 
 fps :: Double
 fps = 60
@@ -29,5 +40,5 @@ fps = 60
 dT :: Double
 dT = 1000 / fps
 
-ppu :: Double
-ppu = 32
+floorFriction :: Double
+floorFriction = 0.90

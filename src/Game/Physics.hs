@@ -2,9 +2,8 @@
 
 module Game.Physics where
 
-import           Control.Monad (when)
 import qualified SDL
-import           Foreign.C.Types (CInt)
+import           Control.Monad (when)
 import           Linear (V2(..), V4(..), (^*))
 import           Apecs
   ( Entity
@@ -19,7 +18,8 @@ import           Apecs
 
 import           Game.World (System')
 import           Game.Constants
-  ( dT
+  ( Unit(..)
+  , dT
   , playerSpeed
   , maxSpeed
   , gravity
@@ -41,20 +41,14 @@ import           Game.Types
   , GlobalTime(..) )
 
 
-roundV2 :: V2 Double -> V2 CInt
-roundV2 (V2 a b) = V2 (round a) (round b)
-
-cIntToDouble :: V2 CInt -> V2 Double
-cIntToDouble (V2 a b) = V2 (fromIntegral a) (fromIntegral b)
-
 -- constant acceleration
 bumpX x = cmap $ \(Player, Acceleration (V2 _ y)) -> Acceleration $ V2 x y
 
 -- x axis
 handleArrowEvent SDL.KeycodeA SDL.Pressed  = bumpX (-playerSpeed)
-handleArrowEvent SDL.KeycodeA SDL.Released = bumpX 0
+handleArrowEvent SDL.KeycodeA SDL.Released = bumpX (Unit 0)
 handleArrowEvent SDL.KeycodeD SDL.Pressed  = bumpX playerSpeed
-handleArrowEvent SDL.KeycodeD SDL.Released = bumpX 0
+handleArrowEvent SDL.KeycodeD SDL.Released = bumpX (Unit 0)
 handleArrowEvent _ _ = return ()
 
 handleEvent :: SDL.Event -> System' ()
@@ -67,22 +61,22 @@ handleEvent event =
         motion  = SDL.keyboardEventKeyMotion keyboardEvent
     _ -> return ()
 
-toAABB :: V2 CInt -> V2 CInt -> V4 CInt
+toAABB :: V2 Unit -> V2 Unit -> V4 Unit
 toAABB (V2 x y) (V2 w h) = V4 x y (x + w) (y + h)
 
-aabbIntersection :: V4 CInt -> V4 CInt -> Bool
+aabbIntersection :: V4 Unit -> V4 Unit -> Bool
 aabbIntersection (V4 tlx1 tly1 brx1 bry1) (V4 tlx2 tly2 brx2 bry2) =
   (brx1 >= tlx2) && (tlx1 <= brx2) && (bry1 >= tly2) && (tly1 <= bry2)
 
 handleFloor :: Entity -> System' ()
 handleFloor e = do
   (_, Friction f, Position p') <- get e :: System' (Floor, Friction, Position)
+  -- apply horizontal friction
+  cmap $ \(Player, Velocity (V2 vx vy)) -> Velocity $ V2 (vx * (Unit f)) vy
   -- set vertical velocity to 0
   cmap $ \(Player, Velocity (V2 vx _)) -> Velocity $ V2 vx 0
-  -- apply horizontal friction
-  cmap $ \(Player, Velocity (V2 vx vy)) -> Velocity $ V2 (vx * f) vy
 
-clampVelocity :: Double -> Double
+clampVelocity :: Unit -> Unit
 clampVelocity v =
   if (v > 0)
   then min v maxSpeed
@@ -91,7 +85,7 @@ clampVelocity v =
 runPhysics :: Double -> System' ()
 runPhysics dT = do
   let dTs = (dT / 1000)
-    -- update acceleration based on gravity
+  -- update acceleration based on gravity
   cmap $ \(Gravity, Acceleration (V2 x _)) -> Acceleration $ V2 x gravity
 
   -- detect collisions
@@ -115,19 +109,22 @@ runPhysics dT = do
   -- clear remaining collisions
   cmap $ \(Collisions _) -> Collisions []
 
-  -- update velocity based on acceleration
+   -- update velocity based on acceleration
   cmap $ \(Acceleration a, Velocity v) ->
-    let (V2 vx vy) = (v + (a ^* dTs))
-    in Velocity $ V2 (clampVelocity vx) (clampVelocity vy)
+    let v' = (v + (a ^* (Unit dTs)))
+    in Velocity $ clampVelocity <$> v'
 
   -- update position based on time and velocity
   cmap $ \(Acceleration a, Velocity v, Position p) ->
-    Position $ roundV2 $ (cIntToDouble p) + ((v ^* dTs) + (a ^* (0.5 * dTs ^ 2)))
+    let a' = a ^* (Unit (0.5 * (dTs ^ 2)))
+        v' = v ^* (Unit dTs)
+    in Position $ p + v' + a'
+
 
   -- clamp player position to screen edges
   cmap $ \(Player, Position (V2 x y)) -> Position $ V2
-    ((min (screenWidth  - 32) . max 0 $ x) :: CInt)
-    ((min (screenHeight - 32) . max 0 $ y) :: CInt)
+    (min (screenWidth  - 1) . max 0 $ x)
+    (min (screenHeight - 1) . max 0 $ y)
 
 updatePhysicsAccum :: Double -> System' ()
 updatePhysicsAccum nextTime = do
