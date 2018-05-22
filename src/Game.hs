@@ -17,7 +17,7 @@ import           Control.Monad.IO.Class (liftIO)
 
 import           Game.World (System', World, initWorld)
 import           Game.Physics (handleEvent, updatePhysicsAccum, runPhysicsLoop)
-import           Game.Render (prepNextRender, stepRender)
+import           Game.Render (prepNextRender, stepRender, runRender)
 import           Game.Init (initSystems)
 import           Game.Constants (initialSize)
 
@@ -50,7 +50,7 @@ appLoop window renderer world = do
   runSystem (step (fromIntegral nextTime) events window renderer) world
 
   -- run current render
-  liftIO $ SDL.present renderer
+  runRender renderer
 
   -- loop
   appLoop window renderer world
