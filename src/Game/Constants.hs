@@ -28,3 +28,6 @@ fps = 60
 
 dT :: Double
 dT = 1000 / fps
+
+ppu :: Double
+ppu = 32

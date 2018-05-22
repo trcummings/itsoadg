@@ -37,9 +37,7 @@ import           Game.Types
   , BoundingBox(..)
   , Gravity(..)
   , Collisions(..)
-  , PhysicsTime(..)
-  , time
-  , accum
+  , PhysicsTime(..), time, accum
   , GlobalTime(..) )
 
 
@@ -79,8 +77,10 @@ aabbIntersection (V4 tlx1 tly1 brx1 bry1) (V4 tlx2 tly2 brx2 bry2) =
 handleFloor :: Entity -> System' ()
 handleFloor e = do
   (_, Friction f, Position p') <- get e :: System' (Floor, Friction, Position)
+  -- set vertical velocity to 0
   cmap $ \(Player, Velocity (V2 vx _)) -> Velocity $ V2 vx 0
-  cmap $ \(Player, Acceleration (V2 ax ay)) -> Acceleration $ V2 (ax * f) ay
+  -- apply horizontal friction
+  cmap $ \(Player, Velocity (V2 vx vy)) -> Velocity $ V2 (vx * f) vy
 
 clampVelocity :: Double -> Double
 clampVelocity v =

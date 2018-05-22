@@ -75,6 +75,6 @@ initSystems renderer = void $ do
   newEntity ( -- floor
       Floor
     , Position $ V2 0 (screenHeight - 20)
-    , Friction 0.3
+    , Friction 0.8
     , Collisions []
     , BoundingBox (V2 screenWidth 20) )
