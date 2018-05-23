@@ -90,3 +90,15 @@ initSystems renderer = void $ do
     , Friction floorFriction
     , Collisions []
     , BoundingBox (V2 screenWidth 1) )
+
+  newEntity ( --floating platform
+      Floor
+    , Position $ V2 5 (screenHeight / 2)
+    , Friction floorFriction
+    , Collisions []
+    , BoundingBox $ V2 6 1 )
+
+  newEntity ( --wall
+      Position $ V2 (screenWidth - 1) (screenHeight - 5)
+    , BoundingBox $ V2 1 4
+    , Collisions [] )

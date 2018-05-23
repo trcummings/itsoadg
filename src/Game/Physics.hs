@@ -85,7 +85,7 @@ handleFloor e = do
 
   cmap $ \(Player, Velocity (V2 vx _)) ->
     -- apply horizontal friction
-    let vx' = (vx * (Unit f))
+    let vx' = (vx * Unit f)
     -- set vertical velocity to 0
         vy' = 0
     in Velocity $ V2 vx' vy'
@@ -108,7 +108,7 @@ runPhysics = do
 
   -- update velocity based on acceleration
   cmap $ \(Acceleration a, Velocity v) ->
-    let v' = (v + (a ^* (Unit dTinSeconds)))
+    let v' = (v + (a ^* Unit dTinSeconds))
     in Velocity $ clampVelocity <$> v'
 
   -- detect collisions
@@ -140,19 +140,25 @@ runPhysics = do
   cmap $ \(Collisions _) -> Collisions []
 
   -- update position based on time and velocity
-  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* (Unit dTinSeconds))
+  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* Unit dTinSeconds)
 
   -- update camera position based on target
-  cmapM_ $ \(Camera s@(V2 cw ch) cp, CameraTarget e, Acceleration a, Position cpos, camera) -> do
+  cmapM_ $ \(
+      Camera s@(V2 cw ch) cp
+    , CameraTarget e
+    , Acceleration a
+    , Position cpos
+    , camera ) -> do
+
     (Position targetP) <- get e :: System' (Position)
         -- target x y based on camera size
-    let txy = targetP - V2 ((Unit (1 / 2)) * cw) ((Unit (3 / 5)) * ch)
+    let txy = targetP - V2 (0.5 * cw) (0.6 * ch)
         -- camera acceleration towards target
         a'   = a + (txy - cpos)
         -- ppos with drag
-        ppos' = cpos + ((Unit 0.5) *^ (cp - cpos))
+        ppos' = cpos + (0.5 *^ (cp - cpos))
         -- verlet on cpos
-        cpos' = cpos + ((Unit 0.256) *^ a')
+        cpos' = cpos + (0.256 *^ a')
         -- differentiate to get new cpos
         d     = (2 *^ cpos') - ppos'
     -- set new values

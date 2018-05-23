@@ -89,7 +89,7 @@ stepRender renderer = do
             ++ (show $ toPixels <$> pv)
           jText = "Jump: " ++ (show jcr) ++ ", " ++ (show ij)
       renderText renderer f p pText
-      renderText renderer f (V2 (Unit 0) (Unit 1)) jText
+      renderText renderer f (V2 0 1) jText
 
 prepNextRender :: SDL.Renderer -> IO ()
 prepNextRender renderer = do

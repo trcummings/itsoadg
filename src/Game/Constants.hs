@@ -7,7 +7,7 @@ import Foreign.C.Types (CInt)
 
 newtype Unit =
   Unit Double
-  deriving (Eq, Ord, Show, Num)
+  deriving (Eq, Ord, Show, Num, Fractional)
 
 pixelsPerUnit :: Double
 pixelsPerUnit = 32
