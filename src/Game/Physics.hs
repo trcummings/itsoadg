@@ -4,9 +4,13 @@ module Game.Physics where
 
 import qualified SDL
 import           Control.Monad (when)
+import           Control.Monad.Extra (partitionM)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^))
 import           Apecs
   ( Entity
+  , Not
   , cmap
   , cmapM_
   , set
@@ -95,32 +99,29 @@ handleFloor e = do
     Jump { jumpCommandReceived = False, isJumping = False }
 
 
-clampVelocity :: Unit -> Unit
-clampVelocity v =
-  if (v > 0)
-  then min v maxSpeed
-  else max v (-maxSpeed)
+type BoxEntity = (BoundingBox, Position, Entity)
 
-runPhysics :: System' ()
-runPhysics = do
-  -- update acceleration based on gravity
-  cmap $ \(Gravity, Acceleration (V2 x _)) -> Acceleration $ V2 x gravity
+hasVelComponent :: BoxEntity -> System' Bool
+hasVelComponent (_, _, e) = do
+  hasVelocity <- exists e (proxy :: Velocity)
+  return hasVelocity
 
-  -- update velocity based on acceleration
-  cmap $ \(Acceleration a, Velocity v) ->
-    let v' = (v + (a ^* Unit dTinSeconds))
-    in Velocity $ clampVelocity <$> v'
+handleCollisions :: System' ()
+handleCollisions = do
+  -- get all entities with a bounding box
+  allBoundingBoxes <- getAll :: System' [BoxEntity]
 
-  -- detect collisions
-  aabbs <- getAll :: System' [(BoundingBox, Position, Entity)]
+  -- partition into moving boxes & static boxes
+  (dynamics, statics) <- partitionM hasVelComponent allBoundingBoxes
+
   -- O(n^2) algorithm, optimize later
   mapM (\(BoundingBox bb, Position p, entity) -> do
       let shouldAABB = aabbIntersection $ toAABB p bb
           actives = filter (\(BoundingBox bb', Position p', e') ->
-            (not $ e' == entity) && (shouldAABB $ toAABB p' bb')) aabbs
+            (not $ e' == entity) && (shouldAABB $ toAABB p' bb')) allBoundingBoxes
           entities = map (\(_, _, e) -> e) actives
       set entity (Collisions entities)
-    ) aabbs
+    ) allBoundingBoxes
 
   -- resolve collisions
   cmapM_ $ \(Player, Collisions es) -> do
@@ -129,19 +130,13 @@ runPhysics = do
      isFloor <- exists e (proxy :: (Floor, Position))
      when isFloor $ (handleFloor e) ) es
 
-  -- jump!
-  cmapM_ $ \(Player, Jump jcr ij, e) -> do
-    Velocity v@(V2 vx vy) <- get e :: System' (Velocity)
-    when (jcr && not ij) $ do
-      set e ( Velocity $ V2 vx (vy - 20)
-            , Jump { jumpCommandReceived = jcr, isJumping = True } )
-
   -- clear remaining collisions
   cmap $ \(Collisions _) -> Collisions []
 
-  -- update position based on time and velocity
-  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* Unit dTinSeconds)
 
+
+stepCamera :: System' ()
+stepCamera = do
   -- update camera position based on target
   cmapM_ $ \(
       Camera s@(V2 cw ch) cp
@@ -166,6 +161,39 @@ runPhysics = do
         Camera { size = s, ppos = cpos' }
       , Acceleration $ V2 0 0
       , Position d )
+
+
+clampVelocity :: Unit -> Unit
+clampVelocity v =
+  if (v > 0)
+  then min v maxSpeed
+  else max v (-maxSpeed)
+
+runPhysics :: System' ()
+runPhysics = do
+  -- update acceleration based on gravity
+  cmap $ \(Gravity, Acceleration (V2 x _)) -> Acceleration $ V2 x gravity
+
+  -- update velocity based on acceleration
+  cmap $ \(Acceleration a, Velocity v) ->
+    let v' = (v + (a ^* Unit dTinSeconds))
+    in Velocity $ clampVelocity <$> v'
+
+  -- collisions
+  handleCollisions
+
+  -- jump!
+  cmapM_ $ \(Player, Jump jcr ij, e) -> do
+    Velocity v@(V2 vx vy) <- get e :: System' (Velocity)
+    when (jcr && not ij) $ do
+      set e ( Velocity $ V2 vx (vy - 20)
+            , Jump { jumpCommandReceived = jcr, isJumping = True } )
+
+  -- update position based on time and velocity
+  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* Unit dTinSeconds)
+
+  -- update camera
+  stepCamera
 
   -- clamp player position to screen edges
   cmap $ \(Player, Position (V2 x y)) -> Position $ V2

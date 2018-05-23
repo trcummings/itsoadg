@@ -30,6 +30,7 @@ dependencies:
 - text
 - text-conversions
 - containers
+- extra
 - linear
 - apecs >= 0.3.0.2
 
