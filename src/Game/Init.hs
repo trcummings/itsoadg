@@ -23,6 +23,7 @@ import           Game.Constants
   ( spriteSize
   , floorFriction
   , playerPos
+  , initialSize
   , screenHeight
   , screenWidth )
 import           Game.Types
@@ -32,6 +33,8 @@ import           Game.Types
   , Acceleration(..)
   , BoundingBox(..)
   , Gravity(..)
+  , Camera(..)
+  , CameraTarget(..)
   , Collisions(..)
   , Friction(..)
   , Floor(..)
@@ -60,7 +63,7 @@ initSystems renderer = void $ do
   TTF.free smallFont
 
   -- entities
-  newEntity ( -- player
+  player <- newEntity ( -- player
       Player
     , ( Position playerPos
       , Velocity $ V2 0 0
@@ -70,6 +73,12 @@ initSystems renderer = void $ do
     , Gravity
     , Collisions []
     , spriteSheetTexture )
+
+  newEntity ( -- camera
+      Camera { size = V2 screenWidth screenHeight, ppos = V2 0 0 }
+    , CameraTarget player
+    , Position playerPos
+    , Acceleration $ V2 0 0 )
 
   newEntity ( -- small font
       Position $ V2 0 0

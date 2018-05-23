@@ -15,6 +15,7 @@ import           Game.Constants
   , spriteSize )
 import           Game.Types
   ( Player(..)
+  , Camera(..)
   , Position(..)
   , Velocity(..)
   , BoundingBox(..)
@@ -59,17 +60,25 @@ renderText renderer f p txt = do
        (Texture t s)
        (P $ (toPixels <$> p) + (V2 pMod 0))
        (Just $ SDL.Rectangle (P (V2 0 0)) s)
-         ) (take (length txt) textPosMap)
+         ) textPosMap
 
 stepRender :: SDL.Renderer -> System' ()
 stepRender renderer = do
+  -- get camera position
+  cmapM_ $ \(Camera _ _, Position cameraPos) -> do
   -- render "player"
-  cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
-    liftIO $ renderTexture
-      renderer
-      (Texture t s)
-      (P $ toPixels <$> p)
-      (Just $ SDL.Rectangle (P (V2 0 0)) (toPixels <$> spriteSize))
+    cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
+      liftIO $ renderTexture
+        renderer
+        (Texture t s)
+        (P $ toPixels <$> (p - cameraPos))
+        (Just $ SDL.Rectangle (P (V2 0 0)) (toPixels <$> spriteSize))
+      -- render bounding boxes
+    cmapM_ $ \(BoundingBox bb, Position p) -> do
+      liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
+      liftIO $ SDL.drawRect
+        renderer
+        (Just $ SDL.Rectangle (P (toPixels <$> (p - cameraPos))) (toPixels <$> bb))
 
   -- render small font
   cmapM_ $ \(Font f, Position p) -> do
@@ -78,16 +87,9 @@ stepRender renderer = do
             ++ (show $ toPixels <$> pp)
             ++ ", "
             ++ (show $ toPixels <$> pv)
-          jText = "Jump " ++ (show jcr) ++ ", " ++ (show ij)
+          jText = "Jump: " ++ (show jcr) ++ ", " ++ (show ij)
       renderText renderer f p pText
       renderText renderer f (V2 (Unit 0) (Unit 1)) jText
-
-  -- render bounding boxes
-  cmapM_ $ \(BoundingBox (V2 w h), Position (V2 x y)) -> do
-    liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
-    liftIO $ SDL.drawRect
-      renderer
-      (Just $ SDL.Rectangle (P (toPixels <$> V2 x y)) (toPixels <$> V2 w h))
 
 prepNextRender :: SDL.Renderer -> IO ()
 prepNextRender renderer = do

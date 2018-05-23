@@ -21,6 +21,7 @@ import Game.Types
   , BoundingBox
   , Player
   , Camera
+  , CameraTarget
   , Floor
   , Texture
   , Gravity
@@ -48,6 +49,9 @@ instance Component Player where
 
 instance Component Camera where
   type Storage Camera = Unique Camera
+
+instance Component CameraTarget where
+  type Storage CameraTarget = Unique CameraTarget
 
 instance Component Floor where
   type Storage Floor = Map Floor
@@ -94,6 +98,7 @@ makeWorld "World" [
   , ''PhysicsTime
   , ''Gravity
   , ''Camera
+  , ''CameraTarget
   , ''Font
   , ''Jump
   ]

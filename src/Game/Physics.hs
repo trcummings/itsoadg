@@ -4,7 +4,7 @@ module Game.Physics where
 
 import qualified SDL
 import           Control.Monad (when)
-import           Linear (V2(..), V4(..), (^*))
+import           Linear (V2(..), V4(..), (^*), (*^))
 import           Apecs
   ( Entity
   , cmap
@@ -33,6 +33,8 @@ import           Game.Types
   , Jump(..), jumpCommandReceived, isJumping
   , Acceleration(..)
   , Position(..)
+  , Camera(..), size, ppos
+  , CameraTarget(..)
   , Velocity(..)
   , Floor(..)
   , Friction(..)
@@ -139,6 +141,23 @@ runPhysics = do
 
   -- update position based on time and velocity
   cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* (Unit dTinSeconds))
+
+  -- update camera position based on target
+  cmapM_ $ \(Camera s cp, CameraTarget e, Acceleration a, Position cpos, camera) -> do
+    (Position targetP) <- get e :: System' (Position)
+        -- camera acceleration towards target
+    let a'   = a + (targetP - cpos)
+        -- ppos with drag
+        ppos' = cpos + ((Unit 0.5) *^ (cp - cpos))
+        -- verlet on cpos
+        cpos' = cpos + ((Unit 0.256) *^ a')
+        -- differentiate to get new cpos
+        d     = (2 *^ cpos') - ppos'
+    -- set new values
+    set camera (
+        Camera { size = s, ppos = cpos' }
+      , Acceleration $ V2 0 0
+      , Position d )
 
   -- clamp player position to screen edges
   cmap $ \(Player, Position (V2 x y)) -> Position $ V2

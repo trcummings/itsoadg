@@ -27,8 +27,13 @@ data Player =
   Player
   deriving Show
 
-data Camera =
-  Camera
+data Camera = Camera
+  { size :: (V2 Unit)   -- camera height and width
+  , ppos :: (V2 Unit) } -- past position for verlet transform
+  deriving Show
+
+data CameraTarget =
+  CameraTarget Entity
   deriving Show
 
 data Floor =
