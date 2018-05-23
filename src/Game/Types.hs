@@ -60,3 +60,8 @@ data PhysicsTime = PhysicsTime
 newtype GlobalTime =
   GlobalTime Double
   deriving Show
+
+data Jump = Jump
+  { jumpCommandReceived :: Bool
+  , isJumping :: Bool }
+  deriving Show

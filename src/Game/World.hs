@@ -10,7 +10,6 @@
 module Game.World
   ( World
   , System'
-  , Texture
   , initWorld ) where
 
 import Apecs
@@ -29,7 +28,8 @@ import Game.Types
   , Font
   , Collisions
   , PhysicsTime(..)
-  , GlobalTime(..) )
+  , GlobalTime(..)
+  , Jump(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -77,6 +77,9 @@ instance Monoid GlobalTime where
 instance Component GlobalTime where
   type Storage GlobalTime = Global GlobalTime
 
+instance Component Jump where
+  type Storage Jump = Map Jump
+
 makeWorld "World" [
     ''Position
   , ''Velocity
@@ -92,6 +95,7 @@ makeWorld "World" [
   , ''Gravity
   , ''Camera
   , ''Font
+  , ''Jump
   ]
 
 type System' a = System World a

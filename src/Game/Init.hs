@@ -35,7 +35,8 @@ import           Game.Types
   , Collisions(..)
   , Friction(..)
   , Floor(..)
-  , Font(..))
+  , Font(..)
+  , Jump(..) )
 
 characters =
      ['a'..'z']
@@ -61,10 +62,11 @@ initSystems renderer = void $ do
   -- entities
   newEntity ( -- player
       Player
-    , Position playerPos
-    , Velocity $ V2 0 0
-    , Acceleration $ V2 0 0
-    , BoundingBox spriteSize
+    , ( Position playerPos
+      , Velocity $ V2 0 0
+      , Acceleration $ V2 0 0
+      , BoundingBox spriteSize
+      , Jump { jumpCommandReceived = False, isJumping = False } )
     , Gravity
     , Collisions []
     , spriteSheetTexture )

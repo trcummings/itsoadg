@@ -20,6 +20,7 @@ import           Game.World (System')
 import           Game.Constants
   ( Unit(..)
   , dT
+  , dTinSeconds
   , playerSpeed
   , maxSpeed
   , gravity
@@ -29,6 +30,7 @@ import           Game.Constants
   , playerSpeed )
 import           Game.Types
   ( Player(..)
+  , Jump(..), jumpCommandReceived, isJumping
   , Acceleration(..)
   , Position(..)
   , Velocity(..)
@@ -44,11 +46,18 @@ import           Game.Types
 -- constant acceleration
 bumpX x = cmap $ \(Player, Acceleration (V2 _ y)) -> Acceleration $ V2 x y
 
--- x axis
+setJump x = cmap $ \(Player, Jump _ ij) ->
+  Jump { jumpCommandReceived = x, isJumping = ij }
+
+-- move left
 handleArrowEvent SDL.KeycodeA SDL.Pressed  = bumpX (-playerSpeed)
 handleArrowEvent SDL.KeycodeA SDL.Released = bumpX (Unit 0)
+-- move right
 handleArrowEvent SDL.KeycodeD SDL.Pressed  = bumpX playerSpeed
 handleArrowEvent SDL.KeycodeD SDL.Released = bumpX (Unit 0)
+-- jump
+handleArrowEvent SDL.KeycodeW SDL.Pressed  = setJump True
+handleArrowEvent SDL.KeycodeW SDL.Released = setJump False
 handleArrowEvent _ _ = return ()
 
 handleEvent :: SDL.Event -> System' ()
@@ -71,10 +80,18 @@ aabbIntersection (V4 tlx1 tly1 brx1 bry1) (V4 tlx2 tly2 brx2 bry2) =
 handleFloor :: Entity -> System' ()
 handleFloor e = do
   (_, Friction f, Position p') <- get e :: System' (Floor, Friction, Position)
-  -- apply horizontal friction
-  cmap $ \(Player, Velocity (V2 vx vy)) -> Velocity $ V2 (vx * (Unit f)) vy
-  -- set vertical velocity to 0
-  cmap $ \(Player, Velocity (V2 vx _)) -> Velocity $ V2 vx 0
+
+  cmap $ \(Player, Velocity (V2 vx _)) ->
+    -- apply horizontal friction
+    let vx' = (vx * (Unit f))
+    -- set vertical velocity to 0
+        vy' = 0
+    in Velocity $ V2 vx' vy'
+
+  -- clear isJumping
+  cmap $ \(Player, Jump _ _) ->
+    Jump { jumpCommandReceived = False, isJumping = False }
+
 
 clampVelocity :: Unit -> Unit
 clampVelocity v =
@@ -82,17 +99,15 @@ clampVelocity v =
   then min v maxSpeed
   else max v (-maxSpeed)
 
-runPhysics :: Double -> System' ()
-runPhysics dT = do
-  let dTs = (dT / 1000)
+runPhysics :: System' ()
+runPhysics = do
   -- update acceleration based on gravity
   cmap $ \(Gravity, Acceleration (V2 x _)) -> Acceleration $ V2 x gravity
 
   -- update velocity based on acceleration
   cmap $ \(Acceleration a, Velocity v) ->
-    let v' = (v + (a ^* (Unit dTs)))
+    let v' = (v + (a ^* (Unit dTinSeconds)))
     in Velocity $ clampVelocity <$> v'
-
 
   -- detect collisions
   aabbs <- getAll :: System' [(BoundingBox, Position, Entity)]
@@ -112,11 +127,18 @@ runPhysics dT = do
      isFloor <- exists e (proxy :: (Floor, Position))
      when isFloor $ (handleFloor e) ) es
 
+  -- jump!
+  cmapM_ $ \(Player, Jump jcr ij, e) -> do
+    Velocity v@(V2 vx vy) <- get e :: System' (Velocity)
+    when (jcr && not ij) $ do
+      set e ( Velocity $ V2 vx (vy - 20)
+            , Jump { jumpCommandReceived = jcr, isJumping = True } )
+
   -- clear remaining collisions
   cmap $ \(Collisions _) -> Collisions []
 
   -- update position based on time and velocity
-  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* (Unit dTs))
+  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* (Unit dTinSeconds))
 
   -- clamp player position to screen edges
   cmap $ \(Player, Position (V2 x y)) -> Position $ V2
@@ -140,7 +162,7 @@ runPhysicsLoop :: System' ()
 runPhysicsLoop = do
   PhysicsTime t acc <- get global
   when (acc >= dT) $ do
-    runPhysics dT
+    runPhysics
     cmap $ \(PhysicsTime t' acc') -> PhysicsTime
       { time = (t' + dT)
       , accum = (acc' - dT) }

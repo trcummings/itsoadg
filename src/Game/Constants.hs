@@ -42,5 +42,8 @@ fps = 60
 dT :: Double
 dT = 1000 / fps
 
+dTinSeconds :: Double
+dTinSeconds = 1 / fps
+
 floorFriction :: Double
 floorFriction = 0.90
