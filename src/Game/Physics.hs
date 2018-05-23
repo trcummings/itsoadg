@@ -143,10 +143,12 @@ runPhysics = do
   cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* (Unit dTinSeconds))
 
   -- update camera position based on target
-  cmapM_ $ \(Camera s cp, CameraTarget e, Acceleration a, Position cpos, camera) -> do
+  cmapM_ $ \(Camera s@(V2 cw ch) cp, CameraTarget e, Acceleration a, Position cpos, camera) -> do
     (Position targetP) <- get e :: System' (Position)
+        -- target x y based on camera size
+    let txy = targetP - V2 ((Unit (1 / 2)) * cw) ((Unit (3 / 5)) * ch)
         -- camera acceleration towards target
-    let a'   = a + (targetP - cpos)
+        a'   = a + (txy - cpos)
         -- ppos with drag
         ppos' = cpos + ((Unit 0.5) *^ (cp - cpos))
         -- verlet on cpos
