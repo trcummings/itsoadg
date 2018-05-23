@@ -19,6 +19,7 @@ import           Game.Types
   , Velocity(..)
   , BoundingBox(..)
   , Font(..)
+  , Jump(..)
   , Texture(..) )
 
 import Paths_itsoadg (getDataFileName)
@@ -47,6 +48,19 @@ renderTexture r (Texture t size) xy clip =
   let dstSize = maybe size (\(SDL.Rectangle _ size') ->  size') clip
   in SDL.copy r t clip (Just (SDL.Rectangle xy dstSize))
 
+renderText :: SDL.Renderer -> [(Char, Texture)] -> V2 Unit -> String -> System' ()
+renderText renderer f p txt = do
+   let textures = catMaybes (map (\c -> lookup c f) txt)
+       spacingMap = [xy | xy <- [1..700], xy `mod` 14 == 0]
+       textPosMap = zip textures spacingMap
+   mapM_ (\(Texture t s, pMod) -> do
+     liftIO $ renderTexture
+       renderer
+       (Texture t s)
+       (P $ (toPixels <$> p) + (V2 pMod 0))
+       (Just $ SDL.Rectangle (P (V2 0 0)) s)
+         ) (take (length txt) textPosMap)
+
 stepRender :: SDL.Renderer -> System' ()
 stepRender renderer = do
   -- render "player"
@@ -59,21 +73,14 @@ stepRender renderer = do
 
   -- render small font
   cmapM_ $ \(Font f, Position p) -> do
-    cmapM_ $ \(Player, Position pp, Velocity pv) -> do
+    cmapM_ $ \(Player, (Jump jcr ij), Position pp, Velocity pv) -> do
       let pText = "Player: "
             ++ (show $ toPixels <$> pp)
             ++ ", "
             ++ (show $ toPixels <$> pv)
-          textures = catMaybes (map (\c -> lookup c f) pText)
-          spacingMap = [xy | xy <- [1..700], xy `mod` 14 == 0]
-          textPosMap = zip textures spacingMap
-      mapM_ (\(Texture t s, pMod) -> do
-        liftIO $ renderTexture
-          renderer
-          (Texture t s)
-          (P $ (toPixels <$> p) + (V2 pMod 0))
-          (Just $ SDL.Rectangle (P (V2 0 0)) s)
-            ) (take 40 textPosMap)
+          jText = "Jump " ++ (show jcr) ++ ", " ++ (show ij)
+      renderText renderer f p pText
+      renderText renderer f (V2 (Unit 0) (Unit 1)) jText
 
   -- render bounding boxes
   cmapM_ $ \(BoundingBox (V2 w h), Position (V2 x y)) -> do
