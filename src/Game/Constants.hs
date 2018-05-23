@@ -5,7 +5,9 @@ module Game.Constants where
 import Linear (V2(..))
 import Foreign.C.Types (CInt)
 
-newtype Unit = Unit Double deriving (Eq, Ord, Show, Num)
+newtype Unit =
+  Unit Double
+  deriving (Eq, Ord, Show, Num)
 
 pixelsPerUnit :: Double
 pixelsPerUnit = 32

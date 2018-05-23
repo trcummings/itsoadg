@@ -88,6 +88,12 @@ runPhysics dT = do
   -- update acceleration based on gravity
   cmap $ \(Gravity, Acceleration (V2 x _)) -> Acceleration $ V2 x gravity
 
+  -- update velocity based on acceleration
+  cmap $ \(Acceleration a, Velocity v) ->
+    let v' = (v + (a ^* (Unit dTs)))
+    in Velocity $ clampVelocity <$> v'
+
+
   -- detect collisions
   aabbs <- getAll :: System' [(BoundingBox, Position, Entity)]
   -- O(n^2) algorithm, optimize later
@@ -109,17 +115,8 @@ runPhysics dT = do
   -- clear remaining collisions
   cmap $ \(Collisions _) -> Collisions []
 
-   -- update velocity based on acceleration
-  cmap $ \(Acceleration a, Velocity v) ->
-    let v' = (v + (a ^* (Unit dTs)))
-    in Velocity $ clampVelocity <$> v'
-
   -- update position based on time and velocity
-  cmap $ \(Acceleration a, Velocity v, Position p) ->
-    let a' = a ^* (Unit (0.5 * (dTs ^ 2)))
-        v' = v ^* (Unit dTs)
-    in Position $ p + v' + a'
-
+  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* (Unit dTs))
 
   -- clamp player position to screen edges
   cmap $ \(Player, Position (V2 x y)) -> Position $ V2
