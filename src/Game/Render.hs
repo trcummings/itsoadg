@@ -47,7 +47,7 @@ renderTexture :: SDL.Renderer
               -> IO ()
 renderTexture r (Texture t size) xy clip =
   let dstSize = maybe size (\(SDL.Rectangle _ size') ->  size') clip
-  in SDL.copy r t clip (Just (SDL.Rectangle xy dstSize))
+  in  SDL.copy r t clip (Just (SDL.Rectangle xy dstSize))
 
 renderText :: SDL.Renderer -> [(Char, Texture)] -> V2 Unit -> String -> System' ()
 renderText renderer f p txt = do

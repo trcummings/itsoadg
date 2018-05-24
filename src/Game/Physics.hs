@@ -10,7 +10,6 @@ import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^))
 import           Apecs
   ( Entity
-  , Not
   , cmap
   , cmapM_
   , set
@@ -21,6 +20,14 @@ import           Apecs
   , global )
 
 import           Game.World (System')
+import           Game.Collision
+  ( AABB(..), center, dims
+  , Collision(..)
+  , CNormal(..)
+  , toVector
+  , aabbCheck
+  , sweepAABB
+  , broadPhaseAABB )
 import           Game.Constants
   ( Unit(..)
   , dT
@@ -40,11 +47,9 @@ import           Game.Types
   , Camera(..), size, ppos
   , CameraTarget(..)
   , Velocity(..)
-  , Floor(..)
   , Friction(..)
   , BoundingBox(..)
   , Gravity(..)
-  , Collisions(..)
   , PhysicsTime(..), time, accum
   , GlobalTime(..) )
 
@@ -76,27 +81,20 @@ handleEvent event =
         motion  = SDL.keyboardEventKeyMotion keyboardEvent
     _ -> return ()
 
-toAABB :: V2 Unit -> V2 Unit -> V4 Unit
-toAABB (V2 x y) (V2 w h) = V4 x y (x + w) (y + h)
+-- handleFloor :: Entity -> System' ()
+-- handleFloor e = do
+--   (_, Friction f, Position p') <- get e :: System' (Floor, Friction, Position)
 
-aabbIntersection :: V4 Unit -> V4 Unit -> Bool
-aabbIntersection (V4 tlx1 tly1 brx1 bry1) (V4 tlx2 tly2 brx2 bry2) =
-  (brx1 >= tlx2) && (tlx1 <= brx2) && (bry1 >= tly2) && (tly1 <= bry2)
+--   cmap $ \(Player, Velocity (V2 vx _)) ->
+--     -- apply horizontal friction
+--     let vx' = (vx * Unit f)
+--     -- set vertical velocity to 0
+--         vy' = 0
+--     in Velocity $ V2 vx' vy'
 
-handleFloor :: Entity -> System' ()
-handleFloor e = do
-  (_, Friction f, Position p') <- get e :: System' (Floor, Friction, Position)
-
-  cmap $ \(Player, Velocity (V2 vx _)) ->
-    -- apply horizontal friction
-    let vx' = (vx * Unit f)
-    -- set vertical velocity to 0
-        vy' = 0
-    in Velocity $ V2 vx' vy'
-
-  -- clear isJumping
-  cmap $ \(Player, Jump _ _) ->
-    Jump { jumpCommandReceived = False, isJumping = False }
+--   -- clear isJumping
+--   cmap $ \(Player, Jump _ _) ->
+--     Jump { jumpCommandReceived = False, isJumping = False }
 
 
 type BoxEntity = (BoundingBox, Position, Entity)
@@ -106,32 +104,90 @@ hasVelComponent (_, _, e) = do
   hasVelocity <- exists e (proxy :: Velocity)
   return hasVelocity
 
+inNarrowPhase :: Entity -> AABB -> BoxEntity -> Bool
+inNarrowPhase e sweptBox (BoundingBox bb, Position p, e') =
+  (not $ e' == e) && (aabbCheck sweptBox $ AABB { center = p, dims = bb })
+
+foldCollisions :: AABB
+               -> Velocity
+               -> [BoxEntity]
+               -> [Collision]
+               -> [Collision]
+foldCollisions _   _ []                                   cls = cls
+foldCollisions box v ((BoundingBox bb, Position p, e):cs) cls =
+  let (collisionTime, normal) = sweepAABB v box $ AABB { center = p, dims = bb }
+  in if (collisionTime >= 1)
+     then cls
+     else cls ++ [Collision collisionTime normal e]
+
+handleBaseCollision :: Entity -> Collision -> System' ()
+handleBaseCollision e c@(Collision collisionTime normal _) = do
+  liftIO $ putStrLn $ show collisionTime ++ ", " ++ show normal
+  ((Velocity v@(V2 vx vy)), Position p) <- get e :: System' (Velocity, Position)
+
+  let p'            = p + (v ^* Unit collisionTime)
+      remainingTime = 1 - collisionTime
+      vNormal@(V2 normalX normalY) = toVector normal
+      dotProd = ((vx * normalY) + (vy * normalX)) * Unit remainingTime
+      v' = V2 (dotProd * normalY) (dotProd * normalX)
+  liftIO $ putStrLn $ "Before: " ++ show p ++ ", " ++ show v
+  liftIO $ putStrLn $ "After: "  ++ show p' ++ ", " ++ show v'
+  set e (Position p', Velocity v')
+  --    when isFloor $ (handleFloor e) ) es
+
+handleFloor :: Entity -> Collision -> System' ()
+handleFloor e c@(Collision _ normal e') = do
+  hasFriction <- exists e' (proxy :: Friction)
+  when hasFriction $ do
+    (Velocity (V2 vx vy)) <- get e  :: System' (Velocity)
+    (Friction f)          <- get e' :: System' (Friction)
+    case normal of
+      TopN    -> do
+        set e (Velocity $ V2 (vx * Unit f) vy)
+      BottomN -> do
+        set e (Velocity $ V2 (vx * Unit f) vy)
+      LeftN   -> do
+        set e (Velocity $ V2 vx (vy * Unit f))
+      RightN  -> do
+        set e (Velocity $ V2 vx (vy * Unit f))
+      _ -> return ()
+
+handleCollision :: Entity -> Collision -> System' ()
+handleCollision e c = do
+  handleBaseCollision e c
+  handleFloor e c
+
 handleCollisions :: System' ()
 handleCollisions = do
   -- get all entities with a bounding box
   allBoundingBoxes <- getAll :: System' [BoxEntity]
 
   -- partition into moving boxes & static boxes
-  (dynamics, statics) <- partitionM hasVelComponent allBoundingBoxes
+  (dynamics, _) <- partitionM hasVelComponent allBoundingBoxes
 
-  -- O(n^2) algorithm, optimize later
-  mapM (\(BoundingBox bb, Position p, entity) -> do
-      let shouldAABB = aabbIntersection $ toAABB p bb
-          actives = filter (\(BoundingBox bb', Position p', e') ->
-            (not $ e' == entity) && (shouldAABB $ toAABB p' bb')) allBoundingBoxes
-          entities = map (\(_, _, e) -> e) actives
-      set entity (Collisions entities)
-    ) allBoundingBoxes
+  mapM_ (\(bb@(BoundingBox bb'), p@(Position p'), entity) -> do
+       v@(Velocity v') <- get entity :: System' Velocity
+       let sweptBox   = broadPhaseAABB bb p v
+           actives    = filter (inNarrowPhase entity sweptBox) allBoundingBoxes
+           box        = AABB { center = p', dims = bb' }
+           collisions = foldCollisions box v actives []
+       mapM_ (handleCollision entity) collisions
+       -- when no collisions, update position and velocity normally
+       when (length collisions == 0) $ do
+         -- update position based on time and velocity
+         let p'' = p' + (v' ^* Unit dTinSeconds)
+         set entity (Position p'')
+     ) dynamics
 
-  -- resolve collisions
-  cmapM_ $ \(Player, Collisions es) -> do
-    -- loop over each collision. if its a wall, if its a floor, else ignore
-    mapM (\e -> do
-     isFloor <- exists e (proxy :: (Floor, Position))
-     when isFloor $ (handleFloor e) ) es
+  -- -- resolve collisions
+  -- cmapM_ $ \(Collisions es, e) -> do
+  --   -- loop over each collision. if its a wall, if its a floor, else ignore
+  --   mapM (\e -> do
+  --    isFloor <- exists e (proxy :: (Floor, Position))
+  --    when isFloor $ (handleFloor e) ) es
 
-  -- clear remaining collisions
-  cmap $ \(Collisions _) -> Collisions []
+  -- -- clear remaining collisions
+  -- cmap $ \(Collisions _) -> Collisions []
 
 
 
@@ -189,16 +245,8 @@ runPhysics = do
       set e ( Velocity $ V2 vx (vy - 20)
             , Jump { jumpCommandReceived = jcr, isJumping = True } )
 
-  -- update position based on time and velocity
-  cmap $ \(Velocity v, Position p) -> Position $ p + (v ^* Unit dTinSeconds)
-
   -- update camera
   stepCamera
-
-  -- clamp player position to screen edges
-  cmap $ \(Player, Position (V2 x y)) -> Position $ V2
-    (min (screenWidth  - 1) . max 0 $ x)
-    (min (screenHeight - 1) . max 0 $ y)
 
 updatePhysicsAccum :: Double -> System' ()
 updatePhysicsAccum nextTime = do

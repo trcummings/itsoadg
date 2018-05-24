@@ -22,12 +22,10 @@ import Game.Types
   , Player
   , Camera
   , CameraTarget
-  , Floor
   , Texture
   , Gravity
   , Friction
   , Font
-  , Collisions
   , PhysicsTime(..)
   , GlobalTime(..)
   , Jump(..) )
@@ -53,9 +51,6 @@ instance Component Camera where
 instance Component CameraTarget where
   type Storage CameraTarget = Unique CameraTarget
 
-instance Component Floor where
-  type Storage Floor = Map Floor
-
 instance Component Texture where
   type Storage Texture = Map Texture
 
@@ -67,9 +62,6 @@ instance Component Friction where
 
 instance Component Font where
   type Storage Font = Map Font
-
-instance Component Collisions where
-  type Storage Collisions = Map Collisions
 
 instance Monoid PhysicsTime where
   mempty = PhysicsTime 0 0
@@ -91,8 +83,6 @@ makeWorld "World" [
   , ''BoundingBox
   , ''Friction
   , ''Player
-  , ''Collisions
-  , ''Floor
   , ''Texture
   , ''GlobalTime
   , ''PhysicsTime

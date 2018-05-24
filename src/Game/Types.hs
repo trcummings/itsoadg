@@ -8,7 +8,7 @@ import qualified SDL (Texture)
 import           Game.Constants (Unit(..))
 
 newtype Position =
-  Position (V2 Unit)
+  Position (V2 Unit) -- center point
   deriving Show
 
 newtype Velocity =
@@ -36,10 +36,6 @@ data CameraTarget =
   CameraTarget Entity
   deriving Show
 
-data Floor =
-  Floor
-  deriving Show
-
 data Texture =
   Texture SDL.Texture (V2 CInt)
 
@@ -50,10 +46,6 @@ newtype Friction =
   deriving Show
 
 data Font = Font [(Char, Texture)]
-
-data Collisions =
-  Collisions [Entity]
-  deriving Show
 
 -- accumulator for physics frame time updates
 data PhysicsTime = PhysicsTime

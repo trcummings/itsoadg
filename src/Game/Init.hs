@@ -35,9 +35,7 @@ import           Game.Types
   , Gravity(..)
   , Camera(..)
   , CameraTarget(..)
-  , Collisions(..)
   , Friction(..)
-  , Floor(..)
   , Font(..)
   , Jump(..) )
 
@@ -71,7 +69,6 @@ initSystems renderer = void $ do
       , BoundingBox spriteSize
       , Jump { jumpCommandReceived = False, isJumping = False } )
     , Gravity
-    , Collisions []
     , spriteSheetTexture )
 
   newEntity ( -- camera
@@ -85,20 +82,15 @@ initSystems renderer = void $ do
     , Font fontMap )
 
   newEntity ( -- floor
-      Floor
-    , Position $ V2 0 (screenHeight - 1)
+      Position $ V2 0 (screenHeight - 1)
     , Friction floorFriction
-    , Collisions []
     , BoundingBox (V2 screenWidth 1) )
 
   newEntity ( --floating platform
-      Floor
-    , Position $ V2 5 (screenHeight / 2)
+      Position $ V2 5 (screenHeight / 2)
     , Friction floorFriction
-    , Collisions []
     , BoundingBox $ V2 6 1 )
 
   newEntity ( --wall
       Position $ V2 (screenWidth - 1) (screenHeight - 5)
-    , BoundingBox $ V2 1 4
-    , Collisions [] )
+    , BoundingBox $ V2 1 4 )
