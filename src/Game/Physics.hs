@@ -27,7 +27,6 @@ import           Game.Collision
   , toVector
   , aabbCheck
   , sweepAABB
-  , minkowskiDiff
   , penetrationVector
   , broadPhaseAABB )
 import           Game.Constants
@@ -242,7 +241,7 @@ runPhysics = do
   cmapM_ $ \(Player, Jump jcr ij, e) -> do
     Velocity v@(V2 vx vy) <- get e :: System' (Velocity)
     when (jcr && not ij) $ do
-      set e ( Velocity $ V2 vx (vy - 20)
+      set e ( Velocity $ V2 vx (vy - 10)
             , Jump { jumpCommandReceived = jcr, isJumping = True } )
 
   -- update camera
