@@ -3,7 +3,7 @@
 module Game.Physics where
 
 import qualified SDL
-import           Control.Monad (when)
+import           Control.Monad (when, unless)
 import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.List (partition)
@@ -27,6 +27,8 @@ import           Game.Collision
   , toVector
   , aabbCheck
   , sweepAABB
+  , minkowskiDiff
+  , penetrationVector
   , broadPhaseAABB )
 import           Game.Constants
   ( Unit(..)
@@ -81,22 +83,6 @@ handleEvent event =
         motion  = SDL.keyboardEventKeyMotion keyboardEvent
     _ -> return ()
 
--- handleFloor :: Entity -> System' ()
--- handleFloor e = do
---   (_, Friction f, Position p') <- get e :: System' (Floor, Friction, Position)
-
---   cmap $ \(Player, Velocity (V2 vx _)) ->
---     -- apply horizontal friction
---     let vx' = (vx * Unit f)
---     -- set vertical velocity to 0
---         vy' = 0
---     in Velocity $ V2 vx' vy'
-
---   -- clear isJumping
---   cmap $ \(Player, Jump _ _) ->
---     Jump { jumpCommandReceived = False, isJumping = False }
-
-
 type BoxEntity = (BoundingBox, Position, Entity)
 
 hasVelComponent :: BoxEntity -> System' Bool
@@ -108,32 +94,37 @@ inNarrowPhase :: Entity -> AABB -> BoxEntity -> Bool
 inNarrowPhase e sweptBox (BoundingBox bb, Position p, e') =
   (not $ e' == e) && (aabbCheck sweptBox $ AABB { center = p, dims = bb })
 
-foldCollisions :: AABB
-               -> Velocity
-               -> [BoxEntity]
-               -> [Collision]
-               -> [Collision]
-foldCollisions _   _ []                                   cls = cls
-foldCollisions box v ((BoundingBox bb, Position p, e):cs) cls =
-  let (collisionTime, normal) = sweepAABB v box $ AABB { center = p, dims = bb }
-  in if (collisionTime >= 1)
-     then cls
-     else cls ++ [Collision collisionTime normal e]
+-- foldCollisions :: AABB
+--                -> Velocity
+--                -> [BoxEntity]
+--                -> [Collision]
+--                -> [Collision]
+-- foldCollisions _   _ []                                   cls = cls
+-- foldCollisions box v ((BoundingBox bb, Position p, e):cs) cls =
+--   let (collisionTime, normal) = sweepAABB v box $ AABB { center = p, dims = bb }
+--   in if (normal == NoneN)
+--      then cls
+--      else cls ++ [Collision collisionTime normal e]
 
 handleBaseCollision :: Entity -> Collision -> System' ()
 handleBaseCollision e c@(Collision collisionTime normal _) = do
-  liftIO $ putStrLn $ show collisionTime ++ ", " ++ show normal
   ((Velocity v@(V2 vx vy)), Position p) <- get e :: System' (Velocity, Position)
 
-  let p'            = p + (v ^* Unit collisionTime)
-      remainingTime = 1 - collisionTime
+  let cTime = dTinSeconds * collisionTime
+      remainingTime = dTinSeconds * (1 - collisionTime)
       vNormal@(V2 normalX normalY) = toVector normal
       dotProd = ((vx * normalY) + (vy * normalX)) * Unit remainingTime
-      v' = V2 (dotProd * normalY) (dotProd * normalX)
-  liftIO $ putStrLn $ "Before: " ++ show p ++ ", " ++ show v
-  liftIO $ putStrLn $ "After: "  ++ show p' ++ ", " ++ show v'
-  set e (Position p', Velocity v')
-  --    when isFloor $ (handleFloor e) ) es
+      v' =
+        if (normal == TopN || normal == BottomN)
+        then V2 vx (dotProd * normalX)
+        else V2 (dotProd * normalY) vy
+      p' = p + v' ^* Unit cTime
+
+  -- liftIO $ putStrLn $ show cTime ++ ", " ++ show normal ++ ", " ++ show dotProd
+  -- liftIO $ putStrLn $ "Before: " ++ show v ++ ", " ++ show p
+  -- liftIO $ putStrLn $ "After: " ++ show v' ++ ", " ++ show p'
+
+  set e (Velocity v', Position p')
 
 handleFloor :: Entity -> Collision -> System' ()
 handleFloor e c@(Collision _ normal e') = do
@@ -152,10 +143,47 @@ handleFloor e c@(Collision _ normal e') = do
         set e (Velocity $ V2 vx (vy * Unit f))
       _ -> return ()
 
+handleJumpCheck :: Entity -> Collision -> System' ()
+handleJumpCheck e (Collision _ normal _) = do
+  hasJump <- exists e (proxy :: Jump)
+  when (hasJump && normal == BottomN) $ do
+    set e Jump { jumpCommandReceived = False, isJumping = False }
+
 handleCollision :: Entity -> Collision -> System' ()
 handleCollision e c = do
   handleBaseCollision e c
   handleFloor e c
+  handleJumpCheck e c
+  -- (Velocity v, Position p) <- get e :: System' (Velocity, Position)
+  -- set e (Position  (p + (v ^* Unit dTinSeconds)))
+
+type GetVelocity  = System' (Velocity)
+type GetAABB      = System' (BoundingBox, Position)
+type GetSweptAABB = System' (BoundingBox, Position, Velocity)
+
+testCollision :: Entity -> BoxEntity -> System' ()
+testCollision e (_, _, e') = do
+  -- get current collision information
+  (BoundingBox bb1, Position p1, v@(Velocity v')) <- get e  :: GetSweptAABB
+  (BoundingBox bb2, Position p2)    <- get e' :: GetAABB
+  let box1 = AABB { center = p1, dims = bb1 }
+      box2 = AABB { center = p2, dims = bb2 }
+      (collisionTime, normal) = sweepAABB v box1 box2
+      collision = Collision collisionTime normal e'
+
+  -- we hit a corner most likely
+  when (normal == NoneN) $ do
+    -- if we're touching a side of a box
+    let p' = if (aabbCheck box1 box2)
+             -- adjust position by penetration vector
+             then p1 + (penetrationVector box1 box2)
+             -- otherwise move normally (touching just a corner)
+             else p1 + (v' ^* Unit dTinSeconds)
+    set e (Position p')
+
+  -- we have a normal collision
+  unless (normal == NoneN) $ do
+    handleCollision e collision
 
 handleCollisions :: System' ()
 handleCollisions = do
@@ -169,26 +197,16 @@ handleCollisions = do
        v@(Velocity v') <- get entity :: System' Velocity
        let sweptBox   = broadPhaseAABB bb p v
            actives    = filter (inNarrowPhase entity sweptBox) allBoundingBoxes
-           box        = AABB { center = p', dims = bb' }
-           collisions = foldCollisions box v actives []
-       mapM_ (handleCollision entity) collisions
-       -- when no collisions, update position and velocity normally
-       when (length collisions == 0) $ do
+
+       -- run all collision updates
+       mapM_ (testCollision entity) actives
+
+       -- when no collisions happened, update position and velocity normally
+       when (length actives == 0) $ do
          -- update position based on time and velocity
          let p'' = p' + (v' ^* Unit dTinSeconds)
          set entity (Position p'')
      ) dynamics
-
-  -- -- resolve collisions
-  -- cmapM_ $ \(Collisions es, e) -> do
-  --   -- loop over each collision. if its a wall, if its a floor, else ignore
-  --   mapM (\e -> do
-  --    isFloor <- exists e (proxy :: (Floor, Position))
-  --    when isFloor $ (handleFloor e) ) es
-
-  -- -- clear remaining collisions
-  -- cmap $ \(Collisions _) -> Collisions []
-
 
 
 stepCamera :: System' ()

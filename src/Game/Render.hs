@@ -13,6 +13,9 @@ import           Game.Constants
   ( Unit(..)
   , toPixels
   , spriteSize )
+import           Game.Collision
+  ( AABB(..), dims, center
+  , broadPhaseAABB )
 import           Game.Types
   ( Player(..)
   , Camera(..)
@@ -66,19 +69,26 @@ stepRender :: SDL.Renderer -> System' ()
 stepRender renderer = do
   -- get camera position
   cmapM_ $ \(Camera _ _, Position cameraPos) -> do
-  -- render "player"
+    -- render "player"
     cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
       liftIO $ renderTexture
         renderer
         (Texture t s)
         (P $ toPixels <$> (p - cameraPos))
         (Just $ SDL.Rectangle (P (V2 0 0)) (toPixels <$> spriteSize))
-      -- render bounding boxes
+    -- render bounding boxes
     cmapM_ $ \(BoundingBox bb, Position p) -> do
-      liftIO $ SDL.rendererDrawColor renderer $= V4 0 0 maxBound maxBound
+      liftIO $ SDL.rendererDrawColor renderer $= V4 255 0 maxBound maxBound
       liftIO $ SDL.drawRect
         renderer
         (Just $ SDL.Rectangle (P (toPixels <$> (p - cameraPos))) (toPixels <$> bb))
+    -- render broad phase bounding box
+    cmapM_ $ \(bb@(BoundingBox _), p@(Position _), v@(Velocity _)) -> do
+      let aabb = broadPhaseAABB bb p v
+      liftIO $ SDL.rendererDrawColor renderer $= V4 maxBound maxBound 0 255
+      liftIO $ SDL.drawRect
+        renderer
+        (Just $ SDL.Rectangle (P (toPixels <$> ((center aabb) - cameraPos))) (toPixels <$> (dims aabb)))
 
   -- render small font
   cmapM_ $ \(Font f, Position p) -> do
