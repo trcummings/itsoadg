@@ -94,18 +94,6 @@ inNarrowPhase :: Entity -> AABB -> BoxEntity -> Bool
 inNarrowPhase e sweptBox (BoundingBox bb, Position p, e') =
   (not $ e' == e) && (aabbCheck sweptBox $ AABB { center = p, dims = bb })
 
--- foldCollisions :: AABB
---                -> Velocity
---                -> [BoxEntity]
---                -> [Collision]
---                -> [Collision]
--- foldCollisions _   _ []                                   cls = cls
--- foldCollisions box v ((BoundingBox bb, Position p, e):cs) cls =
---   let (collisionTime, normal) = sweepAABB v box $ AABB { center = p, dims = bb }
---   in if (normal == NoneN)
---      then cls
---      else cls ++ [Collision collisionTime normal e]
-
 handleBaseCollision :: Entity -> Collision -> System' ()
 handleBaseCollision e c@(Collision collisionTime normal _) = do
   ((Velocity v@(V2 vx vy)), Position p) <- get e :: System' (Velocity, Position)
@@ -119,10 +107,6 @@ handleBaseCollision e c@(Collision collisionTime normal _) = do
         then V2 vx (dotProd * normalX)
         else V2 (dotProd * normalY) vy
       p' = p + v' ^* Unit cTime
-
-  -- liftIO $ putStrLn $ show cTime ++ ", " ++ show normal ++ ", " ++ show dotProd
-  -- liftIO $ putStrLn $ "Before: " ++ show v ++ ", " ++ show p
-  -- liftIO $ putStrLn $ "After: " ++ show v' ++ ", " ++ show p'
 
   set e (Velocity v', Position p')
 
@@ -154,8 +138,6 @@ handleCollision e c = do
   handleBaseCollision e c
   handleFloor e c
   handleJumpCheck e c
-  -- (Velocity v, Position p) <- get e :: System' (Velocity, Position)
-  -- set e (Position  (p + (v ^* Unit dTinSeconds)))
 
 type GetVelocity  = System' (Velocity)
 type GetAABB      = System' (BoundingBox, Position)
