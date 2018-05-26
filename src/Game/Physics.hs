@@ -6,7 +6,7 @@ import qualified SDL
 import           Control.Monad (when, unless)
 import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Map (member, insert, (!))
+import           Data.Map ((!))
 import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^))
 import           Apecs
@@ -48,8 +48,6 @@ import           Game.Types
   , Jump(..), buttonPressed, isJumping, isGrounded
   , Acceleration(..)
   , Position(..)
-  , Camera(..), size, ppos
-  , CameraTarget(..)
   , Velocity(..)
   , Friction(..)
   , BoundingBox(..)
@@ -57,6 +55,7 @@ import           Game.Types
   , PlayerInput(..)
   , PhysicsTime(..), time, accum
   , GlobalTime(..) )
+import Game.Camera (stepCamera)
 import Game.Jump
   ( landed
   , onGround
@@ -76,19 +75,6 @@ setJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
 releaseJump :: System' ()
 releaseJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
   when (jumpState == landed) $ set e onGround
-
-handleEvent :: SDL.Event -> System' ()
-handleEvent event = do
-  case SDL.eventPayload event of
-    SDL.KeyboardEvent keyboardEvent ->
-      cmap $ \(PlayerInput m) ->
-        if (member keyCode m)
-        then PlayerInput $ insert keyCode motion m
-        else PlayerInput m
-      where
-        keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
-        motion  = SDL.keyboardEventKeyMotion keyboardEvent
-    _ -> return ()
 
 type BoxEntity = (BoundingBox, Position, Entity)
 
@@ -207,35 +193,6 @@ handleCollisions = do
          let p'' = p' + (v' ^* Unit dTinSeconds)
          set entity (Position p'')
      ) dynamics
-
-
-stepCamera :: System' ()
-stepCamera = do
-  -- update camera position based on target
-  cmapM_ $ \(
-      Camera s@(V2 cw ch) cp
-    , CameraTarget e
-    , Acceleration a
-    , Position cpos
-    , camera ) -> do
-
-    (Position targetP) <- get e :: System' (Position)
-        -- target x y based on camera size
-    let txy = targetP - V2 (0.5 * cw) (0.6 * ch)
-        -- camera acceleration towards target
-        a'   = a + (txy - cpos)
-        -- ppos with drag
-        ppos' = cpos + (0.5 *^ (cp - cpos))
-        -- verlet on cpos
-        cpos' = cpos + (0.256 *^ a')
-        -- differentiate to get new cpos
-        d     = (2 *^ cpos') - ppos'
-    -- set new values
-    set camera (
-        Camera { size = s, ppos = cpos' }
-      , Acceleration $ V2 0 0
-      , Position d )
-
 
 clampVelocity :: Unit -> Unit
 clampVelocity v =

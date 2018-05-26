@@ -15,6 +15,7 @@ module Game.World
 import           Apecs
 import qualified Data.Map as Map (fromList)
 import qualified SDL
+import           Linear (V2(..))
 
 import Game.Types
   ( Position
@@ -31,6 +32,7 @@ import Game.Types
   , PhysicsTime(..)
   , GlobalTime(..)
   , PlayerInput(..)
+  , MousePosition(..)
   , Jump(..) )
 
 instance Component Position where
@@ -85,6 +87,11 @@ instance Monoid PlayerInput where
 instance Component PlayerInput where
   type Storage PlayerInput = Global PlayerInput
 
+instance Monoid MousePosition where
+  mempty = MousePosition $ V2 0 0
+instance Component MousePosition where
+  type Storage MousePosition = Global MousePosition
+
 instance Component Jump where
   type Storage Jump = Map Jump
 
@@ -99,6 +106,7 @@ makeWorld "World" [
   , ''GlobalTime
   , ''PhysicsTime
   , ''PlayerInput
+  , ''MousePosition
   , ''Gravity
   , ''Camera
   , ''CameraTarget

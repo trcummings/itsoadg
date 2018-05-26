@@ -2,6 +2,7 @@ module Game.Types where
 
 import qualified Data.Map as Map (Map)
 import           Foreign.C.Types (CInt)
+import           GHC.Int (Int32(..))
 import           Linear (V2)
 import           Apecs (Entity)
 import qualified SDL (Texture, Keycode, InputMotion)
@@ -63,6 +64,9 @@ newtype GlobalTime =
 data PlayerInput =
   PlayerInput (Map.Map SDL.Keycode SDL.InputMotion)
   deriving Show
+
+data MousePosition =
+  MousePosition (V2 Int32)
 
 data Jump = Jump
   { buttonPressed :: Bool

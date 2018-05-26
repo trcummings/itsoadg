@@ -1,18 +1,24 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Game.Render where
 
 import qualified SDL
 import           SDL (($=), Point(..))
 import           Foreign.C.Types (CInt)
+import           GHC.Int (Int32)
 import           Linear (V4(..), V2(..))
 import           Apecs (cmapM_, cmap)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe (catMaybes)
+import           Data.Coerce (coerce)
 
 import           Game.World (System')
 import           Game.Constants
   ( Unit(..)
   , toPixels
-  , spriteSize )
+  , spriteSize
+  , screenWidth
+  , screenHeight )
 import           Game.Collision
   ( AABB(..), dims, center
   , broadPhaseAABB )
@@ -22,6 +28,7 @@ import           Game.Types
   , Position(..)
   , Velocity(..)
   , BoundingBox(..)
+  , MousePosition(..)
   , Font(..)
   , Jump(..)
   , Texture(..) )
@@ -105,6 +112,30 @@ stepRender renderer = do
             ++ " Pressed: " ++ (show $ buttonPressed j)
       renderText renderer f p pText
       renderText renderer f (V2 0 1) jText
+
+  -- render constrained mouse position in radius
+  cmapM_ $ \(MousePosition (V2 x y)) -> do
+        -- get positions relative to middle of screen
+    let w = coerce (32 * screenWidth  / 2) :: Double
+        h = coerce (32 * screenHeight / 2) :: Double
+        -- coerce mouse position
+        x_ = fromIntegral x :: Double
+        y_ = fromIntegral y :: Double
+        -- get polar coordinates
+        r = sqrt $ (((x_ - w) ^ 2) + ((y_ - h) ^ 2))
+        theta = 2 * atan ((y_ - h) / (x_ - w + r))
+        -- clamp polar radius
+        r' = 4 * 32
+        -- convert back to cartesian coordinates
+        x' = r' * cos theta
+        y' = r' * sin theta
+        -- shift new coordinates back to screen position
+        px = round ((x' + w) :: Double) :: CInt
+        py = round ((y' + h) :: Double) :: CInt
+        -- lil bounding box
+        bb = toPixels <$> (V2 (Unit 0.25) (Unit 0.25))
+    liftIO $ SDL.rendererDrawColor renderer $= V4 161 62 180 maxBound
+    liftIO $ SDL.drawRect renderer (Just $ SDL.Rectangle (P $ V2 px py) bb)
 
 prepNextRender :: SDL.Renderer -> IO ()
 prepNextRender renderer = do
