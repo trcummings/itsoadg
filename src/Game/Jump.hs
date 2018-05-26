@@ -18,6 +18,13 @@ impossibleJumpState = Jump
   , isJumping = False
   , buttonPressed = True }
 
+-- F T F
+falling :: Jump
+falling = Jump
+  { isGrounded = False
+  , isJumping = True
+  , buttonPressed = False }
+
 -- T F F
 onGround :: Jump
 onGround = Jump

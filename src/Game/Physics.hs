@@ -57,7 +57,13 @@ import           Game.Types
   , PlayerInput(..)
   , PhysicsTime(..), time, accum
   , GlobalTime(..) )
-import Game.Jump (landed, onGround, jumpRequested, jumping, floating)
+import Game.Jump
+  ( landed
+  , onGround
+  , jumpRequested
+  , jumping
+  , floating
+  , falling )
 
 -- constant acceleration
 bumpX :: Unit -> System' ()
@@ -134,7 +140,7 @@ handleJumpCheck e (Collision _ normal _) = do
   when (hasJump && normal == BottomN) $ do
     jumpState <- get e :: System' Jump
     when (jumpState == jumping) $ set e landed
-    when (jumpState == floating) $ set e onGround
+    when (jumpState == floating || jumpState == falling) $ set e onGround
 
 handleCollision :: Entity -> Collision -> System' ()
 handleCollision e c = do
@@ -188,6 +194,14 @@ handleCollisions = do
 
        -- when no collisions happened, update position and velocity normally
        when (length actives == 0) $ do
+
+         -- we are not on the ground if we arent colliding with anything, but we arent
+         -- necessarily jumping
+         hasJump <- exists entity (proxy :: Jump)
+         when hasJump $ do
+           jumpState <- get entity :: System' Jump
+           when (jumpState == onGround || jumpState == landed) $ set entity falling
+
          -- update position based on time and velocity
          let p'' = p' + (v' ^* Unit dTinSeconds)
          set entity (Position p'')
