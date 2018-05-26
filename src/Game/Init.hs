@@ -38,6 +38,7 @@ import           Game.Types
   , Friction(..)
   , Font(..)
   , Jump(..) )
+import           Game.Jump (floating)
 
 characters =
      ['a'..'z']
@@ -67,7 +68,7 @@ initSystems renderer = void $ do
       , Velocity $ V2 0 0
       , Acceleration $ V2 0 0
       , BoundingBox spriteSize
-      , Jump { jumpCommandReceived = False, isJumping = False } )
+      , floating )
     , Gravity
     , spriteSheetTexture )
 

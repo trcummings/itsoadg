@@ -2,8 +2,9 @@
 
 module Game.Constants where
 
-import Linear (V2(..))
-import Foreign.C.Types (CInt)
+import           Linear (V2(..))
+import           Foreign.C.Types (CInt)
+import qualified SDL
 
 newtype Unit =
   Unit Double
@@ -16,7 +17,7 @@ toPixels :: Unit -> CInt
 toPixels (Unit a) = round (pixelsPerUnit * a)
 
 screenWidth, screenHeight :: Unit
-(screenWidth, screenHeight) = (20, 15)
+(screenWidth, screenHeight) = (40, 20)
 
 initialSize :: V2 CInt
 initialSize = V2 (toPixels screenWidth) (toPixels screenHeight)
@@ -46,4 +47,18 @@ dTinSeconds :: Double
 dTinSeconds = 1 / fps
 
 floorFriction :: Double
-floorFriction = 0.90
+floorFriction = 0.95
+
+-- better jump
+
+jumpPeak :: Unit
+jumpPeak = 4
+
+timeToJumpPeak :: Double
+timeToJumpPeak = 0.5
+
+initialJumpVy :: Unit
+initialJumpVy = (2 * jumpPeak) / Unit timeToJumpPeak
+
+initialJumpG :: Unit
+initialJumpG = (2 * jumpPeak) / (Unit timeToJumpPeak ^ 2)

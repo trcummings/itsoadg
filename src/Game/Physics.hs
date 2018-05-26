@@ -6,6 +6,7 @@ import qualified SDL
 import           Control.Monad (when, unless)
 import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
+import           Data.Map (member, insert, (!))
 import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^))
 import           Apecs
@@ -39,10 +40,12 @@ import           Game.Constants
   , screenWidth
   , screenHeight
   , maxSpeed
-  , playerSpeed )
+  , playerSpeed
+  , initialJumpVy
+  , initialJumpG )
 import           Game.Types
   ( Player(..)
-  , Jump(..), jumpCommandReceived, isJumping
+  , Jump(..), buttonPressed, isJumping, isGrounded
   , Acceleration(..)
   , Position(..)
   , Camera(..), size, ppos
@@ -51,32 +54,31 @@ import           Game.Types
   , Friction(..)
   , BoundingBox(..)
   , Gravity(..)
+  , PlayerInput(..)
   , PhysicsTime(..), time, accum
   , GlobalTime(..) )
-
+import Game.Jump (landed, onGround, jumpRequested, jumping, floating)
 
 -- constant acceleration
+bumpX :: Unit -> System' ()
 bumpX x = cmap $ \(Player, Acceleration (V2 _ y)) -> Acceleration $ V2 x y
 
-setJump x = cmap $ \(Player, Jump _ ij) ->
-  Jump { jumpCommandReceived = x, isJumping = ij }
+setJump :: System' ()
+setJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
+  when (jumpState == onGround) $ set e jumpRequested
 
--- move left
-handleArrowEvent SDL.KeycodeA SDL.Pressed  = bumpX (-playerSpeed)
-handleArrowEvent SDL.KeycodeA SDL.Released = bumpX (Unit 0)
--- move right
-handleArrowEvent SDL.KeycodeD SDL.Pressed  = bumpX playerSpeed
-handleArrowEvent SDL.KeycodeD SDL.Released = bumpX (Unit 0)
--- jump
-handleArrowEvent SDL.KeycodeW SDL.Pressed  = setJump True
-handleArrowEvent SDL.KeycodeW SDL.Released = setJump False
-handleArrowEvent _ _ = return ()
+releaseJump :: System' ()
+releaseJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
+  when (jumpState == landed) $ set e onGround
 
 handleEvent :: SDL.Event -> System' ()
-handleEvent event =
+handleEvent event = do
   case SDL.eventPayload event of
     SDL.KeyboardEvent keyboardEvent ->
-      handleArrowEvent keyCode motion
+      cmap $ \(PlayerInput m) ->
+        if (member keyCode m)
+        then PlayerInput $ insert keyCode motion m
+        else PlayerInput m
       where
         keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
         motion  = SDL.keyboardEventKeyMotion keyboardEvent
@@ -130,7 +132,9 @@ handleJumpCheck :: Entity -> Collision -> System' ()
 handleJumpCheck e (Collision _ normal _) = do
   hasJump <- exists e (proxy :: Jump)
   when (hasJump && normal == BottomN) $ do
-    set e Jump { jumpCommandReceived = False, isJumping = False }
+    jumpState <- get e :: System' Jump
+    when (jumpState == jumping) $ set e landed
+    when (jumpState == floating) $ set e onGround
 
 handleCollision :: Entity -> Collision -> System' ()
 handleCollision e c = do
@@ -224,10 +228,38 @@ clampVelocity v =
   then min v maxSpeed
   else max v (-maxSpeed)
 
+runInputUpdates :: System' ()
+runInputUpdates = do
+  PlayerInput m <- get global
+
+  case (m ! SDL.KeycodeW) of
+      SDL.Pressed  -> setJump
+      SDL.Released -> releaseJump
+
+  case (m ! SDL.KeycodeA) of
+      SDL.Pressed  -> bumpX (-playerSpeed)
+      SDL.Released -> return ()
+
+  case (m ! SDL.KeycodeD) of
+      SDL.Pressed  -> bumpX playerSpeed
+      SDL.Released -> return ()
+
 runPhysics :: System' ()
 runPhysics = do
+  -- run updates based on input map
+  runInputUpdates
+
   -- update acceleration based on gravity
-  cmap $ \(Gravity, Acceleration (V2 x _)) -> Acceleration $ V2 x gravity
+  cmap $ \(Gravity, Velocity (V2 _ vy), Acceleration (V2 ax ay)) ->
+    if vy > 0
+    then Acceleration $ V2 ax (3 * initialJumpG)
+    else Acceleration $ V2 ax initialJumpG
+
+  -- jump!
+  cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
+    Velocity (V2 vx _) <- get e :: System' (Velocity)
+    when (jumpState == jumpRequested) $ do
+      set e (Velocity $ V2 vx (-initialJumpVy), jumping)
 
   -- update velocity based on acceleration
   cmap $ \(Acceleration a, Velocity v) ->
@@ -236,13 +268,6 @@ runPhysics = do
 
   -- collisions
   handleCollisions
-
-  -- jump!
-  cmapM_ $ \(Player, Jump jcr ij, e) -> do
-    Velocity v@(V2 vx vy) <- get e :: System' (Velocity)
-    when (jcr && not ij) $ do
-      set e ( Velocity $ V2 vx (vy - 10)
-            , Jump { jumpCommandReceived = jcr, isJumping = True } )
 
   -- update camera
   stepCamera

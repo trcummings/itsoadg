@@ -92,12 +92,17 @@ stepRender renderer = do
 
   -- render small font
   cmapM_ $ \(Font f, Position p) -> do
-    cmapM_ $ \(Player, (Jump jcr ij), Position pp, Velocity pv) -> do
+    cmapM_ $ \(Player, j@(Jump _ _ _), Position pp, Velocity pv) -> do
       let pText = "Player: "
             ++ (show $ toPixels <$> pp)
             ++ ", "
             ++ (show $ toPixels <$> pv)
-          jText = "Jump: " ++ (show jcr) ++ ", " ++ (show ij)
+          jText =
+               " Jumping: " ++ (show $ isJumping j)
+            ++ ", "
+            ++ " Grounded: " ++ (show $ isGrounded j)
+            ++ ", "
+            ++ " Pressed: " ++ (show $ buttonPressed j)
       renderText renderer f p pText
       renderText renderer f (V2 0 1) jText
 

@@ -12,7 +12,9 @@ module Game.World
   , System'
   , initWorld ) where
 
-import Apecs
+import           Apecs
+import qualified Data.Map as Map (fromList)
+import qualified SDL
 
 import Game.Types
   ( Position
@@ -28,6 +30,7 @@ import Game.Types
   , Font
   , PhysicsTime(..)
   , GlobalTime(..)
+  , PlayerInput(..)
   , Jump(..) )
 
 instance Component Position where
@@ -73,6 +76,15 @@ instance Monoid GlobalTime where
 instance Component GlobalTime where
   type Storage GlobalTime = Global GlobalTime
 
+instance Monoid PlayerInput where
+  mempty = PlayerInput $ Map.fromList [
+      (SDL.KeycodeA, SDL.Released)
+    , (SDL.KeycodeD, SDL.Released)
+    , (SDL.KeycodeW, SDL.Released)
+    ]
+instance Component PlayerInput where
+  type Storage PlayerInput = Global PlayerInput
+
 instance Component Jump where
   type Storage Jump = Map Jump
 
@@ -86,6 +98,7 @@ makeWorld "World" [
   , ''Texture
   , ''GlobalTime
   , ''PhysicsTime
+  , ''PlayerInput
   , ''Gravity
   , ''Camera
   , ''CameraTarget
