@@ -52,7 +52,7 @@ floorFriction = 0.95
 -- better jump
 
 jumpPeak :: Unit
-jumpPeak = 4
+jumpPeak = 4.5
 
 timeToJumpPeak :: Double
 timeToJumpPeak = 0.5

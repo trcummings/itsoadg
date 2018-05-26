@@ -200,6 +200,7 @@ handleCollisions = do
          hasJump <- exists entity (proxy :: Jump)
          when hasJump $ do
            jumpState <- get entity :: System' Jump
+
            when (jumpState == onGround || jumpState == landed) $ set entity falling
 
          -- update position based on time and velocity
@@ -242,21 +243,23 @@ clampVelocity v =
   then min v maxSpeed
   else max v (-maxSpeed)
 
+bumpSpeed :: SDL.InputMotion -> SDL.InputMotion -> System' ()
+bumpSpeed SDL.Pressed  SDL.Released = bumpX (-playerSpeed)
+bumpSpeed SDL.Released SDL.Pressed  = bumpX playerSpeed
+bumpSpeed SDL.Released SDL.Released = bumpX (Unit 0)
+bumpSpeed SDL.Pressed  SDL.Pressed  = return ()
+
 runInputUpdates :: System' ()
 runInputUpdates = do
   PlayerInput m <- get global
+  let aPress = m ! SDL.KeycodeA
+      dPress = m ! SDL.KeycodeD
+
+  bumpSpeed aPress dPress
 
   case (m ! SDL.KeycodeW) of
       SDL.Pressed  -> setJump
       SDL.Released -> releaseJump
-
-  case (m ! SDL.KeycodeA) of
-      SDL.Pressed  -> bumpX (-playerSpeed)
-      SDL.Released -> return ()
-
-  case (m ! SDL.KeycodeD) of
-      SDL.Pressed  -> bumpX playerSpeed
-      SDL.Released -> return ()
 
 runPhysics :: System' ()
 runPhysics = do
