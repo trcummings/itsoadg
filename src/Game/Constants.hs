@@ -22,12 +22,6 @@ screenWidth, screenHeight :: Unit
 initialSize :: V2 CInt
 initialSize = V2 (toPixels screenWidth) (toPixels screenHeight)
 
--- playerSpeed :: Unit
--- playerSpeed = 20
-
--- gravity :: Unit
--- gravity = 10
-
 maxSpeed :: Unit
 maxSpeed = 17
 
@@ -69,7 +63,7 @@ playerTopSpeed :: Unit
 playerTopSpeed = 5
 
 timeToTopSpeed :: Double
-timeToTopSpeed = 1.5 -- in seconds
+timeToTopSpeed = 1 -- in seconds
 
 timeToStopFromTopSpeed :: Double
 timeToStopFromTopSpeed = 0.25

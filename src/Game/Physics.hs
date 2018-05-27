@@ -8,7 +8,7 @@ import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Map ((!))
 import           Data.List (partition)
-import           Linear (V2(..), V4(..), (^*), (*^))
+import           Linear (V2(..), V4(..), (^*), (*^), (^/))
 import           Apecs
   ( Entity
   , cmap
@@ -35,6 +35,7 @@ import           Game.Constants
   , dT
   , dTinSeconds
   , maxSpeed
+  , playerTopSpeed
   , screenWidth
   , screenHeight
   , runningAccel
@@ -66,13 +67,18 @@ bumpVelocityX :: Velocity -> Unit -> Velocity
 bumpVelocityX (Velocity (V2 vx vy)) ax =
    Velocity $ V2 (vx + (ax * Unit dTinSeconds)) vy
 
+playerBothButtons :: System' ()
+playerBothButtons = cmapM_ $ \(Player, v@(Velocity (V2 vx _))) ->
+  if vx > 0 then playerRun (-1) else playerRun 1
+
 playerRun :: Unit -> System' ()
-playerRun sign = cmap $ \(Player, v@(Velocity (V2 vx _))) ->
-  let ax
-       | sign ==   1  = if (vx < 0) then 2 * (-stoppingAccel) else   runningAccel
-       | sign == (-1) = if (vx > 0) then 2 *   stoppingAccel  else (-runningAccel)
-       | otherwise = 0
-  in bumpVelocityX v ax
+playerRun sign = cmapM_ $ \(Player, v@(Velocity (V2 vx _)), e) -> do
+  when (abs vx < playerTopSpeed) $ do
+    let ax
+         | sign ==   1  = if (vx < 0) then 2 * (-stoppingAccel) else   runningAccel
+         | sign == (-1) = if (vx > 0) then 2 *   stoppingAccel  else (-runningAccel)
+         | otherwise = 0
+    set e (bumpVelocityX v ax)
 
 playerStop :: System' ()
 playerStop = cmap $ \(Player, v@(Velocity (V2 vx vy))) ->
@@ -165,30 +171,27 @@ testCollision e (_, _, e') = do
             hasZeroNormal
         ||  lowCollisionTime
         || (hasZeroNormal && noPenetration)
-  -- collision too slow to use swept resolution, or we hit a corner
+
   if (useSimpleResolution)
+  -- collision too slow to use swept resolution, or we hit a corner
   then do
     let (V2 vx vy) = v'
         v'' = case normal of
-          NoneN   -> v'
+          NoneN   -> v' + (pVector ^/ Unit dTinSeconds)
           TopN    -> V2 vx 0
           BottomN -> V2 vx 0
           LeftN   -> V2 0 vy
           RightN  -> V2 0 vy
+        willNotEscape = aabbCheck
+          (broadPhaseAABB (BoundingBox bb1) (Position p1) (Velocity v''))
+          box2
         -- handle floor corners
-        p' = if (hasZeroNormal && not noPenetration)
+        p' = if (hasZeroNormal && not noPenetration && willNotEscape)
+             -- push out of wall
              then p1 + pVector
-             else p1
-    liftIO $ putStrLn $ "_________"
-    liftIO $ putStrLn $ show normal
-    liftIO $ putStrLn $ show pVector
-    liftIO $ putStrLn $ show p1
-    liftIO $ putStrLn $ show p'
-    liftIO $ putStrLn $ show v'
-    liftIO $ putStrLn $ show v''
-    liftIO $ putStrLn $ "_________"
-
-    set e (Velocity v'', Position $ p' + (v'' ^* Unit dTinSeconds))
+             -- otherwise update normally
+             else p1 + (v'' ^* Unit dTinSeconds)
+    set e (Velocity v'', Position p')
   -- we need a swept collision resolution
   else handleBaseCollision e collision
   -- move on to continued resolution
@@ -236,7 +239,7 @@ bumpSpeed :: SDL.InputMotion -> SDL.InputMotion -> System' ()
 bumpSpeed SDL.Pressed  SDL.Released = playerRun (-1)
 bumpSpeed SDL.Released SDL.Pressed  = playerRun   1
 bumpSpeed SDL.Released SDL.Released = playerStop
-bumpSpeed SDL.Pressed  SDL.Pressed  = return ()
+bumpSpeed SDL.Pressed  SDL.Pressed  = playerBothButtons
 
 runInputUpdates :: System' ()
 runInputUpdates = do
@@ -272,7 +275,7 @@ runPhysics = do
   cmap $ \(Velocity v@(V2 vx vy)) ->
     if (vx > (-0.05) && vx < 0.05)
     then Velocity $ V2 0 vy
-    else Velocity v
+    else Velocity $ clampVelocity <$> v
 
   -- cmapM_ $ \(Player, Velocity v) -> do
   --   liftIO $ putStrLn $ show v
