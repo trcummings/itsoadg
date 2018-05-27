@@ -64,9 +64,9 @@ initSystems renderer = void $ do
   -- entities
   player <- newEntity ( -- player
       Player
-    , ( Position playerPos
+    , ( Position $ V2 7 ((screenHeight / 2) - 1)
       , Velocity $ V2 0 0
-      , Acceleration $ V2 0 0
+      -- , Acceleration $ V2 0 0
       , BoundingBox spriteSize
       , floating )
     , Gravity
@@ -75,7 +75,7 @@ initSystems renderer = void $ do
   newEntity ( -- camera
       Camera { size = V2 screenWidth screenHeight, ppos = V2 0 0 }
     , CameraTarget player
-    , Position playerPos
+    , Position $ V2 7 ((screenHeight / 2) - 1)
     , Acceleration $ V2 0 0 )
 
   newEntity ( -- small font
@@ -89,6 +89,11 @@ initSystems renderer = void $ do
 
   newEntity ( --floating platform
       Position $ V2 5 (screenHeight / 2)
+    , Friction floorFriction
+    , BoundingBox $ V2 6 1 )
+
+  newEntity ( --floating platform 2
+      Position $ V2 13 (screenHeight / 2)
     , Friction floorFriction
     , BoundingBox $ V2 6 1 )
 

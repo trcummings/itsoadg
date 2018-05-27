@@ -34,13 +34,11 @@ import           Game.Constants
   ( Unit(..)
   , dT
   , dTinSeconds
-  , playerSpeed
   , maxSpeed
-  , gravity
   , screenWidth
   , screenHeight
-  , maxSpeed
-  , playerSpeed
+  , runningAccel
+  , stoppingAccel
   , initialJumpVy
   , initialJumpG )
 import           Game.Types
@@ -64,9 +62,22 @@ import Game.Jump
   , floating
   , falling )
 
--- constant acceleration
-bumpX :: Unit -> System' ()
-bumpX x = cmap $ \(Player, Acceleration (V2 _ y)) -> Acceleration $ V2 x y
+bumpVelocityX :: Velocity -> Unit -> Velocity
+bumpVelocityX (Velocity (V2 vx vy)) ax =
+   Velocity $ V2 (vx + (ax * Unit dTinSeconds)) vy
+
+playerRun :: Unit -> System' ()
+playerRun sign = cmap $ \(Player, v@(Velocity (V2 vx _))) ->
+  let ax
+       | sign ==   1  = if (vx < 0) then 2 * (-stoppingAccel) else   runningAccel
+       | sign == (-1) = if (vx > 0) then 2 *   stoppingAccel  else (-runningAccel)
+       | otherwise = 0
+  in bumpVelocityX v ax
+
+playerStop :: System' ()
+playerStop = cmap $ \(Player, v@(Velocity (V2 vx vy))) ->
+  let ax = if (vx > 0) then stoppingAccel else (-stoppingAccel)
+  in  bumpVelocityX v ax
 
 setJump :: System' ()
 setJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
@@ -75,6 +86,7 @@ setJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
 releaseJump :: System' ()
 releaseJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
   when (jumpState == landed) $ set e onGround
+
 
 type BoxEntity = (BoundingBox, Position, Entity)
 
@@ -90,7 +102,6 @@ inNarrowPhase e sweptBox (BoundingBox bb, Position p, e') =
 handleBaseCollision :: Entity -> Collision -> System' ()
 handleBaseCollision e c@(Collision collisionTime normal _) = do
   ((Velocity v@(V2 vx vy)), Position p) <- get e :: System' (Velocity, Position)
-
   let cTime = dTinSeconds * collisionTime
       remainingTime = dTinSeconds * (1 - collisionTime)
       vNormal@(V2 normalX normalY) = toVector normal
@@ -99,9 +110,9 @@ handleBaseCollision e c@(Collision collisionTime normal _) = do
         if (normal == TopN || normal == BottomN)
         then V2 vx (dotProd * normalX)
         else V2 (dotProd * normalY) vy
-      p' = p + v' ^* Unit cTime
-
+      p' = p + v ^* Unit cTime
   set e (Velocity v', Position p')
+
 
 handleFloor :: Entity -> Collision -> System' ()
 handleFloor e c@(Collision _ normal e') = do
@@ -128,10 +139,9 @@ handleJumpCheck e (Collision _ normal _) = do
     when (jumpState == jumping) $ set e landed
     when (jumpState == floating || jumpState == falling) $ set e onGround
 
-handleCollision :: Entity -> Collision -> System' ()
-handleCollision e c = do
-  handleBaseCollision e c
-  handleFloor e c
+handlePostCollision :: Entity -> Collision -> System' ()
+handlePostCollision e c = do
+  -- handleFloor e c
   handleJumpCheck e c
 
 type GetVelocity  = System' (Velocity)
@@ -141,26 +151,48 @@ type GetSweptAABB = System' (BoundingBox, Position, Velocity)
 testCollision :: Entity -> BoxEntity -> System' ()
 testCollision e (_, _, e') = do
   -- get current collision information
-  (BoundingBox bb1, Position p1, v@(Velocity v')) <- get e  :: GetSweptAABB
-  (BoundingBox bb2, Position p2)    <- get e' :: GetAABB
+  (BoundingBox bb1, Position p1, v@(Velocity v')) <- get e :: GetSweptAABB
+  (BoundingBox bb2, Position p2) <- get e' :: GetAABB
   let box1 = AABB { center = p1, dims = bb1 }
       box2 = AABB { center = p2, dims = bb2 }
       (collisionTime, normal) = sweepAABB v box1 box2
       collision = Collision collisionTime normal e'
+      pVector = penetrationVector box1 box2
+      lowCollisionTime = collisionTime * dTinSeconds < 0.00005
+      noPenetration = (abs <$> pVector) == V2 0 0
+      hasZeroNormal = normal == NoneN
+      useSimpleResolution =
+            hasZeroNormal
+        ||  lowCollisionTime
+        || (hasZeroNormal && noPenetration)
+  -- collision too slow to use swept resolution, or we hit a corner
+  if (useSimpleResolution)
+  then do
+    let (V2 vx vy) = v'
+        v'' = case normal of
+          NoneN   -> v'
+          TopN    -> V2 vx 0
+          BottomN -> V2 vx 0
+          LeftN   -> V2 0 vy
+          RightN  -> V2 0 vy
+        -- handle floor corners
+        p' = if (hasZeroNormal && not noPenetration)
+             then p1 + pVector
+             else p1
+    liftIO $ putStrLn $ "_________"
+    liftIO $ putStrLn $ show normal
+    liftIO $ putStrLn $ show pVector
+    liftIO $ putStrLn $ show p1
+    liftIO $ putStrLn $ show p'
+    liftIO $ putStrLn $ show v'
+    liftIO $ putStrLn $ show v''
+    liftIO $ putStrLn $ "_________"
 
-  -- we hit a corner most likely
-  when (normal == NoneN) $ do
-    -- if we're touching a side of a box
-    let p' = if (aabbCheck box1 box2)
-             -- adjust position by penetration vector
-             then p1 + (penetrationVector box1 box2)
-             -- otherwise move normally (touching just a corner)
-             else p1 + (v' ^* Unit dTinSeconds)
-    set e (Position p')
-
-  -- we have a normal collision
-  unless (normal == NoneN) $ do
-    handleCollision e collision
+    set e (Velocity v'', Position $ p' + (v'' ^* Unit dTinSeconds))
+  -- we need a swept collision resolution
+  else handleBaseCollision e collision
+  -- move on to continued resolution
+  handlePostCollision e collision
 
 handleCollisions :: System' ()
 handleCollisions = do
@@ -201,9 +233,9 @@ clampVelocity v =
   else max v (-maxSpeed)
 
 bumpSpeed :: SDL.InputMotion -> SDL.InputMotion -> System' ()
-bumpSpeed SDL.Pressed  SDL.Released = bumpX (-playerSpeed)
-bumpSpeed SDL.Released SDL.Pressed  = bumpX playerSpeed
-bumpSpeed SDL.Released SDL.Released = bumpX (Unit 0)
+bumpSpeed SDL.Pressed  SDL.Released = playerRun (-1)
+bumpSpeed SDL.Released SDL.Pressed  = playerRun   1
+bumpSpeed SDL.Released SDL.Released = playerStop
 bumpSpeed SDL.Pressed  SDL.Pressed  = return ()
 
 runInputUpdates :: System' ()
@@ -218,16 +250,17 @@ runInputUpdates = do
       SDL.Pressed  -> setJump
       SDL.Released -> releaseJump
 
+
 runPhysics :: System' ()
 runPhysics = do
   -- run updates based on input map
   runInputUpdates
 
   -- update acceleration based on gravity
-  cmap $ \(Gravity, Velocity (V2 _ vy), Acceleration (V2 ax ay)) ->
+  cmap $ \(Gravity, Velocity (V2 vx vy)) ->
     if vy > 0
-    then Acceleration $ V2 ax (3 * initialJumpG)
-    else Acceleration $ V2 ax initialJumpG
+    then Velocity $ V2 vx (vy + (3 * initialJumpG * Unit dTinSeconds))
+    else Velocity $ V2 vx (vy + (initialJumpG * Unit dTinSeconds))
 
   -- jump!
   cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
@@ -235,12 +268,17 @@ runPhysics = do
     when (jumpState == jumpRequested) $ do
       set e (Velocity $ V2 vx (-initialJumpVy), jumping)
 
-  -- update velocity based on acceleration
-  cmap $ \(Acceleration a, Velocity v) ->
-    let v' = (v + (a ^* Unit dTinSeconds))
-    in Velocity $ clampVelocity <$> v'
+  -- clamp velocity
+  cmap $ \(Velocity v@(V2 vx vy)) ->
+    if (vx > (-0.05) && vx < 0.05)
+    then Velocity $ V2 0 vy
+    else Velocity v
+
+  -- cmapM_ $ \(Player, Velocity v) -> do
+  --   liftIO $ putStrLn $ show v
 
   -- collisions
+  -- position will only be modified in here (as well as other things)
   handleCollisions
 
   -- update camera

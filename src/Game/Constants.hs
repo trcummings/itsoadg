@@ -22,14 +22,14 @@ screenWidth, screenHeight :: Unit
 initialSize :: V2 CInt
 initialSize = V2 (toPixels screenWidth) (toPixels screenHeight)
 
-playerSpeed :: Unit
-playerSpeed = 20
+-- playerSpeed :: Unit
+-- playerSpeed = 20
 
-gravity :: Unit
-gravity = 10
+-- gravity :: Unit
+-- gravity = 10
 
 maxSpeed :: Unit
-maxSpeed = 30
+maxSpeed = 17
 
 playerPos :: V2 Unit
 playerPos = V2 10 0
@@ -55,10 +55,27 @@ jumpPeak :: Unit
 jumpPeak = 4.5
 
 timeToJumpPeak :: Double
-timeToJumpPeak = 0.5
+timeToJumpPeak = 0.5 -- in seconds
 
 initialJumpVy :: Unit
 initialJumpVy = (2 * jumpPeak) / Unit timeToJumpPeak
 
 initialJumpG :: Unit
 initialJumpG = (2 * jumpPeak) / (Unit timeToJumpPeak ^ 2)
+
+
+-- horizontal movement
+playerTopSpeed :: Unit
+playerTopSpeed = 5
+
+timeToTopSpeed :: Double
+timeToTopSpeed = 1.5 -- in seconds
+
+timeToStopFromTopSpeed :: Double
+timeToStopFromTopSpeed = 0.25
+
+runningAccel :: Unit
+runningAccel = playerTopSpeed / Unit timeToTopSpeed
+
+stoppingAccel :: Unit
+stoppingAccel = (-playerTopSpeed) / Unit timeToStopFromTopSpeed
