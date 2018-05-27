@@ -63,13 +63,20 @@ import Game.Jump
   , floating
   , falling )
 
+
+oneBumpPerSecond :: Unit
+oneBumpPerSecond = (4 / 32) * Unit dTinSeconds
+
 bumpVelocityX :: Velocity -> Unit -> Velocity
 bumpVelocityX (Velocity (V2 vx vy)) ax =
    Velocity $ V2 (vx + (ax * Unit dTinSeconds)) vy
 
 playerBothButtons :: System' ()
-playerBothButtons = cmapM_ $ \(Player, v@(Velocity (V2 vx _))) ->
-  if vx > 0 then playerRun (-1) else playerRun 1
+playerBothButtons = cmap $ \(Player, v@(Velocity (V2 vx _))) ->
+  bumpVelocityX v (
+    if vx > 0
+    then   stoppingAccel
+    else (-stoppingAccel) )
 
 playerRun :: Unit -> System' ()
 playerRun sign = cmapM_ $ \(Player, v@(Velocity (V2 vx _)), e) -> do
@@ -82,7 +89,10 @@ playerRun sign = cmapM_ $ \(Player, v@(Velocity (V2 vx _)), e) -> do
 
 playerStop :: System' ()
 playerStop = cmap $ \(Player, v@(Velocity (V2 vx vy))) ->
-  let ax = if (vx > 0) then stoppingAccel else (-stoppingAccel)
+  let ax
+       | vx > 0    =   stoppingAccel
+       | vx < 0    = (-stoppingAccel)
+       | otherwise = 0
   in  bumpVelocityX v ax
 
 setJump :: System' ()
@@ -273,12 +283,9 @@ runPhysics = do
 
   -- clamp velocity
   cmap $ \(Velocity v@(V2 vx vy)) ->
-    if (vx > (-0.05) && vx < 0.05)
+    if (vx > (-oneBumpPerSecond) && vx < oneBumpPerSecond)
     then Velocity $ V2 0 vy
     else Velocity $ clampVelocity <$> v
-
-  -- cmapM_ $ \(Player, Velocity v) -> do
-  --   liftIO $ putStrLn $ show v
 
   -- collisions
   -- position will only be modified in here (as well as other things)
