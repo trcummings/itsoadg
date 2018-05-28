@@ -21,15 +21,16 @@ import           Apecs
   , global )
 
 import           Game.World (System')
-import           Game.Collision
+import           Game.AABB
   ( AABB(..), center, dims
-  , Collision(..)
-  , CNormal(..)
-  , toVector
   , aabbCheck
   , sweepAABB
   , penetrationVector
   , broadPhaseAABB )
+import           Game.Collision
+  ( Collision(..)
+  , CNormal(..)
+  , toVector )
 import           Game.Constants
   ( Unit(..)
   , dT

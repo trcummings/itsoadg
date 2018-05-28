@@ -23,7 +23,7 @@ import           Game.Constants
   , spriteSize
   , screenWidth
   , screenHeight )
-import           Game.Collision
+import           Game.AABB
   ( AABB(..), dims, center
   , broadPhaseAABB )
 import           Game.Types
@@ -53,28 +53,6 @@ loadTexture :: SDL.Renderer -> FilePath -> IO Texture
 loadTexture r filePath = do
   surface <- getDataFileName filePath >>= Image.load
   toTexture r surface
-
--- -- | Produce a new 'SDL.Surface' based on an existing one, but
--- -- optimized for blitting to the specified 'SDL.PixelFormat'.
--- convertSurface :: SDL.Surface -> SDL.PixelFormat -> IO SDL.Surface
--- convertSurface (SDL.Surface s _) pixFmt = do
---   fmt <- Raw.allocFormat (Numbered.toNumber pixFmt)
---   surface <- SDL.Surface <$> Raw.convertSurface s fmt 0 <*> pure Nothing
---   surface <$ Raw.freeFormat fmt
-
--- loadSurface :: FilePath -> Maybe Animate.Color -> IO SDL.Surface
--- loadSurface path alpha = do
---   surface0 <- Image.load path
---   surface <- convertSurface surface0 SDL.RGBA8888
---   SDL.freeSurface surface0
---   case alpha of
---     Just (r,g,b) -> SDL.surfaceColorKey surface $= (Just $ V4 r g b 0x00)
---     Nothing -> return ()
---   return surface
-
--- loadSpriteTexture :: SDL.Renderer -> FilePath -> Maybe Animate.Color -> IO SDL.Texture
--- loadSpriteTexture renderer path c =
---   SDL.createTextureFromSurface renderer =<< loadSurface path c
 
 renderTexture :: SDL.Renderer
               -> Texture
