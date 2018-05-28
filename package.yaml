@@ -13,6 +13,7 @@ extra-source-files:
 data-files:
 - assets/*.bmp
 - assets/*.TTF
+- assets/*.json
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -27,12 +28,15 @@ dependencies:
 - base >= 4.7 && < 5
 - sdl2
 - sdl2-ttf
+- sdl2-image
+- aeson
 - text
 - text-conversions
 - containers
 - extra
 - linear
 - apecs >= 0.3.0.2
+- animate >= 0.6.1
 
 library:
   source-dirs: src
@@ -45,6 +49,8 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    # - -fllvm
+    # - -optlo-O3
     dependencies:
     - itsoadg
 

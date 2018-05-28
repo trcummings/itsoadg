@@ -10,7 +10,9 @@
 module Game.Init where
 
 import qualified SDL
-import           SDL.Font as TTF (free, load, blended)
+import qualified Animate
+import           SDL.Font  as TTF (free, load, blended)
+import           SDL (($=))
 import           Linear (V4(..), V2(..))
 import           Data.Text (singleton)
 import           Control.Monad (void)
@@ -37,14 +39,19 @@ import           Game.Types
   , CameraTarget(..)
   , Friction(..)
   , Font(..)
-  , Jump(..) )
+  , Jump(..)
+  , Seconds(..))
 import           Game.Jump (floating)
+import           Game.Player (PlayerKey(..))
+import           Game.Sprite (loadSpriteSheet)
 
 characters =
      ['a'..'z']
   ++ ['A'..'Z']
   ++ ['0'..'9']
   ++ [' ', ':', ',', '-', '.']
+
+type SpriteAnimation = IO (Animate.SpriteSheet PlayerKey SDL.Texture Seconds)
 
 initSystems :: SDL.Renderer -> System' ()
 initSystems renderer = void $ do
@@ -60,6 +67,16 @@ initSystems renderer = void $ do
       ) $ characters
   -- after we convert our font to textures we dont need the resource anymore
   TTF.free smallFont
+
+  -- -- load in player spritesheet
+  let playerSpriteSheet = liftIO $ loadSpriteSheet renderer "assets/player.json" :: SpriteAnimation
+  -- playerSprites <- liftIO $
+  --   Animate.readSpriteSheetJSON (
+  --     loadSpriteTexture
+  --     renderer
+  --     "assets/player.json"
+  --     (Just (0xff,0x00,0xff)) ) :: SpriteAnimation
+
 
   -- entities
   player <- newEntity ( -- player

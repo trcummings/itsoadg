@@ -4,7 +4,7 @@ import Linear (V2(..))
 import Apecs (Entity)
 
 import Game.Types (Velocity(..), Position(..), BoundingBox(..))
-import Game.Constants (Unit(..), dTinSeconds)
+import Game.Constants (Unit(..), frameDeltaSeconds)
 
 data AABB = AABB
   { center :: (V2 Unit)   -- x y pos
@@ -76,8 +76,8 @@ broadPhaseAABB :: BoundingBox -> Position -> Velocity -> AABB
 broadPhaseAABB (BoundingBox (V2 w  h ))
                (Position    (V2 x  y ))
                (Velocity    (V2 vx vy)) =
-  let xMod = vx * Unit dTinSeconds
-      yMod = vy * Unit dTinSeconds
+  let xMod = vx * Unit frameDeltaSeconds
+      yMod = vy * Unit frameDeltaSeconds
       x' = if vx > 0 then x        else x + xMod
       y' = if vy > 0 then y        else y + yMod
       w' = if vx > 0 then w + xMod else w - xMod
@@ -116,10 +116,10 @@ sweepAABB (Velocity (V2 (Unit b1vx) (Unit b1vy)))
       getXThrough xInvEntry xInvExit =
         if b1vx == 0
         then (-10000000, 10000000)
-        else ( xInvEntry / (b1vx * dTinSeconds)
-             , xInvExit  / (b1vx * dTinSeconds) )
+        else ( xInvEntry / (b1vx * frameDeltaSeconds)
+             , xInvExit  / (b1vx * frameDeltaSeconds) )
       getYThrough yInvEntry yInvExit =
         if b1vy == 0
         then (-10000000, 10000000)
-        else ( yInvEntry / (b1vy * dTinSeconds)
-             , yInvExit  / (b1vy * dTinSeconds) )
+        else ( yInvEntry / (b1vy * frameDeltaSeconds)
+             , yInvExit  / (b1vy * frameDeltaSeconds) )

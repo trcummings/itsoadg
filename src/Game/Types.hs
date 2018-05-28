@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Game.Types where
 
 import qualified Data.Map as Map (Map)
@@ -6,6 +8,8 @@ import           GHC.Int (Int32(..))
 import           Linear (V2)
 import           Apecs (Entity)
 import qualified SDL (Texture, Keycode, InputMotion)
+import qualified Animate
+import           Data.Aeson (FromJSON(..), ToJSON(..))
 
 import           Game.Constants (Unit(..))
 
@@ -40,6 +44,12 @@ data CameraTarget =
 
 data Texture =
   Texture SDL.Texture (V2 CInt)
+
+newtype Seconds =
+  Seconds Float
+  deriving (Show, Eq, Num, ToJSON, FromJSON, Fractional, Ord)
+-- newtype SpriteSheet =
+--   SpriteSheet Animate.SpriteSheet Animate.KeyName SDL.Texture Seconds
 
 data Gravity = Gravity
 
