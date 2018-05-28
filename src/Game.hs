@@ -67,6 +67,10 @@ main = do
   window <- SDL.createWindow "ITSOADG" SDL.defaultWindow { SDL.windowInitialSize = initialSize }
   renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
 
+  -- register joystick to receive events from it
+  joysticks <- SDL.availableJoysticks
+  mapM_ SDL.openJoystick joysticks
+
   -- initialize Apecs world & add entities
   world <- initWorld
   runSystem (initSystems renderer) world
