@@ -12,6 +12,7 @@ import qualified Animate
 import           Data.Aeson (FromJSON(..), ToJSON(..))
 
 import           Game.Constants (Unit(..))
+import           Game.AnimationKeys (AnimationKey(..))
 
 newtype Position =
   Position (V2 Unit) -- center point
@@ -48,8 +49,8 @@ data Texture =
 newtype Seconds =
   Seconds Float
   deriving (Show, Eq, Num, ToJSON, FromJSON, Fractional, Ord)
--- newtype SpriteSheet =
---   SpriteSheet Animate.SpriteSheet Animate.KeyName SDL.Texture Seconds
+newtype SpriteSheet =
+  SpriteSheet (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
 
 data Gravity = Gravity
 

@@ -26,6 +26,7 @@ import Game.Types
   , Camera
   , CameraTarget
   , Texture
+  , SpriteSheet
   , Gravity
   , Friction
   , Font
@@ -58,6 +59,9 @@ instance Component CameraTarget where
 
 instance Component Texture where
   type Storage Texture = Map Texture
+
+instance Component SpriteSheet where
+  type Storage SpriteSheet = Map SpriteSheet
 
 instance Component Gravity where
   type Storage Gravity = Map Gravity
@@ -103,6 +107,7 @@ makeWorld "World" [
   , ''Friction
   , ''Player
   , ''Texture
+  , ''SpriteSheet
   , ''GlobalTime
   , ''PhysicsTime
   , ''PlayerInput

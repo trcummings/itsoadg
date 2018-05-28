@@ -37,6 +37,7 @@ import           Game.Types
   , Gravity(..)
   , Camera(..)
   , CameraTarget(..)
+  , SpriteSheet(..)
   , Friction(..)
   , Font(..)
   , Jump(..)
@@ -51,7 +52,7 @@ characters =
   ++ ['0'..'9']
   ++ [' ', ':', ',', '-', '.']
 
-type SpriteAnimation = IO (Animate.SpriteSheet PlayerKey SDL.Texture Seconds)
+type SpriteAnimation = System' (Animate.SpriteSheet PlayerKey SDL.Texture Seconds)
 
 initSystems :: SDL.Renderer -> System' ()
 initSystems renderer = void $ do
@@ -69,14 +70,8 @@ initSystems renderer = void $ do
   TTF.free smallFont
 
   -- -- load in player spritesheet
-  let playerSpriteSheet = liftIO $ loadSpriteSheet renderer "assets/player.json" :: SpriteAnimation
-  -- playerSprites <- liftIO $
-  --   Animate.readSpriteSheetJSON (
-  --     loadSpriteTexture
-  --     renderer
-  --     "assets/player.json"
-  --     (Just (0xff,0x00,0xff)) ) :: SpriteAnimation
-
+  playerSpriteSheet <- liftIO $
+    loadSpriteSheet renderer "assets/player.json" :: SpriteAnimation
 
   -- entities
   player <- newEntity ( -- player
@@ -87,6 +82,7 @@ initSystems renderer = void $ do
       , BoundingBox spriteSize
       , floating )
     , Gravity
+    , SpriteSheet playerSpriteSheet
     , spriteSheetTexture )
 
   newEntity ( -- camera
