@@ -12,6 +12,8 @@ data AABB = AABB
   , dims   :: (V2 Unit) } -- width and height
   deriving Show
 
+type BoxEntity = (BoundingBox, Position, Entity)
+
 aabbCheck :: AABB -> AABB -> Bool
 aabbCheck (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
   not ( (x1 + w1) < x2
@@ -106,4 +108,7 @@ sweepAABB (Velocity (V2 (Unit b1vx) (Unit b1vy)))
         else ( yInvEntry / (b1vy * frameDeltaSeconds)
              , yInvExit  / (b1vy * frameDeltaSeconds) )
 
+inNarrowPhase :: Entity -> AABB -> BoxEntity -> Bool
+inNarrowPhase e sweptBox (BoundingBox bb, Position p, e') =
+  (not $ e' == e) && (aabbCheck sweptBox $ AABB { center = p, dims = bb })
 

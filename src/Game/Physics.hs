@@ -23,10 +23,12 @@ import           Apecs
 import           Game.World (System')
 import           Game.AABB
   ( AABB(..), center, dims
+  , BoxEntity(..)
   , aabbCheck
   , sweepAABB
   , penetrationVector
-  , broadPhaseAABB )
+  , broadPhaseAABB
+  , inNarrowPhase )
 import           Game.Collision
   ( Collision(..)
   , CNormal(..)
@@ -105,16 +107,12 @@ releaseJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
   when (jumpState == landed) $ set e onGround
 
 
-type BoxEntity = (BoundingBox, Position, Entity)
 
 hasVelComponent :: BoxEntity -> System' Bool
 hasVelComponent (_, _, e) = do
   hasVelocity <- exists e (proxy :: Velocity)
   return hasVelocity
 
-inNarrowPhase :: Entity -> AABB -> BoxEntity -> Bool
-inNarrowPhase e sweptBox (BoundingBox bb, Position p, e') =
-  (not $ e' == e) && (aabbCheck sweptBox $ AABB { center = p, dims = bb })
 
 handleBaseCollision :: Entity -> Collision -> System' ()
 handleBaseCollision e c@(Collision collisionTime normal _) = do
