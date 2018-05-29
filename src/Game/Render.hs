@@ -17,6 +17,7 @@ import           Data.Maybe (catMaybes)
 import           Data.Coerce (coerce)
 
 import           Game.World (System')
+import           Game.Player (Player(..))
 import           Game.Constants
   ( Unit(..)
   , toPixels
@@ -27,8 +28,7 @@ import           Game.AABB
   ( AABB(..), dims, center
   , broadPhaseAABB )
 import           Game.Types
-  ( Player(..)
-  , Camera(..)
+  ( Camera(..)
   , Position(..)
   , Velocity(..)
   , BoundingBox(..)
@@ -81,7 +81,7 @@ stepRender renderer = do
   -- get camera position
   cmapM_ $ \(Camera _ _, Position cameraPos) -> do
     -- render "player"
-    cmapM_ $ \(Player, Position p, Velocity v, Texture t s) -> do
+    cmapM_ $ \(Player _, Position p, Velocity v, Texture t s) -> do
       liftIO $ renderTexture
         renderer
         (Texture t s)
@@ -103,8 +103,8 @@ stepRender renderer = do
 
   -- render small font
   cmapM_ $ \(Font f, Position p) -> do
-    cmapM_ $ \(Player, j@(Jump _ _ _), Position pp, Velocity pv) -> do
-      let pText = "Player: "
+    cmapM_ $ \(Player _, j@(Jump _ _ _), Position pp, Velocity pv) -> do
+      let pText = "Player _: "
             ++ (show $ toPixels <$> pp)
             ++ ", "
             ++ (show $ toPixels <$> pv)

@@ -6,13 +6,14 @@ module Game.Player where
 import           Data.Text
 import qualified Animate
 
--- data Step a
---   = Step'Change a a -- | Prev, Next
---   | Step'Sustain a
---   deriving (Show, Eq)
+import           Game.Types (Animations(..))
+import           Game.Constants (Seconds(..), frameDeltaSeconds)
+import           Game.Step (Step(..))
 
--- type Animations key = Animate.Animations key (Animate.SpriteClip key) Float
--- type DrawSprite key m = Animate.SpriteClip key -> (Int, Int) -> m ()
+-- component
+data Player =
+  Player PlayerAction
+  deriving Show
 
 data PlayerKey =
     PlayerKey'RWalk
@@ -23,9 +24,14 @@ data PlayerKey =
   | PlayerKey'LIdle
   deriving (Show, Eq, Ord, Bounded, Enum)
 
--- data PlayerAction =
---     PlayerAction'MoveRight
---   | PlayerAction'Jump
+data PlayerAction =
+    PlayerAction'MoveRight
+  | PlayerAction'JumpRight
+  | PlayerAction'IdleRight
+  | PlayerAction'MoveLeft
+  | PlayerAction'JumpLeft
+  | Playeraction'IdleLeft
+  deriving (Show, Eq)
 
 instance Animate.KeyName PlayerKey where
   keyName = playerKey'keyName
@@ -41,8 +47,8 @@ playerKey'keyName = \case
 
 -- stepPlayerFramePosition :: Step PlayerAction
 --                         -> Animations PlayerKey
---                         -> Animate.Position PlayerKey Float
---                         -> Animate.Position PlayerKey Float
+--                         -> Animate.Position PlayerKey Seconds
+--                         -> Animate.Position PlayerKey Seconds
 -- stepPlayerFramePosition (Step'Sustain _) animations pos =
---   Animate.stepPosition animations pos frameDeltaSeconds
+--   Animate.stepPosition animations pos (realToFrac frameDeltaSeconds)
 -- stepPlayerFramePosition (Step'Change _ pA) _ _ = case pA of

@@ -13,16 +13,18 @@ module Game.World
   , initWorld ) where
 
 import           Apecs
+import qualified Animate (KeyName)
 import qualified Data.Map as Map (fromList)
 import qualified SDL
 import           Linear (V2(..))
+import qualified KeyState (initKeyState)
 
+import           Game.Player (Player(..))
 import Game.Types
   ( Position
   , Velocity
   , Acceleration
   , BoundingBox
-  , Player
   , Camera
   , CameraTarget
   , Texture
@@ -60,8 +62,8 @@ instance Component CameraTarget where
 instance Component Texture where
   type Storage Texture = Map Texture
 
-instance Component SpriteSheet where
-  type Storage SpriteSheet = Map SpriteSheet
+-- instance Animate.KeyName key => Component SpriteSheet where
+--   type Storage SpriteSheet = Map SpriteSheet
 
 instance Component Gravity where
   type Storage Gravity = Map Gravity
@@ -84,9 +86,9 @@ instance Component GlobalTime where
 
 instance Monoid PlayerInput where
   mempty = PlayerInput $ Map.fromList [
-      (SDL.KeycodeA, SDL.Released)
-    , (SDL.KeycodeD, SDL.Released)
-    , (SDL.KeycodeW, SDL.Released)
+      (SDL.KeycodeA, KeyState.initKeyState)
+    , (SDL.KeycodeD, KeyState.initKeyState)
+    , (SDL.KeycodeW, KeyState.initKeyState)
     ]
 instance Component PlayerInput where
   type Storage PlayerInput = Global PlayerInput
@@ -107,7 +109,7 @@ makeWorld "World" [
   , ''Friction
   , ''Player
   , ''Texture
-  , ''SpriteSheet
+  -- , ''SpriteSheet
   , ''GlobalTime
   , ''PhysicsTime
   , ''PlayerInput

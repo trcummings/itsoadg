@@ -9,6 +9,7 @@ import           Control.Monad.IO.Class (liftIO)
 import           Data.Map ((!))
 import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^), (^/))
+import qualified KeyState (isTouched)
 import           Apecs
   ( Entity
   , cmap
@@ -45,9 +46,9 @@ import           Game.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
+import           Game.Player (Player(..))
 import           Game.Types
-  ( Player(..)
-  , Jump(..), buttonPressed, isJumping, isGrounded
+  ( Jump(..), buttonPressed, isJumping, isGrounded
   , Acceleration(..)
   , Position(..)
   , Velocity(..)
@@ -75,14 +76,14 @@ bumpVelocityX (Velocity (V2 vx vy)) ax =
    Velocity $ V2 (vx + (ax * Unit frameDeltaSeconds)) vy
 
 playerBothButtons :: System' ()
-playerBothButtons = cmap $ \(Player, v@(Velocity (V2 vx _))) ->
+playerBothButtons = cmap $ \(Player _, v@(Velocity (V2 vx _))) ->
   bumpVelocityX v (
     if vx > 0
     then   stoppingAccel
     else (-stoppingAccel) )
 
 playerRun :: Unit -> System' ()
-playerRun sign = cmapM_ $ \(Player, v@(Velocity (V2 vx _)), e) -> do
+playerRun sign = cmapM_ $ \(Player _, v@(Velocity (V2 vx _)), e) -> do
   when (abs vx < playerTopSpeed) $ do
     let ax
          | sign ==   1  = if (vx < 0) then 2 * (-stoppingAccel) else   runningAccel
@@ -91,7 +92,7 @@ playerRun sign = cmapM_ $ \(Player, v@(Velocity (V2 vx _)), e) -> do
     set e (bumpVelocityX v ax)
 
 playerStop :: System' ()
-playerStop = cmap $ \(Player, v@(Velocity (V2 vx vy))) ->
+playerStop = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
   let ax
        | vx > 0    =   stoppingAccel
        | vx < 0    = (-stoppingAccel)
@@ -99,11 +100,11 @@ playerStop = cmap $ \(Player, v@(Velocity (V2 vx vy))) ->
   in  bumpVelocityX v ax
 
 setJump :: System' ()
-setJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
+setJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
   when (jumpState == onGround) $ set e jumpRequested
 
 releaseJump :: System' ()
-releaseJump = cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
+releaseJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
   when (jumpState == landed) $ set e onGround
 
 
@@ -244,23 +245,24 @@ clampVelocity v =
   then min v maxSpeed
   else max v (-maxSpeed)
 
-bumpSpeed :: SDL.InputMotion -> SDL.InputMotion -> System' ()
-bumpSpeed SDL.Pressed  SDL.Released = playerRun (-1)
-bumpSpeed SDL.Released SDL.Pressed  = playerRun   1
-bumpSpeed SDL.Released SDL.Released = playerStop
-bumpSpeed SDL.Pressed  SDL.Pressed  = playerBothButtons
+bumpSpeed :: Bool -> Bool -> System' ()
+bumpSpeed True  False = playerRun (-1)
+bumpSpeed False True  = playerRun   1
+bumpSpeed False False = playerStop
+bumpSpeed True  True  = playerBothButtons
 
 runInputUpdates :: System' ()
 runInputUpdates = do
   PlayerInput m <- get global
   let aPress = m ! SDL.KeycodeA
       dPress = m ! SDL.KeycodeD
+      wPress = m ! SDL.KeycodeW
 
-  bumpSpeed aPress dPress
+  bumpSpeed (KeyState.isTouched aPress) (KeyState.isTouched dPress)
 
-  case (m ! SDL.KeycodeW) of
-      SDL.Pressed  -> setJump
-      SDL.Released -> releaseJump
+  case (KeyState.isTouched wPress) of
+    True  -> setJump
+    False -> releaseJump
 
 
 runPhysics :: System' ()
@@ -275,7 +277,7 @@ runPhysics = do
     else Velocity $ V2 vx (vy + (initialJumpG * Unit frameDeltaSeconds))
 
   -- jump!
-  cmapM_ $ \(Player, jumpState@(Jump _ _ _), e) -> do
+  cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
     Velocity (V2 vx _) <- get e :: System' (Velocity)
     when (jumpState == jumpRequested) $ do
       set e (Velocity $ V2 vx (-initialJumpVy), jumping)

@@ -37,6 +37,7 @@ dependencies:
 - linear
 - apecs >= 0.3.0.2
 - animate >= 0.6.1
+- key-state >= 0.2.0
 
 library:
   source-dirs: src

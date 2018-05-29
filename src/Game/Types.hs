@@ -1,5 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module Game.Types where
 
 import qualified Data.Map as Map (Map)
@@ -7,12 +5,12 @@ import           Foreign.C.Types (CInt)
 import           GHC.Int (Int32(..))
 import           Linear (V2)
 import           Apecs (Entity)
-import qualified SDL (Texture, Keycode, InputMotion)
+import qualified SDL (Texture, Keycode)
+import           KeyState
 import qualified Animate
-import           Data.Aeson (FromJSON(..), ToJSON(..))
 
-import           Game.Constants (Unit(..))
-import           Game.AnimationKeys (AnimationKey(..))
+import           Game.Constants (Seconds(..), Unit(..))
+-- import           Game.Player (PlayerAction(..))
 
 newtype Position =
   Position (V2 Unit) -- center point
@@ -30,9 +28,9 @@ newtype BoundingBox =
   BoundingBox (V2 Unit)
   deriving Show
 
-data Player =
-  Player
-  deriving Show
+-- data Player =
+--   Player PlayerAction
+--   deriving Show
 
 data Camera = Camera
   { size :: (V2 Unit)   -- camera height and width
@@ -46,11 +44,11 @@ data CameraTarget =
 data Texture =
   Texture SDL.Texture (V2 CInt)
 
-newtype Seconds =
-  Seconds Float
-  deriving (Show, Eq, Num, ToJSON, FromJSON, Fractional, Ord)
-newtype SpriteSheet =
-  SpriteSheet (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
+
+type Animations key = Animate.Animations key (Animate.SpriteClip key) Seconds
+
+newtype SpriteSheet key =
+  SpriteSheet (Animate.SpriteSheet key SDL.Texture Seconds)
 
 data Gravity = Gravity
 
@@ -73,7 +71,7 @@ newtype GlobalTime =
 
 -- global input for player
 data PlayerInput =
-  PlayerInput (Map.Map SDL.Keycode SDL.InputMotion)
+  PlayerInput (Map.Map SDL.Keycode (KeyState Double))
   deriving Show
 
 data MousePosition =

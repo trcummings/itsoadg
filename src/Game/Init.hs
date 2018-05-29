@@ -27,23 +27,22 @@ import           Game.Constants
   , playerPos
   , initialSize
   , screenHeight
-  , screenWidth )
+  , screenWidth
+  , Seconds(..) )
 import           Game.Types
-  ( Player(..)
-  , Position(..)
+  ( Position(..)
   , Velocity(..)
   , Acceleration(..)
   , BoundingBox(..)
   , Gravity(..)
   , Camera(..)
   , CameraTarget(..)
-  , SpriteSheet(..)
+  -- , SpriteSheet(..)
   , Friction(..)
   , Font(..)
-  , Jump(..)
-  , Seconds(..))
+  , Jump(..) )
 import           Game.Jump (floating)
-import           Game.Player (PlayerKey(..))
+import           Game.Player (Player(..), PlayerKey(..), PlayerAction(..))
 import           Game.Sprite (loadSpriteSheet)
 
 characters =
@@ -69,20 +68,20 @@ initSystems renderer = void $ do
   -- after we convert our font to textures we dont need the resource anymore
   TTF.free smallFont
 
-  -- -- load in player spritesheet
+  -- load in player spritesheet
   playerSpriteSheet <- liftIO $
     loadSpriteSheet renderer "assets/player.json" :: SpriteAnimation
 
   -- entities
   player <- newEntity ( -- player
-      Player
+      Player PlayerAction'IdleRight
     , ( Position $ V2 7 ((screenHeight / 2) - 1)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
       , BoundingBox spriteSize
       , floating )
     , Gravity
-    , SpriteSheet playerSpriteSheet
+    -- , SpriteSheet playerSpriteSheet
     , spriteSheetTexture )
 
   newEntity ( -- camera

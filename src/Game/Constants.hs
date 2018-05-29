@@ -4,11 +4,16 @@ module Game.Constants where
 
 import           Linear (V2(..))
 import           Foreign.C.Types (CInt)
+import           Data.Aeson (FromJSON(..), ToJSON(..))
 import qualified SDL
 
 newtype Unit =
   Unit Double
   deriving (Eq, Ord, Show, Num, Fractional)
+
+newtype Seconds =
+  Seconds Float
+  deriving (Show, Eq, Num, ToJSON, FromJSON, Fractional, Ord)
 
 pixelsPerUnit :: Double
 pixelsPerUnit = 32
