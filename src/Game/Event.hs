@@ -21,6 +21,8 @@ handleEvent event = do
     SDL.KeyboardEvent keyboardEvent ->
       cmap $ \(PlayerInput m) ->
         case (Map.lookup keyCode m) of
+          -- NB: Int keys work best performance-wise for maps,
+          --     if performance is slow here, change to Int map
           Just ks -> PlayerInput $ insert keyCode (updateKey ks motion) m
           Nothing -> PlayerInput m
       where
