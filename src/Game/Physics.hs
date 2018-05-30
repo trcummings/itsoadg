@@ -33,7 +33,9 @@ import           Game.AABB
 import           Game.Collision
   ( Collision(..)
   , CNormal(..)
-  , toVector )
+  , toVector
+  , resolveBaseCollision
+  , resolveNormalVelocity )
 import           Game.Constants
   ( dT
   , frameDeltaSeconds
@@ -77,38 +79,27 @@ hasVelComponent (_, _, e) = do
   hasVelocity <- exists e (proxy :: Velocity)
   return hasVelocity
 
-
 handleBaseCollision :: Entity -> Collision -> System' ()
-handleBaseCollision e c@(Collision collisionTime normal _) = do
-  ((Velocity v@(V2 vx vy)), Position p) <- get e :: System' (Velocity, Position)
-  let cTime = frameDeltaSeconds * collisionTime
-      remainingTime = frameDeltaSeconds * (1 - collisionTime)
-      vNormal@(V2 normalX normalY) = toVector normal
-      dotProd = ((vx * normalY) + (vy * normalX)) * Unit remainingTime
-      v' =
-        if (normal == TopN || normal == BottomN)
-        then V2 vx (dotProd * normalX)
-        else V2 (dotProd * normalY) vy
-      p' = p + v ^* Unit cTime
-  set e (Velocity v', Position p')
+handleBaseCollision e c@(Collision _ _ _) = do
+  pv <- get e :: System' (Position, Velocity)
+  set e $ resolveBaseCollision c pv
 
-
-handleFloor :: Entity -> Collision -> System' ()
-handleFloor e c@(Collision _ normal e') = do
-  hasFriction <- exists e' (proxy :: Friction)
-  when hasFriction $ do
-    (Velocity (V2 vx vy)) <- get e  :: System' (Velocity)
-    (Friction f)          <- get e' :: System' (Friction)
-    case normal of
-      TopN    -> do
-        set e (Velocity $ V2 (vx * Unit f) vy)
-      BottomN -> do
-        set e (Velocity $ V2 (vx * Unit f) vy)
-      LeftN   -> do
-        set e (Velocity $ V2 vx (vy * Unit f))
-      RightN  -> do
-        set e (Velocity $ V2 vx (vy * Unit f))
-      _ -> return ()
+-- handleFloor :: Entity -> Collision -> System' ()
+-- handleFloor e c@(Collision _ normal e') = do
+--   hasFriction <- exists e' (proxy :: Friction)
+--   when hasFriction $ do
+--     (Velocity (V2 vx vy)) <- get e  :: System' (Velocity)
+--     (Friction f)          <- get e' :: System' (Friction)
+--     case normal of
+--       TopN    -> do
+--         set e (Velocity $ V2 (vx * Unit f) vy)
+--       BottomN -> do
+--         set e (Velocity $ V2 (vx * Unit f) vy)
+--       LeftN   -> do
+--         set e (Velocity $ V2 vx (vy * Unit f))
+--       RightN  -> do
+--         set e (Velocity $ V2 vx (vy * Unit f))
+--       _ -> return ()
 
 
 handleJumpCheck :: Entity -> Collision -> System' ()
@@ -152,13 +143,7 @@ testCollision e (_, _, e') = do
   if (useSimpleResolution)
   -- collision too slow to use swept resolution, or we hit a corner
   then do
-    let (V2 vx vy) = v'
-        v'' = case normal of
-          NoneN   -> v' + (pVector ^/ Unit frameDeltaSeconds)
-          TopN    -> V2 vx 0
-          BottomN -> V2 vx 0
-          LeftN   -> V2 0 vy
-          RightN  -> V2 0 vy
+    let Velocity v'' = resolveNormalVelocity v pVector normal
         willNotEscape = aabbCheck
           (broadPhaseAABB (BoundingBox bb1) (Position p1) (Velocity v''))
           box2
@@ -237,7 +222,7 @@ runPhysics = do
     then Velocity $ V2 0 vy
     else Velocity $ clampVelocity <$> v
 
-  -- collisions
+   -- collisions
   -- position will only be modified in here (as well as other things)
   handleCollisions
 
