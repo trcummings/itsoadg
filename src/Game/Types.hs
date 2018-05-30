@@ -97,8 +97,8 @@ data Texture =
 type AnimationKey =
   PlayerKey
 
-type Animations =
-  Animate.Animations AnimationKey (Animate.SpriteClip AnimationKey) Seconds
+type Animations key =
+  Animate.Animations key (Animate.SpriteClip key) Seconds
 
 newtype SpriteSheet =
   SpriteSheet (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)

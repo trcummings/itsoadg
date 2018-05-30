@@ -17,6 +17,7 @@ import           Data.Maybe (catMaybes)
 import           Data.Coerce (coerce)
 
 import           Game.World (System')
+import           Game.Sprite (rectFromClip)
 import           Game.Constants
   ( toPixels
   , spriteSize
@@ -25,6 +26,7 @@ import           Game.Constants
 import           Game.AABB
   ( AABB(..), dims, center
   , broadPhaseAABB )
+-- import           Game.Player (stepPlayerAnimation)
 import           Game.Types
   ( Unit(..)
   , Camera(..)
@@ -35,7 +37,10 @@ import           Game.Types
   , Font(..)
   , Jump(..)
   , Texture(..)
-  , Player(..) )
+  , Player(..), PlayerKey(..)
+  , Seconds(..)
+  , SpriteSheet(..)
+  , Animations(..) )
 
 import Paths_itsoadg (getDataFileName)
 
@@ -76,23 +81,47 @@ renderText renderer f p txt = do
        (Just $ SDL.Rectangle (P (V2 0 0)) s)
          ) textPosMap
 
+type RenderSprite key = Animate.SpriteClip key -> V2 CInt -> IO ()
+
+renderSprite :: SDL.Renderer
+             -> Animate.SpriteSheet key SDL.Texture Seconds
+             -> Animate.SpriteClip  key
+             -> V2 Unit
+             -> IO ()
+renderSprite renderer ss clip pos = do
+  let sSheet = Animate.ssImage ss
+      SDL.Rectangle _ dims = rectFromClip clip
+  renderTexture
+    renderer
+    (Texture sSheet dims)
+    (SDL.P $ toPixels <$> pos)
+    (Just $ SDL.Rectangle (SDL.P $ (V2 0 0)) dims)
+
+
 stepRender :: SDL.Renderer -> System' ()
 stepRender renderer = do
   -- get camera position
   cmapM_ $ \(Camera _ _, Position cameraPos) -> do
     -- render "player"
-    cmapM_ $ \(Player _, Position p, Velocity v, Texture t s) -> do
-      liftIO $ renderTexture
-        renderer
-        (Texture t s)
-        (P $ toPixels <$> (p - cameraPos))
-        (Just $ SDL.Rectangle (P (V2 0 0)) (toPixels <$> spriteSize))
+    cmapM_ $ \(Player pa, Position p, Velocity v, SpriteSheet ss) -> do
+      let animations = Animate.ssAnimations ss :: Animations PlayerKey
+          position   = Animate.initPosition PlayerKey'RIdle
+          location   = Animate.currentLocation animations position
+      liftIO $ renderSprite renderer ss location (p - cameraPos)
+    -- cmapM_ $ \(Player _, Position p, Velocity v, Texture t s) -> do
+    --   liftIO $ renderTexture
+    --     renderer
+    --     (Texture t s)
+    --     (P $ toPixels <$> (p - cameraPos))
+    --     (Just $ SDL.Rectangle (P (V2 0 0)) (toPixels <$> spriteSize))
+
     -- render bounding boxes
     cmapM_ $ \(BoundingBox bb, Position p) -> do
       liftIO $ SDL.rendererDrawColor renderer $= V4 255 0 maxBound maxBound
       liftIO $ SDL.drawRect
         renderer
         (Just $ SDL.Rectangle (P (toPixels <$> (p - cameraPos))) (toPixels <$> bb))
+
     -- render broad phase bounding box
     cmapM_ $ \(bb@(BoundingBox _), p@(Position _), v@(Velocity _)) -> do
       let aabb = broadPhaseAABB bb p v

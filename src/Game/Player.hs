@@ -2,6 +2,7 @@ module Game.Player where
 
 import qualified SDL
 import qualified KeyState (isTouched)
+import qualified Animate
 import           Data.Map ((!))
 import           Control.Monad (when)
 import           Apecs (cmap, cmapM_, get, global, proxy, set)
@@ -12,15 +13,36 @@ import           Game.Types
   , PlayerInput(..)
   , Jump(..)
   , Unit(..)
-  , Player(..), PlayerAction(..) )
+  , Seconds(..)
+  , Player(..), PlayerAction(..), PlayerKey(..)
+  , Animations(..) )
 import           Game.Constants
   ( stoppingAccel
   , runningAccel
   , frameDeltaSeconds
   , playerTopSpeed )
 import           Game.Jump (jumpRequested, onGround, landed)
+import           Game.Step (Step(..))
 import           Game.World (System')
 
+-- stepPlayerState :: Step PlayerAction -> PlayerState -> PlayerState
+
+
+-- stepPlayerAnimation :: Step PlayerAction
+--                     -> Animations PlayerKey
+--                     -> Animate.Position PlayerKey Seconds
+--                     -> Animate.Position PlayerKey Seconds
+-- stepPlayerAnimation (Step'Sustain _) animations pos =
+--   Animate.stepPosition animations pos frameDeltaSeconds
+-- stepPlayerAnimation (Step'Change _ pa) _ _ = case pa of
+--   PlayerAction'MoveRight -> Animate.initPositionLoops PlayerKey'RWalk 0
+--   PlayerAction'JumpRight -> Animate.initPosition PlayerKey'RJump
+--   PlayerAction'IdleRight -> Animate.initPosition PlayerKey'RIdle
+--   PlayerAction'MoveLeft  -> Animate.initPositionLoops PlayerKey'LWalk 0
+--   PlayerAction'JumpLeft  -> Animate.initPosition PlayerKey'LJump
+--   PlayerAction'IdleLeft  -> Animate.initPosition PlayerKey'LIdle
+
+-- movement
 bumpVelocityX :: Velocity -> Unit -> Velocity
 bumpVelocityX (Velocity (V2 vx vy)) ax =
    Velocity $ V2 (vx + (ax * Unit frameDeltaSeconds)) vy

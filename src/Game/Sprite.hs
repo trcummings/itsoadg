@@ -19,16 +19,16 @@ import           Control.Monad.IO.Class (liftIO)
 import           Game.Constants
   ( frameDeltaSeconds
   , toPixels )
-import           Game.Render (renderTexture)
+-- import           Game.Render (renderTexture)
 import           Game.Types (Texture(..), Unit(..), Seconds(..))
 
 
 rectFromClip :: Animate.SpriteClip key -> SDL.Rectangle CInt
 rectFromClip Animate.SpriteClip{ scX, scY, scW, scH }
-  = SDL.Rectangle point pos
+  = SDL.Rectangle point dims
     where
       point = SDL.P $ fromIntegral <$> (V2 scX scY)
-      pos = fromIntegral <$> (V2 scW scH)
+      dims  = fromIntegral <$> (V2 scW scH)
 
 -- | Produce a new 'SDL.Surface' based on an existing one, but
 -- optimized for blitting to the specified 'SDL.PixelFormat'.
@@ -48,18 +48,18 @@ loadSurface path alpha = do
     Nothing -> return ()
   return surface
 
-renderSprite :: SDL.Renderer
-             -> Animate.SpriteSheet key SDL.Texture Seconds
-             -> Animate.SpriteClip  key
-             -> V2 Unit -> IO ()
-renderSprite renderer ss clip pos = do
-  let sSheet = Animate.ssImage ss
-      clip'@(SDL.Rectangle _ dim) = rectFromClip clip
-  renderTexture
-    renderer
-    (Texture sSheet dim)
-    (SDL.P $ toPixels <$> pos)
-    (Just $ SDL.Rectangle (SDL.P $ toPixels <$> pos) dim)
+-- renderSprite :: SDL.Renderer
+--              -> Animate.SpriteSheet key SDL.Texture Seconds
+--              -> Animate.SpriteClip  key
+--              -> V2 Unit -> IO ()
+-- renderSprite renderer ss clip pos = do
+--   let sSheet = Animate.ssImage ss
+--       clip'@(SDL.Rectangle _ dim) = rectFromClip clip
+--   renderTexture
+--     renderer
+--     (Texture sSheet dim)
+--     (SDL.P $ toPixels <$> pos)
+--     (Just $ SDL.Rectangle (SDL.P $ toPixels <$> pos) dim)
 
 loadSpriteSheet :: (Animate.KeyName key, Ord key, Bounded key, Enum key)
                 => SDL.Renderer
