@@ -69,13 +69,23 @@ playerRun sign = cmapM_ $ \(Player _, v@(Velocity (V2 vx _)), e) -> do
          | otherwise = 0
     set e (bumpVelocityX v ax)
 
+toZeroVelocity :: Unit -> Bool
+toZeroVelocity vx =
+  if (vx > 0)
+  then (vx - (stoppingAccel * Unit frameDeltaSeconds)) <= 0
+  else (vx + (stoppingAccel * Unit frameDeltaSeconds)) >= 0
+
 playerStop :: System' ()
 playerStop = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
   let ax
-       | vx > 0    =   stoppingAccel
-       | vx < 0    = (-stoppingAccel)
-       | otherwise = 0
-  in  bumpVelocityX v ax
+       | vx == 0                =   0
+       | vx >  0 && wontStopYet =   stoppingAccel
+       | vx <  0 && wontStopYet = (-stoppingAccel)
+       | otherwise              =   0
+       where wontStopYet = not $ toZeroVelocity vx
+  in if ax == 0
+     then Velocity $ V2 0 vy
+     else bumpVelocityX v ax
 
 setJump :: System' ()
 setJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
