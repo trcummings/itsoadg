@@ -43,6 +43,7 @@ import           Game.Types
   , Jump(..)
   , Player(..), PlayerKey(..), PlayerAction(..)
   , AnimationKey(..) )
+import           Game.Step (Step(..))
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
 
@@ -75,7 +76,7 @@ initSystems renderer = void $ do
 
   -- entities
   player <- newEntity ( -- player
-      Player PlayerAction'IdleRight
+      Player (Step'Sustain PlayerAction'IdleRight)
     , ( Position $ V2 7 ((screenHeight / 2) - 2)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0

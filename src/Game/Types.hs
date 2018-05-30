@@ -15,6 +15,8 @@ import           Data.Aeson (FromJSON(..), ToJSON(..))
 import           KeyState
 import           Data.Text
 
+import           Game.Step (Step(..))
+
 
 -- Utility types
 newtype Unit =
@@ -78,7 +80,7 @@ newtype BoundingBox =
   deriving Show
 
 data Player =
-  Player PlayerAction
+  Player (Step PlayerAction)
   deriving Show
 
 

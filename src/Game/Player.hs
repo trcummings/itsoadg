@@ -40,6 +40,8 @@ stepPlayerAnimation (Step'Change _ pa) _ _ = case pa of
   PlayerAction'JumpLeft  -> Animate.initPosition PlayerKey'LJump
   PlayerAction'IdleLeft  -> Animate.initPosition PlayerKey'LIdle
 
+-- stepPlayerState
+
 -- movement
 bumpVelocityX :: Velocity -> Unit -> Velocity
 bumpVelocityX (Velocity (V2 vx vy)) ax =
@@ -95,3 +97,4 @@ stepPlayerInput = do
   case (KeyState.isTouched wPress) of
     True  -> setJump
     False -> releaseJump
+
