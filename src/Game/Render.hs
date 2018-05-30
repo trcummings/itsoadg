@@ -68,8 +68,10 @@ renderTexture r (Texture t size) xy clip =
   let dstSize = maybe size (\(SDL.Rectangle _ size') ->  size') clip
   in  SDL.copy r t clip (Just (SDL.Rectangle xy dstSize))
 
-makeRect :: V2 CInt -> Maybe (SDL.Rectangle CInt)
-makeRect dims = Just $ SDL.Rectangle (SDL.P $ V2 0 0) dims
+makeRect :: V2 CInt -> V2 CInt -> Maybe (SDL.Rectangle CInt)
+makeRect pos dims = Just $ SDL.Rectangle (SDL.P pos) dims
+
+vZero = V2 0 0
 
 renderText :: SDL.Renderer -> [(Char, Texture)] -> V2 Unit -> String -> System' ()
 renderText renderer f p txt = do
@@ -81,7 +83,7 @@ renderText renderer f p txt = do
        renderer
        (Texture t s)
        (P $ (toPixels <$> p) + (V2 pMod 0))
-       (makeRect s) ) textPosMap
+       (makeRect vZero s) ) textPosMap
 
 renderSprite :: SDL.Renderer
              -> Animate.SpriteSheet key SDL.Texture Seconds
@@ -90,12 +92,12 @@ renderSprite :: SDL.Renderer
              -> IO ()
 renderSprite renderer ss clip pos = do
   let sSheet = Animate.ssImage ss
-      SDL.Rectangle _ dims = rectFromClip clip
+      SDL.Rectangle (SDL.P clipPos) dims = rectFromClip clip
   renderTexture
     renderer
     (Texture sSheet dims)
     (SDL.P $ toPixels <$> pos)
-    (makeRect dims)
+    (makeRect clipPos dims)
 
 
 stepRender :: SDL.Renderer -> System' ()
@@ -103,14 +105,10 @@ stepRender renderer = do
   -- get camera position
   cmapM_ $ \(Camera _ _, Position cameraPos) -> do
     -- render "player"
-    cmapM_ $ \(Player spa, Position p, Velocity v, SpriteSheet ss ap, e) -> do
+    cmapM_ $ \(Player spa, Position p, Velocity v, SpriteSheet ss ap) -> do
       let animations = Animate.ssAnimations ss :: Animations PlayerKey
-          -- get new spritesheet position
-          ap'        = stepPlayerAnimation spa animations ap
-          location   = Animate.currentLocation animations ap'
+          location   = Animate.currentLocation animations ap
       liftIO $ renderSprite renderer ss location (p - cameraPos)
-      -- set new spritesheet position
-      set e (SpriteSheet ss ap')
 
     -- render bounding boxes
     cmapM_ $ \(BoundingBox bb, Position p) -> do

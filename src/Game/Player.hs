@@ -5,6 +5,7 @@ import qualified KeyState (isTouched)
 import qualified Animate
 import           Data.Map ((!))
 import           Control.Monad (when)
+import           Control.Monad.IO.Class (liftIO)
 import           Apecs (cmap, cmapM_, get, global, proxy, set)
 import           Linear (V2(..))
 
@@ -15,14 +16,21 @@ import           Game.Types
   , Unit(..)
   , Seconds(..)
   , Player(..), PlayerAction(..), PlayerKey(..)
-  , Animations(..) )
+  , Animations(..)
+  , SpriteSheet(..) )
 import           Game.Constants
   ( stoppingAccel
   , runningAccel
   , frameDeltaSeconds
   , playerTopSpeed )
-import           Game.Jump (jumpRequested, onGround, landed)
-import           Game.Step (Step(..))
+import           Game.Jump
+  ( jumpRequested
+  , onGround
+  , landed
+  , falling
+  , floating
+  , jumping )
+import           Game.Step (Step(..), smash, peel)
 import           Game.World (System')
 
 
@@ -33,14 +41,12 @@ stepPlayerAnimation :: Step PlayerAction
 stepPlayerAnimation (Step'Sustain _) animations pos =
   Animate.stepPosition animations pos $ Seconds (realToFrac frameDeltaSeconds :: Float)
 stepPlayerAnimation (Step'Change _ pa) _ _ = case pa of
-  PlayerAction'MoveRight -> Animate.initPositionLoops PlayerKey'RWalk 0
+  PlayerAction'MoveRight -> Animate.initPositionWithLoop PlayerKey'RWalk Animate.Loop'Always
   PlayerAction'JumpRight -> Animate.initPosition PlayerKey'RJump
   PlayerAction'IdleRight -> Animate.initPosition PlayerKey'RIdle
-  PlayerAction'MoveLeft  -> Animate.initPositionLoops PlayerKey'LWalk 0
+  PlayerAction'MoveLeft  -> Animate.initPositionWithLoop PlayerKey'LWalk Animate.Loop'Always
   PlayerAction'JumpLeft  -> Animate.initPosition PlayerKey'LJump
   PlayerAction'IdleLeft  -> Animate.initPosition PlayerKey'LIdle
-
--- stepPlayerState
 
 -- movement
 bumpVelocityX :: Velocity -> Unit -> Velocity
@@ -98,3 +104,19 @@ stepPlayerInput = do
     True  -> setJump
     False -> releaseJump
 
+stepPlayerAction :: System' ()
+stepPlayerAction = do
+  cmapM_ $ \(Player spa, jump@(Jump _ _ _), Velocity (V2 vx _), SpriteSheet ss ap, e) -> do
+    let pa = smash spa
+        na = if (jump == falling || jump == floating || jump == jumping)
+             then PlayerAction'JumpRight
+             else if (vx > 0 || vx < 0)
+                  then PlayerAction'MoveRight
+                  else PlayerAction'IdleRight
+        sna = if (pa == na)
+              then Step'Sustain na
+              else Step'Change  pa na
+        animations = Animate.ssAnimations ss :: Animations PlayerKey
+        ap' = stepPlayerAnimation spa animations ap
+
+    set e (Player sna, SpriteSheet ss ap')

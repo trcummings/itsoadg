@@ -45,7 +45,7 @@ import           Game.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
-import           Game.Player (stepPlayerInput)
+import           Game.Player (stepPlayerInput, stepPlayerAction)
 import           Game.Types
   ( Unit(..)
   , Player(..)
@@ -241,6 +241,9 @@ runPhysics = do
   -- collisions
   -- position will only be modified in here (as well as other things)
   handleCollisions
+
+  -- update player "action"
+  stepPlayerAction
 
   -- update camera
   stepCamera
