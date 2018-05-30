@@ -35,8 +35,7 @@ import           Game.Collision
   , CNormal(..)
   , toVector )
 import           Game.Constants
-  ( Unit(..)
-  , dT
+  ( dT
   , frameDeltaSeconds
   , maxSpeed
   , playerTopSpeed
@@ -46,9 +45,11 @@ import           Game.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
-import           Game.Player (Player(..))
+import           Game.PlayerStep (stepPlayerInput)
 import           Game.Types
-  ( Jump(..), buttonPressed, isJumping, isGrounded
+  ( Unit(..)
+  , Player(..)
+  , Jump(..), buttonPressed, isJumping, isGrounded
   , Acceleration(..)
   , Position(..)
   , Velocity(..)
@@ -70,43 +71,6 @@ import Game.Jump
 
 oneBumpPerSecond :: Unit
 oneBumpPerSecond = (4 / 32) * Unit frameDeltaSeconds
-
-bumpVelocityX :: Velocity -> Unit -> Velocity
-bumpVelocityX (Velocity (V2 vx vy)) ax =
-   Velocity $ V2 (vx + (ax * Unit frameDeltaSeconds)) vy
-
-playerBothButtons :: System' ()
-playerBothButtons = cmap $ \(Player _, v@(Velocity (V2 vx _))) ->
-  bumpVelocityX v (
-    if vx > 0
-    then   stoppingAccel
-    else (-stoppingAccel) )
-
-playerRun :: Unit -> System' ()
-playerRun sign = cmapM_ $ \(Player _, v@(Velocity (V2 vx _)), e) -> do
-  when (abs vx < playerTopSpeed) $ do
-    let ax
-         | sign ==   1  = if (vx < 0) then 2 * (-stoppingAccel) else   runningAccel
-         | sign == (-1) = if (vx > 0) then 2 *   stoppingAccel  else (-runningAccel)
-         | otherwise = 0
-    set e (bumpVelocityX v ax)
-
-playerStop :: System' ()
-playerStop = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
-  let ax
-       | vx > 0    =   stoppingAccel
-       | vx < 0    = (-stoppingAccel)
-       | otherwise = 0
-  in  bumpVelocityX v ax
-
-setJump :: System' ()
-setJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
-  when (jumpState == onGround) $ set e jumpRequested
-
-releaseJump :: System' ()
-releaseJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
-  when (jumpState == landed) $ set e onGround
-
 
 
 hasVelComponent :: BoxEntity -> System' Bool
@@ -147,6 +111,7 @@ handleFloor e c@(Collision _ normal e') = do
         set e (Velocity $ V2 vx (vy * Unit f))
       _ -> return ()
 
+
 handleJumpCheck :: Entity -> Collision -> System' ()
 handleJumpCheck e (Collision _ normal _) = do
   hasJump <- exists e (proxy :: Jump)
@@ -155,14 +120,17 @@ handleJumpCheck e (Collision _ normal _) = do
     when (jumpState == jumping) $ set e landed
     when (jumpState == floating || jumpState == falling) $ set e onGround
 
+
 handlePostCollision :: Entity -> Collision -> System' ()
 handlePostCollision e c = do
   -- handleFloor e c
   handleJumpCheck e c
 
+
 type GetVelocity  = System' (Velocity)
 type GetAABB      = System' (BoundingBox, Position)
 type GetSweptAABB = System' (BoundingBox, Position, Velocity)
+
 
 testCollision :: Entity -> BoxEntity -> System' ()
 testCollision e (_, _, e') = do
@@ -207,6 +175,7 @@ testCollision e (_, _, e') = do
   -- move on to continued resolution
   handlePostCollision e collision
 
+
 handleCollisions :: System' ()
 handleCollisions = do
   -- get all entities with a bounding box
@@ -239,36 +208,17 @@ handleCollisions = do
          set entity (Position p'')
      ) dynamics
 
+
 clampVelocity :: Unit -> Unit
 clampVelocity v =
   if (v > 0)
   then min v maxSpeed
   else max v (-maxSpeed)
 
-bumpSpeed :: Bool -> Bool -> System' ()
-bumpSpeed True  False = playerRun (-1)
-bumpSpeed False True  = playerRun   1
-bumpSpeed False False = playerStop
-bumpSpeed True  True  = playerBothButtons
-
-runInputUpdates :: System' ()
-runInputUpdates = do
-  PlayerInput m <- get global
-  let aPress = m ! SDL.KeycodeA
-      dPress = m ! SDL.KeycodeD
-      wPress = m ! SDL.KeycodeW
-
-  bumpSpeed (KeyState.isTouched aPress) (KeyState.isTouched dPress)
-
-  case (KeyState.isTouched wPress) of
-    True  -> setJump
-    False -> releaseJump
-
-
 runPhysics :: System' ()
 runPhysics = do
   -- run updates based on input map
-  runInputUpdates
+  stepPlayerInput
 
   -- update acceleration based on gravity
   cmap $ \(Gravity, Velocity (V2 vx vy)) ->

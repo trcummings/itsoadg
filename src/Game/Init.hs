@@ -27,10 +27,10 @@ import           Game.Constants
   , playerPos
   , initialSize
   , screenHeight
-  , screenWidth
-  , Seconds(..) )
+  , screenWidth )
 import           Game.Types
-  ( Position(..)
+  ( Seconds(..)
+  , Position(..)
   , Velocity(..)
   , Acceleration(..)
   , BoundingBox(..)
@@ -40,9 +40,11 @@ import           Game.Types
   -- , SpriteSheet(..)
   , Friction(..)
   , Font(..)
-  , Jump(..) )
+  , Jump(..)
+  , Player(..)
+  , PlayerKey(..)
+  , PlayerAction(..) )
 import           Game.Jump (floating)
-import           Game.Player (Player(..), PlayerKey(..), PlayerAction(..))
 import           Game.Sprite (loadSpriteSheet)
 
 characters =

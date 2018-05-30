@@ -19,7 +19,6 @@ import qualified SDL
 import           Linear (V2(..))
 import qualified KeyState (initKeyState)
 
-import           Game.Player (Player(..))
 import Game.Types
   ( Position
   , Velocity
@@ -36,7 +35,8 @@ import Game.Types
   , GlobalTime(..)
   , PlayerInput(..)
   , MousePosition(..)
-  , Jump(..) )
+  , Jump(..)
+  , Player(..) )
 
 instance Component Position where
   type Storage Position = Map Position

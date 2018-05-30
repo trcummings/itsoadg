@@ -3,7 +3,7 @@ module Game.Collision where
 import Linear (V2(..))
 import Apecs (Entity)
 
-import Game.Constants (Unit(..))
+import Game.Types (Unit(..))
 
 data CNormal =
     LeftN

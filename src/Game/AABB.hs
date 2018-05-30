@@ -3,8 +3,8 @@ module Game.AABB where
 import Linear (V2(..))
 import Apecs (Entity)
 
-import Game.Types (Velocity(..), Position(..), BoundingBox(..))
-import Game.Constants (Unit(..), frameDeltaSeconds)
+import Game.Types (Velocity(..), Position(..), BoundingBox(..), Unit(..))
+import Game.Constants (frameDeltaSeconds)
 import Game.Collision (CNormal(..), Collision(..), toVector)
 
 data AABB = AABB

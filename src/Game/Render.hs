@@ -17,10 +17,8 @@ import           Data.Maybe (catMaybes)
 import           Data.Coerce (coerce)
 
 import           Game.World (System')
-import           Game.Player (Player(..))
 import           Game.Constants
-  ( Unit(..)
-  , toPixels
+  ( toPixels
   , spriteSize
   , screenWidth
   , screenHeight )
@@ -28,14 +26,16 @@ import           Game.AABB
   ( AABB(..), dims, center
   , broadPhaseAABB )
 import           Game.Types
-  ( Camera(..)
+  ( Unit(..)
+  , Camera(..)
   , Position(..)
   , Velocity(..)
   , BoundingBox(..)
   , MousePosition(..)
   , Font(..)
   , Jump(..)
-  , Texture(..) )
+  , Texture(..)
+  , Player(..) )
 
 import Paths_itsoadg (getDataFileName)
 

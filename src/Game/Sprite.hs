@@ -17,12 +17,10 @@ import           Data.Text
 import           Control.Monad.IO.Class (liftIO)
 
 import           Game.Constants
-  ( Unit(..)
-  , Seconds(..)
-  , frameDeltaSeconds
+  ( frameDeltaSeconds
   , toPixels )
 import           Game.Render (renderTexture)
-import           Game.Types (Texture(..))
+import           Game.Types (Texture(..), Unit(..), Seconds(..))
 
 
 rectFromClip :: Animate.SpriteClip key -> SDL.Rectangle CInt

@@ -1,17 +1,66 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Game.Types where
 
+import qualified SDL (Texture, Keycode)
 import qualified Data.Map as Map (Map)
+import qualified Animate
 import           Foreign.C.Types (CInt)
 import           GHC.Int (Int32(..))
 import           Linear (V2)
 import           Apecs (Entity)
-import qualified SDL (Texture, Keycode)
+import           Data.Aeson (FromJSON(..), ToJSON(..))
 import           KeyState
-import qualified Animate
+import           Data.Text
 
-import           Game.Constants (Seconds(..), Unit(..))
--- import           Game.Player (PlayerAction(..))
 
+-- Utility types
+newtype Unit =
+  Unit Double
+  deriving (Eq, Ord, Show, Num, Fractional)
+
+newtype Seconds =
+  Seconds Float
+  deriving (Show, Eq, Num, ToJSON, FromJSON, Fractional, Ord)
+
+
+-- Entity State Types
+-- -- Player
+data PlayerKey =
+    PlayerKey'RWalk
+  | PlayerKey'RJump
+  | PlayerKey'RIdle
+  | PlayerKey'LWalk
+  | PlayerKey'LJump
+  | PlayerKey'LIdle
+  deriving (Show, Eq, Ord, Bounded, Enum)
+
+data PlayerAction =
+    PlayerAction'MoveRight
+  | PlayerAction'JumpRight
+  | PlayerAction'IdleRight
+  | PlayerAction'MoveLeft
+  | PlayerAction'JumpLeft
+  | Playeraction'IdleLeft
+  deriving (Show, Eq)
+
+instance Animate.KeyName PlayerKey where
+  keyName = playerKey'keyName
+
+playerKey'keyName :: PlayerKey -> Text
+playerKey'keyName = \case
+  PlayerKey'RWalk -> "RWalk"
+  PlayerKey'RJump -> "RJump"
+  PlayerKey'RIdle -> "RIdle"
+  PlayerKey'LWalk -> "LWalk"
+  PlayerKey'LJump -> "LJump"
+  PlayerKey'LIdle -> "LIdle"
+
+
+
+-- Component types
 newtype Position =
   Position (V2 Unit) -- center point
   deriving Show
@@ -28,9 +77,10 @@ newtype BoundingBox =
   BoundingBox (V2 Unit)
   deriving Show
 
--- data Player =
---   Player PlayerAction
---   deriving Show
+data Player =
+  Player PlayerAction
+  deriving Show
+
 
 data Camera = Camera
   { size :: (V2 Unit)   -- camera height and width
@@ -45,7 +95,7 @@ data Texture =
   Texture SDL.Texture (V2 CInt)
 
 
-type Animations key = Animate.Animations key (Animate.SpriteClip key) Seconds
+-- type Animations key = Animate.Animations key (Animate.SpriteClip key) Seconds
 
 newtype SpriteSheet key =
   SpriteSheet (Animate.SpriteSheet key SDL.Texture Seconds)
