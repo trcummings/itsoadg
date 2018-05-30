@@ -48,7 +48,6 @@ import           Game.Constants
 import           Game.Player (stepPlayerInput, stepPlayerAction)
 import           Game.Types
   ( Unit(..)
-  , Player(..)
   , Jump(..), buttonPressed, isJumping, isGrounded
   , Acceleration(..)
   , Position(..)
@@ -227,7 +226,7 @@ runPhysics = do
     else Velocity $ V2 vx (vy + (initialJumpG * Unit frameDeltaSeconds))
 
   -- jump!
-  cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
+  cmapM_ $ \(jumpState@(Jump _ _ _), e) -> do
     Velocity (V2 vx _) <- get e :: System' (Velocity)
     when (jumpState == jumpRequested) $ do
       set e (Velocity $ V2 vx (-initialJumpVy), jumping)
