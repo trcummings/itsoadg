@@ -104,19 +104,50 @@ stepPlayerInput = do
     True  -> setJump
     False -> releaseJump
 
+
+data Dir = L | R
+
+actionDir :: PlayerAction -> Dir
+actionDir action = case action of
+  PlayerAction'MoveRight -> R
+  PlayerAction'JumpRight -> R
+  PlayerAction'IdleRight -> R
+  PlayerAction'MoveLeft  -> L
+  PlayerAction'JumpLeft  -> L
+  PlayerAction'IdleLeft  -> L
+
+moveAction :: Dir -> PlayerAction
+moveAction L = PlayerAction'MoveLeft
+moveAction R = PlayerAction'MoveRight
+
+jumpAction :: Dir -> PlayerAction
+jumpAction L = PlayerAction'JumpLeft
+jumpAction R = PlayerAction'JumpRight
+
+idleAction :: Dir -> PlayerAction
+idleAction L = PlayerAction'IdleLeft
+idleAction R = PlayerAction'IdleRight
+
 stepPlayerAction :: System' ()
 stepPlayerAction = do
-  cmapM_ $ \(Player spa, jump@(Jump _ _ _), Velocity (V2 vx _), SpriteSheet ss ap, e) -> do
-    let pa = smash spa
-        na = if (jump == falling || jump == floating || jump == jumping)
-             then PlayerAction'JumpRight
-             else if (vx > 0 || vx < 0)
-                  then PlayerAction'MoveRight
-                  else PlayerAction'IdleRight
-        sna = if (pa == na)
-              then Step'Sustain na
-              else Step'Change  pa na
-        animations = Animate.ssAnimations ss :: Animations PlayerKey
-        ap' = stepPlayerAnimation spa animations ap
-
-    set e (Player sna, SpriteSheet ss ap')
+  cmapM_ $ \( Player pastActionStep
+            , jump@(Jump _ _ _)
+            , Velocity (V2 vx _)
+            , SpriteSheet sheet position
+            , e ) -> do
+    let pastAction = smash pastActionStep
+        pastDir    = actionDir pastAction
+        isJumping  = jump == falling || jump == floating || jump == jumping
+        nextAction = if isJumping
+                     then jumpAction pastDir
+                     else if (vx == 0)
+                          then idleAction pastDir
+                          else if (vx > 0)
+                               then moveAction R
+                               else moveAction L
+        nextActionStep = if (pastAction == nextAction)
+                         then Step'Sustain nextAction
+                         else Step'Change  pastAction nextAction
+        animations = Animate.ssAnimations sheet :: Animations PlayerKey
+        position'  = stepPlayerAnimation nextActionStep animations position
+    set e (Player nextActionStep, SpriteSheet sheet position')
