@@ -45,7 +45,7 @@ import           Game.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
-import           Game.PlayerStep (stepPlayerInput)
+import           Game.Player (stepPlayerInput)
 import           Game.Types
   ( Unit(..)
   , Player(..)
