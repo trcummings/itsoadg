@@ -43,7 +43,7 @@ data PlayerAction =
   | PlayerAction'IdleRight
   | PlayerAction'MoveLeft
   | PlayerAction'JumpLeft
-  | Playeraction'IdleLeft
+  | PlayerAction'IdleLeft
   deriving (Show, Eq)
 
 instance Animate.KeyName PlayerKey where
@@ -100,8 +100,9 @@ type AnimationKey =
 type Animations key =
   Animate.Animations key (Animate.SpriteClip key) Seconds
 
-newtype SpriteSheet =
-  SpriteSheet (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
+data SpriteSheet = SpriteSheet
+    (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
+    (Animate.Position AnimationKey Seconds)
 
 data Gravity = Gravity
 

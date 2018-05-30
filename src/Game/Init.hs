@@ -41,9 +41,8 @@ import           Game.Types
   , Friction(..)
   , Font(..)
   , Jump(..)
-  , Player(..)
-  , AnimationKey(..)
-  , PlayerAction(..) )
+  , Player(..), PlayerKey(..), PlayerAction(..)
+  , AnimationKey(..) )
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
 
@@ -77,13 +76,13 @@ initSystems renderer = void $ do
   -- entities
   player <- newEntity ( -- player
       Player PlayerAction'IdleRight
-    , ( Position $ V2 7 ((screenHeight / 2) - 1)
+    , ( Position $ V2 7 ((screenHeight / 2) - 2)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
-      , BoundingBox spriteSize
+      , BoundingBox $ V2 1 2
       , floating )
     , Gravity
-    , SpriteSheet playerSpriteSheet
+    , SpriteSheet playerSpriteSheet (Animate.initPosition PlayerKey'RIdle)
     , spriteSheetTexture )
 
   newEntity ( -- camera

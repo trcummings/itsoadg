@@ -11,7 +11,7 @@ import qualified SDL.Internal.Numbered as Numbered
 import           Foreign.C.Types (CInt)
 import           GHC.Int (Int32)
 import           Linear (V4(..), V2(..))
-import           Apecs (cmapM_, cmap)
+import           Apecs (cmapM_, cmap, set)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe (catMaybes)
 import           Data.Coerce (coerce)
@@ -26,7 +26,8 @@ import           Game.Constants
 import           Game.AABB
   ( AABB(..), dims, center
   , broadPhaseAABB )
--- import           Game.Player (stepPlayerAnimation)
+import           Game.Player (stepPlayerAnimation)
+import           Game.Step (Step(..))
 import           Game.Types
   ( Unit(..)
   , Camera(..)
@@ -68,6 +69,9 @@ renderTexture r (Texture t size) xy clip =
   let dstSize = maybe size (\(SDL.Rectangle _ size') ->  size') clip
   in  SDL.copy r t clip (Just (SDL.Rectangle xy dstSize))
 
+makeRect :: V2 CInt -> Maybe (SDL.Rectangle CInt)
+makeRect dims = Just $ SDL.Rectangle (SDL.P $ V2 0 0) dims
+
 renderText :: SDL.Renderer -> [(Char, Texture)] -> V2 Unit -> String -> System' ()
 renderText renderer f p txt = do
    let textures = catMaybes (map (\c -> lookup c f) txt)
@@ -78,10 +82,7 @@ renderText renderer f p txt = do
        renderer
        (Texture t s)
        (P $ (toPixels <$> p) + (V2 pMod 0))
-       (Just $ SDL.Rectangle (P (V2 0 0)) s)
-         ) textPosMap
-
-type RenderSprite key = Animate.SpriteClip key -> V2 CInt -> IO ()
+       (makeRect s) ) textPosMap
 
 renderSprite :: SDL.Renderer
              -> Animate.SpriteSheet key SDL.Texture Seconds
@@ -95,7 +96,7 @@ renderSprite renderer ss clip pos = do
     renderer
     (Texture sSheet dims)
     (SDL.P $ toPixels <$> pos)
-    (Just $ SDL.Rectangle (SDL.P $ (V2 0 0)) dims)
+    (makeRect dims)
 
 
 stepRender :: SDL.Renderer -> System' ()
@@ -103,17 +104,14 @@ stepRender renderer = do
   -- get camera position
   cmapM_ $ \(Camera _ _, Position cameraPos) -> do
     -- render "player"
-    cmapM_ $ \(Player pa, Position p, Velocity v, SpriteSheet ss) -> do
+    cmapM_ $ \(Player pa, Position p, Velocity v, SpriteSheet ss ap, e) -> do
       let animations = Animate.ssAnimations ss :: Animations PlayerKey
-          position   = Animate.initPosition PlayerKey'RIdle
-          location   = Animate.currentLocation animations position
+          -- get new spritesheet position
+          ap'        = stepPlayerAnimation (Step'Sustain pa) animations ap
+          location   = Animate.currentLocation animations ap'
       liftIO $ renderSprite renderer ss location (p - cameraPos)
-    -- cmapM_ $ \(Player _, Position p, Velocity v, Texture t s) -> do
-    --   liftIO $ renderTexture
-    --     renderer
-    --     (Texture t s)
-    --     (P $ toPixels <$> (p - cameraPos))
-    --     (Just $ SDL.Rectangle (P (V2 0 0)) (toPixels <$> spriteSize))
+      -- set new spritesheet position
+      set e (SpriteSheet ss ap')
 
     -- render bounding boxes
     cmapM_ $ \(BoundingBox bb, Position p) -> do
