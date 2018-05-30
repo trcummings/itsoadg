@@ -42,8 +42,7 @@ appLoop window renderer world = do
   prepNextRender renderer
 
   -- get next time tick from SDL
-  nextTick <- ticks
-  let nextTime = fromIntegral nextTick :: Double
+  nextTime <- fromIntegral <$> ticks :: IO Double
 
   -- collect events from SDL
   events <- SDL.pollEvents
