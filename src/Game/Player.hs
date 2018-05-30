@@ -12,7 +12,7 @@ import           Game.Types
   , PlayerInput(..)
   , Jump(..)
   , Unit(..)
-  , Player(..) )
+  , Player(..), PlayerAction(..) )
 import           Game.Constants
   ( stoppingAccel
   , runningAccel

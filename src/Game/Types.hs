@@ -94,11 +94,14 @@ data CameraTarget =
 data Texture =
   Texture SDL.Texture (V2 CInt)
 
+type AnimationKey =
+  PlayerKey
 
--- type Animations key = Animate.Animations key (Animate.SpriteClip key) Seconds
+type Animations =
+  Animate.Animations AnimationKey (Animate.SpriteClip AnimationKey) Seconds
 
-newtype SpriteSheet key =
-  SpriteSheet (Animate.SpriteSheet key SDL.Texture Seconds)
+newtype SpriteSheet =
+  SpriteSheet (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
 
 data Gravity = Gravity
 

@@ -36,7 +36,8 @@ import Game.Types
   , PlayerInput(..)
   , MousePosition(..)
   , Jump(..)
-  , Player(..) )
+  , Player(..)
+  , SpriteSheet(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -62,8 +63,8 @@ instance Component CameraTarget where
 instance Component Texture where
   type Storage Texture = Map Texture
 
--- instance Animate.KeyName key => Component SpriteSheet where
---   type Storage SpriteSheet = Map SpriteSheet
+instance Component SpriteSheet where
+  type Storage SpriteSheet = Map SpriteSheet
 
 instance Component Gravity where
   type Storage Gravity = Map Gravity
@@ -109,7 +110,7 @@ makeWorld "World" [
   , ''Friction
   , ''Player
   , ''Texture
-  -- , ''SpriteSheet
+  , ''SpriteSheet
   , ''GlobalTime
   , ''PhysicsTime
   , ''PlayerInput

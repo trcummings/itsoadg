@@ -37,12 +37,12 @@ import           Game.Types
   , Gravity(..)
   , Camera(..)
   , CameraTarget(..)
-  -- , SpriteSheet(..)
+  , SpriteSheet(..)
   , Friction(..)
   , Font(..)
   , Jump(..)
   , Player(..)
-  , PlayerKey(..)
+  , AnimationKey(..)
   , PlayerAction(..) )
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
@@ -53,7 +53,7 @@ characters =
   ++ ['0'..'9']
   ++ [' ', ':', ',', '-', '.']
 
-type SpriteAnimation = System' (Animate.SpriteSheet PlayerKey SDL.Texture Seconds)
+type SpriteAnimation = System' (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
 
 initSystems :: SDL.Renderer -> System' ()
 initSystems renderer = void $ do
@@ -83,7 +83,7 @@ initSystems renderer = void $ do
       , BoundingBox spriteSize
       , floating )
     , Gravity
-    -- , SpriteSheet playerSpriteSheet
+    , SpriteSheet playerSpriteSheet
     , spriteSheetTexture )
 
   newEntity ( -- camera
