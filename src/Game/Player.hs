@@ -64,25 +64,26 @@ playerRun :: Unit -> System' ()
 playerRun sign = cmapM_ $ \(Player _, v@(Velocity (V2 vx _)), e) -> do
   when (abs vx < playerTopSpeed) $ do
     let ax
-         | sign ==   1  = if (vx < 0) then 2 * (-stoppingAccel) else   runningAccel
-         | sign == (-1) = if (vx > 0) then 2 *   stoppingAccel  else (-runningAccel)
+         | sign ==   1  = if (vx < 0) then 3 * (-stoppingAccel) else   runningAccel
+         | sign == (-1) = if (vx > 0) then 3 *   stoppingAccel  else (-runningAccel)
          | otherwise = 0
     set e (bumpVelocityX v ax)
 
 toZeroVelocity :: Unit -> Bool
 toZeroVelocity vx =
   if (vx > 0)
-  then (vx - (stoppingAccel * Unit frameDeltaSeconds)) <= 0
-  else (vx + (stoppingAccel * Unit frameDeltaSeconds)) >= 0
+  then vx + nextVx <= 0
+  else vx - nextVx >= 0
+  where nextVx = stoppingAccel * Unit frameDeltaSeconds
 
 playerStop :: System' ()
 playerStop = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
   let ax
-       | vx == 0                =   0
-       | vx >  0 && wontStopYet =   stoppingAccel
-       | vx <  0 && wontStopYet = (-stoppingAccel)
-       | otherwise              =   0
-       where wontStopYet = not $ toZeroVelocity vx
+       | willStopNext =   0
+       | vx >  0      =   stoppingAccel
+       | vx <  0      = (-stoppingAccel)
+       | otherwise    =   0
+       where willStopNext = toZeroVelocity vx
   in if ax == 0
      then Velocity $ V2 0 vy
      else bumpVelocityX v ax
