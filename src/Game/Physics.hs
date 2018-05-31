@@ -130,8 +130,9 @@ testCollision e (_, _, e') = do
   let box1 = AABB { center = p1, dims = bb1 }
       box2 = AABB { center = p2, dims = bb2 }
       (collisionTime, normal) = sweepAABB v box1 box2
+      (pVec, pNormal) = penetrationVector box1 box2
+      pVector = pVec * (toVector pNormal)
       collision = Collision collisionTime normal e'
-      pVector = penetrationVector box1 box2
       lowCollisionTime = collisionTime * frameDeltaSeconds < 0.00005
       noPenetration = (abs <$> pVector) == V2 0 0
       hasZeroNormal = normal == NoneN
@@ -143,6 +144,8 @@ testCollision e (_, _, e') = do
   if (useSimpleResolution)
   -- collision too slow to use swept resolution, or we hit a corner
   then do
+    -- liftIO $ putStrLn $ show collision
+    -- liftIO $ putStrLn $ show pNormal
     let Velocity v'' = resolveNormalVelocity v pVector normal
         willNotEscape = aabbCheck
           (broadPhaseAABB (BoundingBox bb1) (Position p1) (Velocity v''))
@@ -222,7 +225,7 @@ runPhysics = do
     then Velocity $ V2 0 vy
     else Velocity $ clampVelocity <$> v
 
-   -- collisions
+  -- collisions
   -- position will only be modified in here (as well as other things)
   handleCollisions
 
