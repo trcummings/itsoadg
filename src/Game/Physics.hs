@@ -84,24 +84,6 @@ handleBaseCollision e c@(Collision _ _ _) = do
   pv <- get e :: System' (Position, Velocity)
   set e $ resolveBaseCollision c pv
 
--- handleFloor :: Entity -> Collision -> System' ()
--- handleFloor e c@(Collision _ normal e') = do
---   hasFriction <- exists e' (proxy :: Friction)
---   when hasFriction $ do
---     (Velocity (V2 vx vy)) <- get e  :: System' (Velocity)
---     (Friction f)          <- get e' :: System' (Friction)
---     case normal of
---       TopN    -> do
---         set e (Velocity $ V2 (vx * Unit f) vy)
---       BottomN -> do
---         set e (Velocity $ V2 (vx * Unit f) vy)
---       LeftN   -> do
---         set e (Velocity $ V2 vx (vy * Unit f))
---       RightN  -> do
---         set e (Velocity $ V2 vx (vy * Unit f))
---       _ -> return ()
-
-
 handleJumpCheck :: Entity -> Collision -> System' ()
 handleJumpCheck e (Collision _ normal _) = do
   hasJump <- exists e (proxy :: Jump)
