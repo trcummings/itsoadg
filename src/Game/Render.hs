@@ -10,7 +10,7 @@ import qualified SDL.Raw.Video as Raw (allocFormat, freeFormat, convertSurface)
 import qualified SDL.Internal.Numbered as Numbered
 import           Foreign.C.Types (CInt)
 import           GHC.Int (Int32)
-import           Linear (V4(..), V2(..))
+import           Linear (V4(..), V2(..), (^/))
 import           Apecs (cmapM_, cmap, set)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe (catMaybes)

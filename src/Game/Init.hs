@@ -72,7 +72,7 @@ initSystems renderer = void $ do
 
   -- load in player spritesheet
   playerSpriteSheet <- liftIO $
-    loadSpriteSheet renderer "assets/player.json" :: SpriteAnimation
+    loadSpriteSheet renderer "assets/player-32.json" :: SpriteAnimation
 
   -- entities
   player <- newEntity ( -- player
@@ -80,7 +80,7 @@ initSystems renderer = void $ do
     , ( Position $ V2 7 ((screenHeight / 2) - 2)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
-      , BoundingBox $ V2 1 2
+      , BoundingBox $ V2 1 1.55
       , floating )
     , Gravity
     , SpriteSheet playerSpriteSheet (Animate.initPosition PlayerKey'RIdle)
