@@ -11,9 +11,9 @@ extra-source-files:
 - ChangeLog.md
 
 data-files:
-- assets/*.bmp
-- assets/*.TTF
-- assets/*.json
+- assets/fonts/*.TTF
+- assets/sprites/*.json
+- assets/sprites/*.png
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package

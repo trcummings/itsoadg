@@ -58,8 +58,8 @@ type SpriteAnimation = System' (Animate.SpriteSheet AnimationKey SDL.Texture Sec
 initSystems :: SDL.Renderer -> System' ()
 initSystems renderer = void $ do
   -- load in assets, convert to textures
-  spriteSheetTexture <- liftIO $ loadTexture renderer "assets/red_square.bmp"
-  smallFont <- liftIO $ TTF.load "assets/04B_19__.TTF" 24
+  -- spriteSheetTexture <- liftIO $ loadTexture renderer "assets/red_square.bmp"
+  smallFont <- liftIO $ TTF.load "assets/fonts/04B_19__.TTF" 24
   fontMap <- liftIO $ mapM (\c -> do
         texture <- toTexture renderer =<< TTF.blended
           smallFont
@@ -72,7 +72,7 @@ initSystems renderer = void $ do
 
   -- load in player spritesheet
   playerSpriteSheet <- liftIO $
-    loadSpriteSheet renderer "assets/player-32.json" :: SpriteAnimation
+    loadSpriteSheet renderer "assets/sprites/player-32.json" :: SpriteAnimation
 
   -- entities
   player <- newEntity ( -- player
@@ -83,8 +83,7 @@ initSystems renderer = void $ do
       , BoundingBox $ V2 1 1.55
       , floating )
     , Gravity
-    , SpriteSheet playerSpriteSheet (Animate.initPosition PlayerKey'RIdle)
-    , spriteSheetTexture )
+    , SpriteSheet playerSpriteSheet (Animate.initPosition PlayerKey'RIdle) )
 
   newEntity ( -- camera
       Camera { size = V2 screenWidth screenHeight, ppos = V2 0 0 }
