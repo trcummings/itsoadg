@@ -1,10 +1,10 @@
 name:                itsoadg
 version:             0.1.0.0
-github:              "githubuser/itsoadg"
+github:              "trcummings/itsoadg"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Thomsen Cummings"
+maintainer:          "thomsencummings@gmail.com"
+copyright:           "2018 Thomsen Cummings"
 
 extra-source-files:
 - README.md
