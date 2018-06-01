@@ -37,7 +37,8 @@ import Game.Types
   , MousePosition(..)
   , Jump(..)
   , Player(..)
-  , SpriteSheet(..) )
+  , SpriteSheet(..)
+  , FlowMeter(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -102,6 +103,9 @@ instance Component MousePosition where
 instance Component Jump where
   type Storage Jump = Map Jump
 
+instance Component FlowMeter where
+  type Storage FlowMeter = Map FlowMeter
+
 makeWorld "World" [
     ''Position
   , ''Velocity
@@ -120,6 +124,7 @@ makeWorld "World" [
   , ''CameraTarget
   , ''Font
   , ''Jump
+  , ''FlowMeter
   ]
 
 type System' a = System World a

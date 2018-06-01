@@ -40,7 +40,8 @@ import           Game.Types
   , Player(..), PlayerKey(..)
   , Seconds(..)
   , SpriteSheet(..)
-  , Animations(..) )
+  , Animations(..)
+  , FlowMeter(..) )
 
 import Paths_itsoadg (getDataFileName)
 
@@ -115,7 +116,7 @@ stepRender renderer = do
       liftIO $ SDL.rendererDrawColor renderer $= V4 255 0 maxBound maxBound
       liftIO $ SDL.drawRect
         renderer
-        (Just $ SDL.Rectangle (P (toPixels <$> (p - cameraPos))) (toPixels <$> bb))
+        (makeRect (toPixels <$> (p - cameraPos)) (toPixels <$> bb))
 
     -- render broad phase bounding box
     cmapM_ $ \(bb@(BoundingBox _), p@(Position _), v@(Velocity _)) -> do
@@ -123,23 +124,46 @@ stepRender renderer = do
       liftIO $ SDL.rendererDrawColor renderer $= V4 maxBound maxBound 0 255
       liftIO $ SDL.drawRect
         renderer
-        (Just $ SDL.Rectangle (P (toPixels <$> ((center aabb) - cameraPos))) (toPixels <$> (dims aabb)))
+        (makeRect (toPixels <$> ((center aabb) - cameraPos)) (toPixels <$> (dims aabb)))
 
-  -- render small font
+  -- render flow meter
   cmapM_ $ \(Font f, Position p) -> do
-    cmapM_ $ \(Player _, j@(Jump _ _ _), Position pp, Velocity pv) -> do
-      let pText = "Player _: "
-            ++ (show $ toPixels <$> pp)
-            ++ ", "
-            ++ (show $ toPixels <$> pv)
-          jText =
-               " Jumping: " ++ (show $ isJumping j)
-            ++ ", "
-            ++ " Grounded: " ++ (show $ isGrounded j)
-            ++ ", "
-            ++ " Pressed: " ++ (show $ buttonPressed j)
-      renderText renderer f p pText
-      renderText renderer f (V2 0 1) jText
+    cmapM_ $ \(Player _, flow@(FlowMeter _ _ _ _)) -> do
+      let boxHeight     = 5
+          baseHeight    = boxHeight - (boxHeight * Unit (baseFlow flow / flowLimit flow))
+          currentHeight = (boxHeight * Unit (currentFlow flow / flowLimit flow))
+      -- render meter text
+      renderText renderer f p "Flow"
+      -- render meter
+      liftIO $ SDL.fillRect
+        renderer
+        ( makeRect
+            (toPixels <$> V2 0.5 (boxHeight - currentHeight + 1))
+            (toPixels <$> V2 1 currentHeight) )
+      -- render baseFlow line
+      liftIO $ SDL.drawLine
+        renderer
+        (P (toPixels <$> V2 0.5 (baseHeight + 1)))
+        (P (toPixels <$> V2 1.5 (baseHeight + 1)))
+      -- render meter outline
+      liftIO $ SDL.drawRect
+        renderer
+        ( makeRect
+            (toPixels <$> V2 0.5 1)
+            (toPixels <$> V2 1 boxHeight) )
+
+    -- cmapM_ $ \(Player _, j@(Jump _ _ _), Position pp, Velocity pv) -> do
+      -- let pText = "Player _: "
+      --       ++ (show $ toPixels <$> pp)
+      --       ++ ", "
+      --       ++ (show $ toPixels <$> pv)
+      --     jText =
+      --          " Jumping: " ++ (show $ isJumping j)
+      --       ++ ", "
+      --       ++ " Grounded: " ++ (show $ isGrounded j)
+      --       ++ ", "
+      --       ++ " Pressed: " ++ (show $ buttonPressed j)
+      -- renderText renderer f (V2 0 1) jText
 
   -- render constrained mouse position in radius
   cmapM_ $ \(MousePosition (V2 x y)) -> do

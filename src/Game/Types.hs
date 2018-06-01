@@ -138,3 +138,9 @@ data Jump = Jump
   , isJumping     :: Bool
   , isGrounded    :: Bool }
   deriving (Eq, Show)
+
+data FlowMeter = FlowMeter
+  { currentFlow :: Double
+  , baseFlow    :: Double
+  , flowLimit   :: Double
+  , counter     :: Double }

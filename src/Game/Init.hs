@@ -42,7 +42,8 @@ import           Game.Types
   , Font(..)
   , Jump(..)
   , Player(..), PlayerKey(..), PlayerAction(..)
-  , AnimationKey(..) )
+  , AnimationKey(..)
+  , FlowMeter(..) )
 import           Game.Step (Step(..))
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
@@ -81,8 +82,13 @@ initSystems renderer = void $ do
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
+      , Gravity
       , floating )
-    , Gravity
+    , FlowMeter
+        { currentFlow = 10
+        , baseFlow    = 20
+        , flowLimit   = 50
+        , counter     = 0  }
     , SpriteSheet playerSpriteSheet (Animate.initPosition PlayerKey'RIdle) )
 
   newEntity ( -- camera

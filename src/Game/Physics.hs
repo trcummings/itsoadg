@@ -61,6 +61,7 @@ import           Game.Types
   , PhysicsTime(..), time, accum
   , GlobalTime(..) )
 import Game.Camera (stepCamera)
+import Game.FlowMeter (stepFlowMeter)
 import Game.Jump
   ( landed
   , onGround
@@ -206,6 +207,9 @@ runPhysics = do
     if (vx > (-oneBumpPerSecond) && vx < oneBumpPerSecond)
     then Velocity $ V2 0 vy
     else Velocity $ clampVelocity <$> v
+
+  -- update flow meter
+  stepFlowMeter
 
   -- collisions
   -- position will only be modified in here (as well as other things)
