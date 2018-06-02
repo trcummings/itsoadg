@@ -43,7 +43,8 @@ import           Game.Types
   , Jump(..)
   , Player(..), PlayerKey(..), PlayerAction(..)
   , AnimationKey(..)
-  , FlowMeter(..) )
+  , FlowMeter(..)
+  , HardFlow(..) )
 import           Game.Step (Step(..))
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
@@ -123,3 +124,10 @@ initSystems renderer = void $ do
   newEntity ( --wall2
       Position $ V2 (screenWidth - 1) (screenHeight - 8)
     , BoundingBox $ V2 1 7 )
+
+  newEntity ( --hard flow1
+      HardFlow
+    , Gravity
+    , Position $ V2 2 (screenHeight - 1.5)
+    , BoundingBox $ V2 0.25 0.25
+    , Velocity $ V2 0 0 )

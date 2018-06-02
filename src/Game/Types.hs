@@ -7,7 +7,7 @@ module Game.Types where
 import qualified SDL (Texture, Keycode)
 import qualified Data.Map as Map (Map)
 import qualified Animate
-import           Foreign.C.Types (CInt)
+import           Foreign.C.Types (CInt, CDouble)
 import           GHC.Int (Int32(..))
 import           Linear (V2)
 import           Apecs (Entity)
@@ -26,6 +26,22 @@ newtype Unit =
 newtype Seconds =
   Seconds Float
   deriving (Show, Eq, Num, ToJSON, FromJSON, Fractional, Ord)
+
+-- -- -- Animation directives
+-- newtype Rotate =
+--   Rotate CDouble
+
+-- newtype ScaleBox =
+--   ScaleBox (Maybe (SDL.Rectangle CInt))
+
+-- newtype Flip =
+--   Flip (V2 Bool)
+
+-- data Directive = Directive
+--   { position :: Position
+--   , rotation :: Rotate
+--   , scale    :: ScaleBox
+--   , flip     :: Flip }
 
 
 -- Entity State Types
@@ -144,3 +160,5 @@ data FlowMeter = FlowMeter
   , baseFlow    :: Double
   , flowLimit   :: Double
   , counter     :: Double }
+
+data HardFlow = HardFlow

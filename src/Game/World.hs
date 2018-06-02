@@ -38,7 +38,8 @@ import Game.Types
   , Jump(..)
   , Player(..)
   , SpriteSheet(..)
-  , FlowMeter(..) )
+  , FlowMeter(..)
+  , HardFlow(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -106,6 +107,9 @@ instance Component Jump where
 instance Component FlowMeter where
   type Storage FlowMeter = Map FlowMeter
 
+instance Component HardFlow where
+  type Storage HardFlow = Map HardFlow
+
 makeWorld "World" [
     ''Position
   , ''Velocity
@@ -125,6 +129,7 @@ makeWorld "World" [
   , ''Font
   , ''Jump
   , ''FlowMeter
+  , ''HardFlow
   ]
 
 type System' a = System World a
