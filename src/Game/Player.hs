@@ -1,7 +1,7 @@
 module Game.Player where
 
 import qualified SDL
-import qualified KeyState (isTouched)
+import qualified KeyState (isTouched, ksCounter)
 import qualified Animate
 import           Data.Map ((!))
 import           Control.Monad (when)
@@ -109,12 +109,19 @@ stepPlayerInput = do
   let aPress = m ! SDL.KeycodeA
       dPress = m ! SDL.KeycodeD
       wPress = m ! SDL.KeycodeW
+      nPress = m ! SDL.KeycodeN
 
   bumpSpeed (KeyState.isTouched aPress) (KeyState.isTouched dPress)
 
   case (KeyState.isTouched wPress) of
     True  -> setJump
     False -> releaseJump
+
+  case (KeyState.ksCounter nPress) of
+    Just nCount ->
+      when (nCount > 0.5) $ do
+        liftIO $ putStrLn "burning flow!"
+    Nothing     -> return ()
 
 
 data Dir = L | R

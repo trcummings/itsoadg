@@ -93,6 +93,7 @@ instance Monoid PlayerInput where
       (SDL.KeycodeA, KeyState.initKeyState)
     , (SDL.KeycodeD, KeyState.initKeyState)
     , (SDL.KeycodeW, KeyState.initKeyState)
+    , (SDL.KeycodeN, KeyState.initKeyState)
     ]
 instance Component PlayerInput where
   type Storage PlayerInput = Global PlayerInput
