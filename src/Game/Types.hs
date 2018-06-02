@@ -55,16 +55,24 @@ data AABB = AABB
 
 type BoxEntity = (BoundingBox, Position, Entity)
 
-data CNormal =
-    LeftN
-  | RightN
-  | TopN
-  | BottomN
-  | NoneN -- the "zero normal"
+newtype PenetrationVector =
+  PenetrationVector (V2 Unit)
+  deriving (Show)
+
+newtype CollisionTime =
+  CollisionTime Double
+  deriving (Show)
+
+data CollisionNormal =
+    LeftNormal
+  | RightNormal
+  | TopNormal
+  | BottomNormal
+  | NoneNormal -- the "zero normal"
   deriving (Eq, Show)
 
 data Collision =
-  Collision Double CNormal Entity
+  Collision CollisionTime CollisionNormal PenetrationVector Entity
   deriving Show
 
 
@@ -174,7 +182,7 @@ data PlayerInput =
 data MousePosition =
   MousePosition (V2 Int32)
 
-newtype Collisions = Collisions [Collision]
+newtype Inbox = Inbox [Collision]
 
 data Jump = Jump
   { buttonPressed :: Bool

@@ -45,7 +45,8 @@ import           Game.Types
   , AnimationKey(..)
   , FlowMeter(..)
   , HardFlow(..)
-  , Step(..) )
+  , Step(..)
+  , Inbox(..) )
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
 
@@ -90,6 +91,7 @@ initSystems renderer = void $ do
         , baseFlow    = 20
         , flowLimit   = 50
         , counter     = 0  }
+    , Inbox []
     , SpriteSheet playerSpriteSheet (Animate.initPosition PlayerKey'RIdle) )
 
   newEntity ( -- camera
@@ -130,4 +132,5 @@ initSystems renderer = void $ do
     , Gravity
     , Position $ V2 2 (screenHeight - 1.5)
     , BoundingBox $ V2 0.25 0.25
-    , Velocity $ V2 0 0 )
+    , Velocity $ V2 0 0
+    , Inbox [] )

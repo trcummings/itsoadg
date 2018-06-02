@@ -8,7 +8,9 @@ import Game.Types
   , Position(..)
   , BoundingBox(..)
   , Unit(..)
-  , CNormal(..)
+  , CollisionNormal(..)
+  , CollisionTime(..)
+  , PenetrationVector(..)
   , Collision(..)
   , AABB(..)
   , BoxEntity(..) )
@@ -40,7 +42,7 @@ aabbCheck (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
 --       fullSize = (dims a) + (dims b)
 --   in AABB (topLeft + (fullSize / 2)) fullSize
 
-penetrationVector :: AABB -> AABB -> (V2 Unit, CNormal)
+penetrationVector :: AABB -> AABB -> (PenetrationVector, CollisionNormal)
 penetrationVector (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
   let xV = (x1 + (w1 / 2)) - (x2 + (w2 / 2))
       yV = (y1 + (h1 / 2)) - (y2 + (h2 / 2))
@@ -51,11 +53,11 @@ penetrationVector (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
       vec = V2 oX oY
   in if (oX >= oY)
      then if (yV > 0)
-          then (vec, TopN)
-          else (vec, BottomN)
+          then (PenetrationVector vec, TopNormal)
+          else (PenetrationVector vec, BottomNormal)
      else if (xV > 0)
-          then (vec, RightN)
-          else (vec, LeftN)
+          then (PenetrationVector vec, RightNormal)
+          else (PenetrationVector vec, LeftNormal)
 
 broadPhaseAABB :: BoundingBox -> Position -> Velocity -> AABB
 broadPhaseAABB (BoundingBox (V2 w  h ))
@@ -69,7 +71,7 @@ broadPhaseAABB (BoundingBox (V2 w  h ))
       h' = if vy > 0 then h + yMod else h - yMod
   in AABB { center = (V2 x' y'), dims = (V2 w' h') }
 
-sweepAABB :: Velocity -> AABB -> AABB -> (Double, CNormal)
+sweepAABB :: Velocity -> AABB -> AABB -> (CollisionTime, CollisionNormal)
 sweepAABB (Velocity (V2 (Unit b1vx) (Unit b1vy)))
           (AABB (V2 (Unit b1x) (Unit b1y)) (V2 (Unit b1w) (Unit b1h)))
           (AABB (V2 (Unit b2x) (Unit b2y)) (V2 (Unit b2w) (Unit b2h))) =
@@ -81,14 +83,14 @@ sweepAABB (Velocity (V2 (Unit b1vx) (Unit b1vy)))
       exitTime  = min xExit  yExit
    in
      if (entryTime > exitTime || xEntry < 0 && yEntry < 0 || xEntry > 1 || yEntry > 1)
-     then (1, NoneN) -- no collision
+     then (CollisionTime 1, NoneNormal) -- no collision
      else if (xEntry > yEntry)
           then if (xInvEntry < 0)
-               then (entryTime, LeftN)
-               else (entryTime, RightN)
+               then (CollisionTime entryTime, LeftNormal)
+               else (CollisionTime entryTime, RightNormal)
           else if (yInvEntry < 0)
-               then (entryTime, TopN)
-               else (entryTime, BottomN)
+               then (CollisionTime entryTime, TopNormal)
+               else (CollisionTime entryTime, BottomNormal)
     where
       getInvX =
         if b1vx > 0

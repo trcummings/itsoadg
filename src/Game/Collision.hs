@@ -7,39 +7,44 @@ import Game.Types
   ( Unit(..)
   , Position(..)
   , Velocity(..)
-  , CNormal(..)
+  , CollisionNormal(..)
+  , CollisionTime(..)
+  , PenetrationVector(..)
   , Collision(..) )
 import Game.Constants (frameDeltaSeconds)
 
-toVector :: CNormal -> V2 Unit
-toVector LeftN   = V2 (-1)  0
-toVector RightN  = V2   1   0
-toVector TopN    = V2   0   1
-toVector BottomN = V2   0 (-1)
-toVector NoneN   = V2   0   0
+toVector :: CollisionNormal -> V2 Unit
+toVector LeftNormal   = V2 (-1)  0
+toVector RightNormal  = V2   1   0
+toVector TopNormal    = V2   0   1
+toVector BottomNormal = V2   0 (-1)
+toVector NoneNormal   = V2   0   0
 
 resolveBaseCollision :: Collision -> (Position, Velocity) -> (Position, Velocity)
 resolveBaseCollision
-  c@(Collision collisionTime normal _)
+  (Collision (CollisionTime collisionTime) normal _ _)
   (Position p, Velocity v@(V2 vx vy)) =
     let cTime = frameDeltaSeconds * collisionTime
         remainingTime = frameDeltaSeconds * (1 - collisionTime)
         vNormal@(V2 normalX normalY) = toVector normal
         dotProd = ((vx * normalY) + (vy * normalX)) * Unit remainingTime
         v' =
-          if (normal == TopN || normal == BottomN)
+          if (normal == TopNormal || normal == BottomNormal)
           then V2 vx (dotProd * normalX)
           else V2 (dotProd * normalY) vy
         p' = p + v ^* Unit cTime
     in (Position p', Velocity v')
 
-resolveNormalVelocity :: Velocity -> V2 Unit -> CNormal -> Velocity
-resolveNormalVelocity (Velocity v@(V2 vx vy)) pVector normal =
+resolveNormalVelocity :: Velocity
+                      -> PenetrationVector
+                      -> CollisionNormal
+                      -> Velocity
+resolveNormalVelocity (Velocity v@(V2 vx vy)) (PenetrationVector pVector) normal =
   let v' = case normal of
-             NoneN   -> v + (pVector ^/ Unit frameDeltaSeconds)
-             TopN    -> V2 vx 0
-             BottomN -> V2 vx 0
-             LeftN   -> V2 0 vy
-             RightN  -> V2 0 vy
+             NoneNormal   -> v + (pVector ^/ Unit frameDeltaSeconds)
+             TopNormal    -> V2 vx 0
+             BottomNormal -> V2 vx 0
+             LeftNormal   -> V2 0 vy
+             RightNormal  -> V2 0 vy
   in Velocity v'
 

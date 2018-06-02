@@ -59,7 +59,9 @@ import           Game.Types
   , AABB(..), center, dims
   , BoxEntity(..)
   , Collision(..)
-  , CNormal(..) )
+  , CollisionNormal(..)
+  , PenetrationVector(..)
+  , CollisionTime(..) )
 import Game.Camera (stepCamera)
 import Game.FlowMeter (stepFlowMeter)
 import Game.Jump
@@ -81,14 +83,14 @@ hasVelComponent (_, _, e) = do
   return hasVelocity
 
 handleBaseCollision :: Entity -> Collision -> System' ()
-handleBaseCollision e c@(Collision _ _ _) = do
+handleBaseCollision e c@(Collision _ _ _ _) = do
   pv <- get e :: System' (Position, Velocity)
   set e $ resolveBaseCollision c pv
 
 handleJumpCheck :: Entity -> Collision -> System' ()
-handleJumpCheck e (Collision _ normal _) = do
+handleJumpCheck e (Collision _ normal _ _) = do
   hasJump <- exists e (proxy :: Jump)
-  when (hasJump && normal == BottomN) $ do
+  when (hasJump && normal == BottomNormal) $ do
     jumpState <- get e :: System' Jump
     when (jumpState == jumping) $ set e landed
     when (jumpState == floating || jumpState == falling) $ set e onGround
@@ -112,13 +114,17 @@ testCollision e (_, _, e') = do
   (BoundingBox bb2, Position p2) <- get e' :: GetAABB
   let box1 = AABB { center = p1, dims = bb1 }
       box2 = AABB { center = p2, dims = bb2 }
-      (collisionTime, normal) = sweepAABB v box1 box2
-      (pVec, pNormal) = penetrationVector box1 box2
+      (CollisionTime collisionTime, normal) = sweepAABB v box1 box2
+      (PenetrationVector pVec, pNormal) = penetrationVector box1 box2
       pVector = pVec * (toVector pNormal)
-      collision = Collision collisionTime normal e'
+      collision = Collision
+        (CollisionTime collisionTime)
+        normal
+        (PenetrationVector pVector)
+        e'
       lowCollisionTime = collisionTime * frameDeltaSeconds < 0.00005
       noPenetration = (abs <$> pVector) == V2 0 0
-      hasZeroNormal = normal == NoneN
+      hasZeroNormal = normal == NoneNormal
       useSimpleResolution =
             hasZeroNormal
         ||  lowCollisionTime
@@ -129,7 +135,7 @@ testCollision e (_, _, e') = do
   then do
     -- liftIO $ putStrLn $ show collision
     -- liftIO $ putStrLn $ show pNormal
-    let Velocity v'' = resolveNormalVelocity v pVector normal
+    let Velocity v'' = resolveNormalVelocity v (PenetrationVector pVector) normal
         willNotEscape = aabbCheck
           (broadPhaseAABB (BoundingBox bb1) (Position p1) (Velocity v''))
           box2

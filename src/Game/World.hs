@@ -40,7 +40,7 @@ import Game.Types
   , SpriteSheet(..)
   , FlowMeter(..)
   , HardFlow(..)
-  , Collisions(..) )
+  , Inbox(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -111,15 +111,15 @@ instance Component FlowMeter where
 instance Component HardFlow where
   type Storage HardFlow = Map HardFlow
 
-instance Component Collisions where
-  type Storage Collisions = Map Collisions
+instance Component Inbox where
+  type Storage Inbox = Map Inbox
 
 makeWorld "World" [
     ''Position
   , ''Velocity
   , ''Acceleration
   , ''BoundingBox
-  , ''Collisions
+  , ''Inbox
   , ''Friction
   , ''Player
   , ''Texture
