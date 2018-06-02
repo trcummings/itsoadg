@@ -13,6 +13,13 @@ import Game.Types
   , Collision(..) )
 import Game.Constants (frameDeltaSeconds)
 
+inverseNormal :: CollisionNormal -> CollisionNormal
+inverseNormal LeftNormal   = RightNormal
+inverseNormal RightNormal  = LeftNormal
+inverseNormal TopNormal    = BottomNormal
+inverseNormal BottomNormal = TopNormal
+inverseNormal NoneNormal   = NoneNormal
+
 toVector :: CollisionNormal -> V2 Unit
 toVector LeftNormal   = V2 (-1)  0
 toVector RightNormal  = V2   1   0

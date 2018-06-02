@@ -32,7 +32,8 @@ import           Game.AABB
 import           Game.Collision
   ( toVector
   , resolveBaseCollision
-  , resolveNormalVelocity )
+  , resolveNormalVelocity
+  , inverseNormal )
 import           Game.Constants
   ( dT
   , frameDeltaSeconds
@@ -149,6 +150,12 @@ testCollision e (_, _, e') = do
              -- otherwise update normally
              else p1 + (v'' ^* Unit frameDeltaSeconds)
     set e (Velocity v'', Position p')
+    -- dispatchToInbox
+    --   (Collision collisionTime pNormal pVector e') e
+    -- let reverseVector = PenetrationVector $ negate <$> (coerce pVector :: V2 Unit)
+    --     reverseNormal = inverseNormal pNormal
+    -- dispatchToInbox
+    --   (Collision collisionTime reverseNormal reverseVector e) e'
   -- we need a swept collision resolution
   else handleBaseCollision e collision
   -- move on to continued resolution
@@ -165,8 +172,8 @@ handleCollisions = do
 
   mapM_ (\(bb@(BoundingBox bb'), p@(Position p'), entity) -> do
        v@(Velocity v') <- get entity :: System' Velocity
-       let sweptBox   = broadPhaseAABB bb p v
-           actives    = filter (inNarrowPhase entity sweptBox) allBoundingBoxes
+       let sweptBox = broadPhaseAABB bb p v
+           actives  = filter (inNarrowPhase entity sweptBox) allBoundingBoxes
 
        -- run all collision updates
        mapM_ (testCollision entity) actives
