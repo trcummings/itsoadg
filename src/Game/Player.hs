@@ -17,7 +17,8 @@ import           Game.Types
   , Seconds(..)
   , Player(..), PlayerAction(..), PlayerKey(..)
   , Animations(..)
-  , SpriteSheet(..) )
+  , SpriteSheet(..)
+  , Step(..) )
 import           Game.Constants
   ( stoppingAccel
   , runningAccel
@@ -30,7 +31,7 @@ import           Game.Jump
   , falling
   , floating
   , jumping )
-import           Game.Step (Step(..), smash, peel)
+import           Game.Step (smash, peel)
 import           Game.World (System')
 
 

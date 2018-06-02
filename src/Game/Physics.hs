@@ -23,17 +23,13 @@ import           Apecs
 
 import           Game.World (System')
 import           Game.AABB
-  ( AABB(..), center, dims
-  , BoxEntity(..)
-  , aabbCheck
+  ( aabbCheck
   , sweepAABB
   , penetrationVector
   , broadPhaseAABB
   , inNarrowPhase )
 import           Game.Collision
-  ( Collision(..)
-  , CNormal(..)
-  , toVector
+  ( toVector
   , resolveBaseCollision
   , resolveNormalVelocity )
 import           Game.Constants
@@ -59,7 +55,11 @@ import           Game.Types
   , Gravity(..)
   , PlayerInput(..)
   , PhysicsTime(..), time, accum
-  , GlobalTime(..) )
+  , GlobalTime(..)
+  , AABB(..), center, dims
+  , BoxEntity(..)
+  , Collision(..)
+  , CNormal(..) )
 import Game.Camera (stepCamera)
 import Game.FlowMeter (stepFlowMeter)
 import Game.Jump

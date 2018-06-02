@@ -15,8 +15,6 @@ import           Data.Aeson (FromJSON(..), ToJSON(..))
 import           KeyState
 import           Data.Text
 
-import           Game.Step (Step(..))
-
 
 -- Utility types
 newtype Unit =
@@ -26,6 +24,12 @@ newtype Unit =
 newtype Seconds =
   Seconds Float
   deriving (Show, Eq, Num, ToJSON, FromJSON, Fractional, Ord)
+
+data Step a
+  = Step'Change a a -- | Prev, Next
+  | Step'Sustain a
+  deriving (Show, Eq)
+
 
 -- -- -- Animation directives
 -- newtype Rotate =
@@ -42,6 +46,27 @@ newtype Seconds =
 --   , rotation :: Rotate
 --   , scale    :: ScaleBox
 --   , flip     :: Flip }
+
+-- Physics Types
+data AABB = AABB
+  { center :: (V2 Unit)   -- x y pos
+  , dims   :: (V2 Unit) } -- width and height
+  deriving Show
+
+type BoxEntity = (BoundingBox, Position, Entity)
+
+data CNormal =
+    LeftN
+  | RightN
+  | TopN
+  | BottomN
+  | NoneN -- the "zero normal"
+  deriving (Eq, Show)
+
+data Collision =
+  Collision Double CNormal Entity
+  deriving Show
+
 
 
 -- Entity State Types
@@ -148,6 +173,8 @@ data PlayerInput =
 
 data MousePosition =
   MousePosition (V2 Int32)
+
+newtype Collisions = Collisions [Collision]
 
 data Jump = Jump
   { buttonPressed :: Bool

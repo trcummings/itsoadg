@@ -3,20 +3,13 @@ module Game.Collision where
 import Linear (V2(..), (^*), (^/))
 import Apecs (Entity)
 
-import Game.Types (Unit(..), Position(..), Velocity(..))
+import Game.Types
+  ( Unit(..)
+  , Position(..)
+  , Velocity(..)
+  , CNormal(..)
+  , Collision(..) )
 import Game.Constants (frameDeltaSeconds)
-
-data CNormal =
-    LeftN
-  | RightN
-  | TopN
-  | BottomN
-  | NoneN -- the "zero normal"
-  deriving (Eq, Show)
-
-data Collision =
-  Collision Double CNormal Entity
-  deriving Show
 
 toVector :: CNormal -> V2 Unit
 toVector LeftN   = V2 (-1)  0

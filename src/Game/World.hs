@@ -39,7 +39,8 @@ import Game.Types
   , Player(..)
   , SpriteSheet(..)
   , FlowMeter(..)
-  , HardFlow(..) )
+  , HardFlow(..)
+  , Collisions(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -110,11 +111,15 @@ instance Component FlowMeter where
 instance Component HardFlow where
   type Storage HardFlow = Map HardFlow
 
+instance Component Collisions where
+  type Storage Collisions = Map Collisions
+
 makeWorld "World" [
     ''Position
   , ''Velocity
   , ''Acceleration
   , ''BoundingBox
+  , ''Collisions
   , ''Friction
   , ''Player
   , ''Texture

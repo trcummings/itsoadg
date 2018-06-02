@@ -44,8 +44,8 @@ import           Game.Types
   , Player(..), PlayerKey(..), PlayerAction(..)
   , AnimationKey(..)
   , FlowMeter(..)
-  , HardFlow(..) )
-import           Game.Step (Step(..))
+  , HardFlow(..)
+  , Step(..) )
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
 

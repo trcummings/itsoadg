@@ -1,9 +1,6 @@
 module Game.Step where
 
-data Step a
-  = Step'Change a a -- | Prev, Next
-  | Step'Sustain a
-  deriving (Show, Eq)
+import           Game.Types (Step(..) )
 
 smash :: Step a -> a
 smash (Step'Change _ a) = a

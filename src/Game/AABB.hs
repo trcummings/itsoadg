@@ -3,16 +3,17 @@ module Game.AABB where
 import Linear (V2(..))
 import Apecs (Entity)
 
-import Game.Types (Velocity(..), Position(..), BoundingBox(..), Unit(..))
+import Game.Types
+  ( Velocity(..)
+  , Position(..)
+  , BoundingBox(..)
+  , Unit(..)
+  , CNormal(..)
+  , Collision(..)
+  , AABB(..)
+  , BoxEntity(..) )
 import Game.Constants (frameDeltaSeconds)
-import Game.Collision (CNormal(..), Collision(..), toVector)
-
-data AABB = AABB
-  { center :: (V2 Unit)   -- x y pos
-  , dims   :: (V2 Unit) } -- width and height
-  deriving Show
-
-type BoxEntity = (BoundingBox, Position, Entity)
+import Game.Collision (toVector)
 
 aabbCheck :: AABB -> AABB -> Bool
 aabbCheck (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =

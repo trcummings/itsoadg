@@ -23,9 +23,7 @@ import           Game.Constants
   , spriteSize
   , screenWidth
   , screenHeight )
-import           Game.AABB
-  ( AABB(..), dims, center
-  , broadPhaseAABB )
+import           Game.AABB (broadPhaseAABB)
 import           Game.Player (stepPlayerAnimation)
 import           Game.Types
   ( Unit(..)
@@ -41,7 +39,8 @@ import           Game.Types
   , Seconds(..)
   , SpriteSheet(..)
   , Animations(..)
-  , FlowMeter(..) )
+  , FlowMeter(..)
+  , AABB(..), dims, center )
 
 import Paths_itsoadg (getDataFileName)
 
