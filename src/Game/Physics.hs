@@ -7,6 +7,7 @@ import           Control.Monad (when, unless)
 import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Map ((!))
+import           Data.Coerce (coerce)
 import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^), (^/))
 import qualified KeyState (isTouched)
@@ -61,7 +62,8 @@ import           Game.Types
   , Collision(..)
   , CollisionNormal(..)
   , PenetrationVector(..)
-  , CollisionTime(..) )
+  , CollisionTime(..)
+  , Inbox(..) )
 import Game.Camera (stepCamera)
 import Game.FlowMeter (stepFlowMeter)
 import Game.Jump
@@ -101,6 +103,13 @@ handlePostCollision e c = do
   -- handleFloor e c
   handleJumpCheck e c
 
+dispatchToInbox :: Collision -> Entity -> System' ()
+dispatchToInbox c e = do
+  hasInbox <- exists e (proxy :: Inbox)
+  when (hasInbox) $ do
+    Inbox ibx <- get e :: System' Inbox
+    set e (Inbox $ ibx ++ [c])
+
 
 type GetVelocity  = System' (Velocity)
 type GetAABB      = System' (BoundingBox, Position)
@@ -114,16 +123,12 @@ testCollision e (_, _, e') = do
   (BoundingBox bb2, Position p2) <- get e' :: GetAABB
   let box1 = AABB { center = p1, dims = bb1 }
       box2 = AABB { center = p2, dims = bb2 }
-      (CollisionTime collisionTime, normal) = sweepAABB v box1 box2
-      (PenetrationVector pVec, pNormal) = penetrationVector box1 box2
-      pVector = pVec * (toVector pNormal)
-      collision = Collision
-        (CollisionTime collisionTime)
-        normal
-        (PenetrationVector pVector)
-        e'
-      lowCollisionTime = collisionTime * frameDeltaSeconds < 0.00005
-      noPenetration = (abs <$> pVector) == V2 0 0
+      (collisionTime, normal) = sweepAABB v box1 box2
+      (pVec, pNormal) = penetrationVector box1 box2
+      pVector = PenetrationVector $ pVec * (toVector pNormal)
+      collision = Collision collisionTime normal pVector e'
+      lowCollisionTime = ((coerce collisionTime :: Double) * frameDeltaSeconds) < 0.00005
+      noPenetration = (abs <$> (coerce pVector :: V2 Unit)) == V2 0 0
       hasZeroNormal = normal == NoneNormal
       useSimpleResolution =
             hasZeroNormal
@@ -133,16 +138,14 @@ testCollision e (_, _, e') = do
   if (useSimpleResolution)
   -- collision too slow to use swept resolution, or we hit a corner
   then do
-    -- liftIO $ putStrLn $ show collision
-    -- liftIO $ putStrLn $ show pNormal
-    let Velocity v'' = resolveNormalVelocity v (PenetrationVector pVector) normal
+    let Velocity v'' = resolveNormalVelocity v pVector normal
         willNotEscape = aabbCheck
           (broadPhaseAABB (BoundingBox bb1) (Position p1) (Velocity v''))
           box2
         -- handle floor corners
         p' = if (hasZeroNormal && not noPenetration && willNotEscape)
              -- push out of wall
-             then p1 + pVector
+             then p1 + (coerce pVector :: V2 Unit)
              -- otherwise update normally
              else p1 + (v'' ^* Unit frameDeltaSeconds)
     set e (Velocity v'', Position p')

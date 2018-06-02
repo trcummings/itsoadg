@@ -42,7 +42,7 @@ aabbCheck (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
 --       fullSize = (dims a) + (dims b)
 --   in AABB (topLeft + (fullSize / 2)) fullSize
 
-penetrationVector :: AABB -> AABB -> (PenetrationVector, CollisionNormal)
+penetrationVector :: AABB -> AABB -> (V2 Unit, CollisionNormal)
 penetrationVector (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
   let xV = (x1 + (w1 / 2)) - (x2 + (w2 / 2))
       yV = (y1 + (h1 / 2)) - (y2 + (h2 / 2))
@@ -53,11 +53,11 @@ penetrationVector (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
       vec = V2 oX oY
   in if (oX >= oY)
      then if (yV > 0)
-          then (PenetrationVector vec, TopNormal)
-          else (PenetrationVector vec, BottomNormal)
+          then (vec, TopNormal)
+          else (vec, BottomNormal)
      else if (xV > 0)
-          then (PenetrationVector vec, RightNormal)
-          else (PenetrationVector vec, LeftNormal)
+          then (vec, RightNormal)
+          else (vec, LeftNormal)
 
 broadPhaseAABB :: BoundingBox -> Position -> Velocity -> AABB
 broadPhaseAABB (BoundingBox (V2 w  h ))
