@@ -45,7 +45,6 @@ import           Game.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
-import           Game.Player (stepPlayerState, stepPlayerAction)
 import           Game.Types
   ( Unit(..)
   , Jump(..), buttonPressed, isJumping, isGrounded
@@ -56,8 +55,6 @@ import           Game.Types
   , BoundingBox(..)
   , Gravity(..)
   , PlayerInput(..)
-  , PhysicsTime(..), time, accum
-  , GlobalTime(..)
   , AABB(..), center, dims
   , BoxEntity(..)
   , Collision(..)
@@ -65,8 +62,6 @@ import           Game.Types
   , PenetrationVector(..)
   , CollisionTime(..)
   , Inbox(..) )
-import Game.Camera (stepCamera)
-import Game.FlowMeter (stepFlowMeter)
 import Game.Jump
   ( landed
   , onGround
@@ -201,11 +196,8 @@ clampVelocity v =
   then min v maxSpeed
   else max v (-maxSpeed)
 
-runPhysics :: System' ()
-runPhysics = do
-  -- run updates based on input map
-  stepPlayerState
-
+stepPhysics :: System' ()
+stepPhysics = do
   -- update acceleration based on gravity
   cmap $ \(g@(Gravity _ _), Velocity (V2 vx vy)) ->
     if vy > 0
@@ -224,38 +216,6 @@ runPhysics = do
     then Velocity $ V2 0 vy
     else Velocity $ clampVelocity <$> v
 
-  -- update flow meter
-  stepFlowMeter
-
   -- collisions
   -- position will only be modified in here (as well as other things)
   handleCollisions
-
-  -- update player "action"
-  stepPlayerAction
-
-  -- update camera
-  stepCamera
-
-updatePhysicsAccum :: Double -> System' ()
-updatePhysicsAccum nextTime = do
-  GlobalTime currentTime <- get global
-  -- update global time
-  cmap $ \(GlobalTime _) -> GlobalTime nextTime
-
-  -- update physics frame time accumulator
-  cmap $ \(PhysicsTime t acc) -> PhysicsTime
-    { time = t
-    -- clamp frameTime at 25ms
-    , accum = acc + (min 25 $ nextTime - currentTime) }
-
--- update physics multiple times if time step is less than frame update time
-runPhysicsLoop :: System' ()
-runPhysicsLoop = do
-  PhysicsTime t acc <- get global
-  when (acc >= dT) $ do
-    runPhysics
-    cmap $ \(PhysicsTime t' acc') -> PhysicsTime
-      { time = (t' + dT)
-      , accum = (acc' - dT) }
-    runPhysicsLoop

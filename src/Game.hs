@@ -13,23 +13,61 @@ import qualified SDL
 import           Apecs (runSystem, runGC)
 import           SDL.Time (ticks)
 import qualified SDL.Font as TTF (initialize)
+import           Control.Monad (when)
 import           Control.Monad.IO.Class (liftIO)
 
 import           Game.World (System', World, initWorld)
-import           Game.Event (handleEvent)
-import           Game.Physics (updatePhysicsAccum, runPhysicsLoop)
+import           Game.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
+import           Game.Player (stepPlayerState, stepPlayerAction)
+import           Game.Camera (stepCamera)
+import           Game.FlowMeter (stepFlowMeter)
+import           Game.Event (handleEvent, maintainAllInputs)
+import           Game.Physics (stepPhysics)
 import           Game.Render (prepNextRender, stepRender, runRender)
 import           Game.Init (initSystems)
-import           Game.Constants (initialSize)
+import           Game.Constants (dT, initialSize)
 
-step :: Double -> [SDL.Event] -> SDL.Window -> SDL.Renderer -> System' ()
-step nextTime events window renderer = do
+-- update physics multiple times if time step is less than frame update time
+innerStep :: System' ()
+innerStep = do
+  (t, acc) <- getFixedTime
+
+  -- when we've accumulated a fixed step update
+  when (acc >= dT) $ do
+    -- maintain key held or released updates
+    maintainAllInputs
+
+    -- run updates based on input map
+    stepPlayerState
+
+    -- physics update
+    stepPhysics
+
+    -- update flow meter
+    stepFlowMeter
+
+    -- update player "action"
+    stepPlayerAction
+
+    -- update camera
+    stepCamera
+
+    -- clear away the fixed time we've accumulated
+    clearFixedTime
+
+    -- recurse if we need to run another fixed step update
+    innerStep
+
+outerStep :: Double -> [SDL.Event] -> SDL.Window -> SDL.Renderer -> System' ()
+outerStep nextTime events window renderer = do
   -- update velocity based on arrow key presses
   mapM handleEvent events
 
-  -- update physics
-  updatePhysicsAccum nextTime
-  runPhysicsLoop
+  -- accumulate fixed time for updates
+  accumulateFixedTime nextTime
+
+  -- run updates
+  innerStep
 
   -- render
   stepRender renderer
@@ -48,7 +86,7 @@ appLoop window renderer world = do
   events <- SDL.pollEvents
 
   -- run main system
-  runSystem (step nextTime events window renderer) world
+  runSystem (outerStep nextTime events window renderer) world
 
   -- run current render
   runRender renderer
