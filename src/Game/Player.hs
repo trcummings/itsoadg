@@ -1,7 +1,7 @@
 module Game.Player where
 
 import qualified SDL
-import qualified KeyState (isTouched, ksCounter)
+import qualified KeyState (isTouched, ksCounter, isHeld)
 import qualified Animate
 import           Data.Map ((!))
 import           Control.Monad (when)
@@ -144,26 +144,25 @@ stepPlayerState = do
     case (KeyState.isTouched wPress) of
       True  ->
         case flowState of
-          BurningFlow ->
-            -- cannot jump while burning
-            if not isJumping
-            then setJump
-            else return ()
+          -- cannot jump while burning
+          -- so play some kind of feedback, audio or whatever
+          BurningFlow -> return ()
           _           -> setJump
       False -> releaseJump
 
     -- attempt to activate burning state
-    case (KeyState.ksCounter nPress) of
-      Just nCount ->
-        if (nCount > 0.25)
-        then case flowState of
-          AbsorbingFlow -> return ()
-          _             -> set e ( FlowEffectEmitter BurningFlow
-                                 , Gravity { ascent  = initialJumpG
-                                           , descent = initialJumpG } )
-        -- play some kind of sound here to indicate its "charging up"
-        else return ()
-      Nothing     -> return ()
+    when (KeyState.isHeld nPress) $ do
+      case (KeyState.ksCounter nPress) of
+        Just nCount ->
+          if (nCount > 0.5)
+          then case flowState of
+            AbsorbingFlow -> return ()
+            _             -> set e ( FlowEffectEmitter BurningFlow
+                                   , Gravity { ascent  = initialJumpG
+                                             , descent = initialJumpG / Unit 2 } )
+          -- play some kind of sound here to indicate its "charging up"
+          else return ()
+        Nothing     -> return ()
 
     -- release burning state
     case (KeyState.isTouched nPress) of
