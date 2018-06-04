@@ -14,14 +14,23 @@ import           Game.Types
   , PlayerInput(..)
   , Jump(..)
   , Unit(..)
+  , Gravity(..)
   , Seconds(..)
   , Player(..), PlayerAction(..), PlayerKey(..)
   , Animations(..)
   , SpriteSheet(..)
-  , Step(..) )
+  , Step(..)
+  , FlowEffectEmitter(..)
+  , FlowEffectEmitState(..) )
 import           Game.Constants
-  ( stoppingAccel
+  ( initialJumpG
+  , initialFallG
+  , stoppingAccel
   , runningAccel
+  , bRunningAccel
+  , bStoppingAccel
+  , aRunningAccel
+  , aStoppingAccel
   , frameDeltaSeconds
   , playerTopSpeed )
 import           Game.Jump
@@ -34,57 +43,43 @@ import           Game.Jump
 import           Game.Step (smash, peel)
 import           Game.World (System')
 
-
-stepPlayerAnimation :: Step PlayerAction
-                    -> Animations PlayerKey
-                    -> Animate.Position PlayerKey Seconds
-                    -> Animate.Position PlayerKey Seconds
-stepPlayerAnimation (Step'Sustain _) animations pos =
-  Animate.stepPosition animations pos $ Seconds (realToFrac frameDeltaSeconds :: Float)
-stepPlayerAnimation (Step'Change _ pa) _ _ = case pa of
-  PlayerAction'MoveRight -> Animate.initPositionWithLoop PlayerKey'RWalk Animate.Loop'Always
-  PlayerAction'JumpRight -> Animate.initPosition PlayerKey'RJump
-  PlayerAction'IdleRight -> Animate.initPosition PlayerKey'RIdle
-  PlayerAction'MoveLeft  -> Animate.initPositionWithLoop PlayerKey'LWalk Animate.Loop'Always
-  PlayerAction'JumpLeft  -> Animate.initPosition PlayerKey'LJump
-  PlayerAction'IdleLeft  -> Animate.initPosition PlayerKey'LIdle
-
 -- movement
 bumpVelocityX :: Velocity -> Unit -> Velocity
 bumpVelocityX (Velocity (V2 vx vy)) ax =
    Velocity $ V2 (vx + (ax * Unit frameDeltaSeconds)) vy
 
-playerBothButtons :: System' ()
-playerBothButtons = cmap $ \(Player _, v@(Velocity (V2 vx _))) ->
+playerBothButtons :: Unit -> System' ()
+playerBothButtons stopAccel = cmap $ \(Player _, v@(Velocity (V2 vx _))) ->
   bumpVelocityX v (
     if vx > 0
-    then   stoppingAccel
-    else (-stoppingAccel) )
+    then   stopAccel
+    else (-stopAccel) )
 
-playerRun :: Unit -> System' ()
-playerRun sign = cmapM_ $ \(Player _, v@(Velocity (V2 vx _)), e) -> do
-  when (abs vx < playerTopSpeed) $ do
-    let ax
-         | sign ==   1  = if (vx < 0) then 3 * (-stoppingAccel) else   runningAccel
-         | sign == (-1) = if (vx > 0) then 3 *   stoppingAccel  else (-runningAccel)
-         | otherwise = 0
-    set e (bumpVelocityX v ax)
+playerRun :: Unit -> Unit -> Unit -> System' ()
+playerRun stopAccel runAccel sign =
+  cmapM_ $ \(Player _, v@(Velocity (V2 vx _)), e) -> do
+    when (abs vx < playerTopSpeed) $ do
+      let ax
+           | sign ==   1  = if (vx < 0) then 3 * (-stopAccel) else   runAccel
+           | sign == (-1) = if (vx > 0) then 3 *   stopAccel  else (-runAccel)
+           | otherwise = 0
+      set e (bumpVelocityX v ax)
 
-toZeroVelocity :: Unit -> Bool
-toZeroVelocity vx =
+toZeroVelocity :: Unit -> Unit -> Bool
+toZeroVelocity stopAccel vx =
   if (vx > 0)
   then vx + nextVx <= 0
   else vx - nextVx >= 0
-  where nextVx = stoppingAccel * Unit frameDeltaSeconds
+  where nextVx = stopAccel * Unit frameDeltaSeconds
 
-playerStop :: System' ()
-playerStop = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
+playerStop :: Unit -> System' ()
+playerStop stopAccel = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
   let ax
        | willStopNext =   0
-       | vx >  0      =   stoppingAccel
-       | vx <  0      = (-stoppingAccel)
+       | vx >  0      =   stopAccel
+       | vx <  0      = (-stopAccel)
        | otherwise    =   0
-       where willStopNext = toZeroVelocity vx
+       where willStopNext = toZeroVelocity stopAccel vx
   in if ax == 0
      then Velocity $ V2 0 vy
      else bumpVelocityX v ax
@@ -97,31 +92,11 @@ releaseJump :: System' ()
 releaseJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
   when (jumpState == landed) $ set e onGround
 
-bumpSpeed :: Bool -> Bool -> System' ()
-bumpSpeed True  False = playerRun (-1)
-bumpSpeed False True  = playerRun   1
-bumpSpeed False False = playerStop
-bumpSpeed True  True  = playerBothButtons
-
-stepPlayerInput :: System' ()
-stepPlayerInput = do
-  PlayerInput m <- get global
-  let aPress = m ! SDL.KeycodeA
-      dPress = m ! SDL.KeycodeD
-      wPress = m ! SDL.KeycodeW
-      nPress = m ! SDL.KeycodeN
-
-  bumpSpeed (KeyState.isTouched aPress) (KeyState.isTouched dPress)
-
-  case (KeyState.isTouched wPress) of
-    True  -> setJump
-    False -> releaseJump
-
-  case (KeyState.ksCounter nPress) of
-    Just nCount ->
-      when (nCount > 0.5) $ do
-        liftIO $ putStrLn "burning flow!"
-    Nothing     -> return ()
+bumpSpeed :: Bool -> Bool -> Unit -> Unit -> System' ()
+bumpSpeed True  False stopA runA = playerRun stopA runA (-1)
+bumpSpeed False True  stopA runA = playerRun stopA runA  1
+bumpSpeed False False stopA _    = playerStop stopA
+bumpSpeed True  True  stopA _    = playerBothButtons stopA
 
 
 data Dir = L | R
@@ -147,6 +122,98 @@ idleAction :: Dir -> PlayerAction
 idleAction L = PlayerAction'IdleLeft
 idleAction R = PlayerAction'IdleRight
 
+stepPlayerState :: System' ()
+stepPlayerState = do
+  PlayerInput m <- get global
+  let aPress = m ! SDL.KeycodeA
+      dPress = m ! SDL.KeycodeD
+      wPress = m ! SDL.KeycodeW
+      nPress = m ! SDL.KeycodeN
+      mPress = m ! SDL.KeycodeM
+
+  cmapM_ $ \a@( Player _
+            , jump@(Jump _ _ _)
+            , g@(Gravity _ _)
+            , Velocity (V2 vx _)
+            , FlowEffectEmitter flowState
+            , e ) -> do
+    let isJumping  = jump == falling || jump == floating || jump == jumping
+        runBumpSpeed = bumpSpeed (KeyState.isTouched aPress) (KeyState.isTouched dPress)
+
+    -- attempt to jump
+    case (KeyState.isTouched wPress) of
+      True  ->
+        case flowState of
+          BurningFlow ->
+            -- cannot jump while burning
+            if not isJumping
+            then setJump
+            else return ()
+          _           -> setJump
+      False -> releaseJump
+
+    -- attempt to activate burning state
+    case (KeyState.ksCounter nPress) of
+      Just nCount ->
+        if (nCount > 0.25)
+        then case flowState of
+          AbsorbingFlow -> return ()
+          _             -> set e ( FlowEffectEmitter BurningFlow
+                                 , Gravity { ascent  = initialJumpG
+                                           , descent = initialJumpG } )
+        -- play some kind of sound here to indicate its "charging up"
+        else return ()
+      Nothing     -> return ()
+
+    -- release burning state
+    case (KeyState.isTouched nPress) of
+      True  -> return ()
+      False -> case flowState of
+        BurningFlow ->
+          set e ( FlowEffectEmitter NotEmittingFlowEffect
+                , Gravity { ascent  = initialJumpG
+                          , descent = initialFallG } )
+        _           -> return ()
+
+    -- attempt to activate absorbing state
+    case (KeyState.isTouched mPress) of
+      True  ->
+        case flowState of
+          BurningFlow -> return ()
+          _           ->
+            -- cannot absorb while jumping
+            if isJumping
+            then return ()
+            else set e ( FlowEffectEmitter AbsorbingFlow
+                       , Gravity { ascent  = initialJumpG / Unit 2
+                                 , descent = initialFallG } )
+      False -> return ()
+
+    -- release absorbing state
+    case (KeyState.isTouched mPress) of
+      True  -> return ()
+      False -> case flowState of
+        AbsorbingFlow -> set e ( FlowEffectEmitter NotEmittingFlowEffect
+                               , Gravity { ascent  = initialJumpG
+                                         , descent = initialFallG } )
+        _             -> return ()
+
+    -- ensure gravity is set for proper burning state
+    case flowState of
+      NotEmittingFlowEffect -> set e (Gravity { ascent  = initialJumpG
+                                              , descent = initialFallG })
+      _                     -> return ()
+
+    -- modify player speed
+    case flowState of
+      BurningFlow           ->
+        if isJumping
+        then do runBumpSpeed stoppingAccel  runningAccel
+        else runBumpSpeed bStoppingAccel bRunningAccel
+      AbsorbingFlow         -> runBumpSpeed aStoppingAccel aRunningAccel
+      NotEmittingFlowEffect -> runBumpSpeed stoppingAccel  runningAccel
+
+
 stepPlayerAction :: System' ()
 stepPlayerAction = do
   cmapM_ $ \( Player pastActionStep
@@ -170,3 +237,18 @@ stepPlayerAction = do
         animations = Animate.ssAnimations sheet :: Animations PlayerKey
         position'  = stepPlayerAnimation nextActionStep animations position
     set e (Player nextActionStep, SpriteSheet sheet position')
+
+stepPlayerAnimation :: Step PlayerAction
+                    -> Animations PlayerKey
+                    -> Animate.Position PlayerKey Seconds
+                    -> Animate.Position PlayerKey Seconds
+stepPlayerAnimation (Step'Sustain _) animations pos =
+  Animate.stepPosition animations pos $ Seconds (realToFrac frameDeltaSeconds :: Float)
+stepPlayerAnimation (Step'Change _ pa) _ _ = case pa of
+  PlayerAction'MoveRight -> Animate.initPositionWithLoop PlayerKey'RWalk Animate.Loop'Always
+  PlayerAction'JumpRight -> Animate.initPosition PlayerKey'RJump
+  PlayerAction'IdleRight -> Animate.initPosition PlayerKey'RIdle
+  PlayerAction'MoveLeft  -> Animate.initPositionWithLoop PlayerKey'LWalk Animate.Loop'Always
+  PlayerAction'JumpLeft  -> Animate.initPosition PlayerKey'LJump
+  PlayerAction'IdleLeft  -> Animate.initPosition PlayerKey'LIdle
+

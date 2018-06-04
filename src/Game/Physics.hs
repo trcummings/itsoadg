@@ -45,7 +45,7 @@ import           Game.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
-import           Game.Player (stepPlayerInput, stepPlayerAction)
+import           Game.Player (stepPlayerState, stepPlayerAction)
 import           Game.Types
   ( Unit(..)
   , Jump(..), buttonPressed, isJumping, isGrounded
@@ -204,13 +204,13 @@ clampVelocity v =
 runPhysics :: System' ()
 runPhysics = do
   -- run updates based on input map
-  stepPlayerInput
+  stepPlayerState
 
   -- update acceleration based on gravity
-  cmap $ \(Gravity, Velocity (V2 vx vy)) ->
+  cmap $ \(g@(Gravity _ _), Velocity (V2 vx vy)) ->
     if vy > 0
-    then Velocity $ V2 vx (vy + (3 * initialJumpG * Unit frameDeltaSeconds))
-    else Velocity $ V2 vx (vy + (initialJumpG * Unit frameDeltaSeconds))
+    then Velocity $ V2 vx (vy + ((descent g) * Unit frameDeltaSeconds))
+    else Velocity $ V2 vx (vy + ((ascent  g) * Unit frameDeltaSeconds))
 
   -- jump!
   cmapM_ $ \(jumpState@(Jump _ _ _), e) -> do

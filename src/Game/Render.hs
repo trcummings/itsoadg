@@ -99,6 +99,28 @@ renderSprite renderer ss clip pos = do
     (SDL.P $ toPixels <$> pos)
     (makeRect clipPos dims)
 
+renderFlowMeter :: SDL.Renderer -> Position -> FlowMeter -> System' ()
+renderFlowMeter renderer (Position p) flow = do
+  let boxHeight     = 5
+      baseHeight    = boxHeight - (boxHeight * Unit (baseFlow flow / flowLimit flow))
+      currentHeight = (boxHeight * Unit (currentFlow flow / flowLimit flow))
+  -- render meter
+  liftIO $ SDL.fillRect
+    renderer
+    ( makeRect
+      (toPixels <$> V2 0.5 (boxHeight - currentHeight + 1))
+      (toPixels <$> V2 1 currentHeight) )
+  -- render baseFlow line
+  liftIO $ SDL.drawLine
+    renderer
+    (P (toPixels <$> V2 0.5 (baseHeight + 1)))
+    (P (toPixels <$> V2 1.5 (baseHeight + 1)))
+  -- render meter outline
+  liftIO $ SDL.drawRect
+    renderer
+    ( makeRect
+      (toPixels <$> V2 0.5 1)
+      (toPixels <$> V2 1 boxHeight) )
 
 stepRender :: SDL.Renderer -> System' ()
 stepRender renderer = do
@@ -128,41 +150,10 @@ stepRender renderer = do
   -- render flow meter
   cmapM_ $ \(Font f, Position p) -> do
     cmapM_ $ \(Player _, flow@(FlowMeter _ _ _ _)) -> do
-      let boxHeight     = 5
-          baseHeight    = boxHeight - (boxHeight * Unit (baseFlow flow / flowLimit flow))
-          currentHeight = (boxHeight * Unit (currentFlow flow / flowLimit flow))
       -- render meter text
       renderText renderer f p "Flow"
       -- render meter
-      liftIO $ SDL.fillRect
-        renderer
-        ( makeRect
-            (toPixels <$> V2 0.5 (boxHeight - currentHeight + 1))
-            (toPixels <$> V2 1 currentHeight) )
-      -- render baseFlow line
-      liftIO $ SDL.drawLine
-        renderer
-        (P (toPixels <$> V2 0.5 (baseHeight + 1)))
-        (P (toPixels <$> V2 1.5 (baseHeight + 1)))
-      -- render meter outline
-      liftIO $ SDL.drawRect
-        renderer
-        ( makeRect
-            (toPixels <$> V2 0.5 1)
-            (toPixels <$> V2 1 boxHeight) )
-
-    -- cmapM_ $ \(Player _, j@(Jump _ _ _), Position pp, Velocity pv) -> do
-      -- let pText = "Player _: "
-      --       ++ (show $ toPixels <$> pp)
-      --       ++ ", "
-      --       ++ (show $ toPixels <$> pv)
-      --     jText =
-      --          " Jumping: " ++ (show $ isJumping j)
-      --       ++ ", "
-      --       ++ " Grounded: " ++ (show $ isGrounded j)
-      --       ++ ", "
-      --       ++ " Pressed: " ++ (show $ buttonPressed j)
-      -- renderText renderer f (V2 0 1) jText
+      renderFlowMeter renderer (Position p) flow
 
   -- render constrained mouse position in radius
   cmapM_ $ \(MousePosition (V2 x y)) -> do

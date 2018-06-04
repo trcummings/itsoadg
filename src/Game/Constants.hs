@@ -56,10 +56,25 @@ initialJumpVy = (2 * jumpPeak) / Unit timeToJumpPeak
 initialJumpG :: Unit
 initialJumpG = (2 * jumpPeak) / (Unit timeToJumpPeak ^ 2)
 
+initialFallG :: Unit
+initialFallG = initialJumpG * (Unit 3)
+
 
 -- horizontal movement
+makeStoppingAccel :: Unit -> Unit
+makeStoppingAccel topSpeed = (-topSpeed) / Unit timeToStopFromTopSpeed
+
+makeRunningAccel :: Unit -> Unit
+makeRunningAccel topSpeed = topSpeed / Unit timeToTopSpeed
+
 playerTopSpeed :: Unit
-playerTopSpeed = 5
+playerTopSpeed = 10
+
+playerBurningTopSpeed :: Unit
+playerBurningTopSpeed = 2.5
+
+playerAbsorbingTopSpeed :: Unit
+playerAbsorbingTopSpeed = 20
 
 timeToTopSpeed :: Double
 timeToTopSpeed = 1 -- in seconds
@@ -68,7 +83,19 @@ timeToStopFromTopSpeed :: Double
 timeToStopFromTopSpeed = 0.25
 
 runningAccel :: Unit
-runningAccel = playerTopSpeed / Unit timeToTopSpeed
+runningAccel = makeRunningAccel playerTopSpeed
 
 stoppingAccel :: Unit
-stoppingAccel = (-playerTopSpeed) / Unit timeToStopFromTopSpeed
+stoppingAccel = makeStoppingAccel playerTopSpeed
+
+bRunningAccel :: Unit
+bRunningAccel = makeRunningAccel playerBurningTopSpeed
+
+bStoppingAccel :: Unit
+bStoppingAccel = makeStoppingAccel playerBurningTopSpeed
+
+aRunningAccel :: Unit
+aRunningAccel = makeRunningAccel playerAbsorbingTopSpeed
+
+aStoppingAccel :: Unit
+aStoppingAccel = makeStoppingAccel playerAbsorbingTopSpeed

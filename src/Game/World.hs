@@ -40,7 +40,8 @@ import Game.Types
   , SpriteSheet(..)
   , FlowMeter(..)
   , HardFlow(..)
-  , Inbox(..) )
+  , Inbox(..)
+  , FlowEffectEmitter(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -94,6 +95,7 @@ instance Monoid PlayerInput where
     , (SDL.KeycodeD, KeyState.initKeyState)
     , (SDL.KeycodeW, KeyState.initKeyState)
     , (SDL.KeycodeN, KeyState.initKeyState)
+    , (SDL.KeycodeM, KeyState.initKeyState)
     ]
 instance Component PlayerInput where
   type Storage PlayerInput = Global PlayerInput
@@ -111,6 +113,9 @@ instance Component FlowMeter where
 
 instance Component HardFlow where
   type Storage HardFlow = Map HardFlow
+
+instance Component FlowEffectEmitter where
+  type Storage FlowEffectEmitter = Map FlowEffectEmitter
 
 instance Component Inbox where
   type Storage Inbox = Map Inbox
@@ -136,6 +141,7 @@ makeWorld "World" [
   , ''Jump
   , ''FlowMeter
   , ''HardFlow
+  , ''FlowEffectEmitter
   ]
 
 type System' a = System World a

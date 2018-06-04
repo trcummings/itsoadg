@@ -67,6 +67,9 @@ data SpriteSheet = SpriteSheet
     (Animate.Position AnimationKey Seconds)
 
 data Gravity = Gravity
+  { ascent  :: Unit
+  , descent :: Unit }
+  deriving Show
 
 newtype Friction =
   Friction Double
@@ -106,5 +109,17 @@ data FlowMeter = FlowMeter
   , baseFlow    :: Double
   , flowLimit   :: Double
   , counter     :: Double }
+  deriving Show
 
 data HardFlow = HardFlow
+
+-- For flow effect emitter state
+data FlowEffectEmitState =
+    BurningFlow
+  | AbsorbingFlow
+  | NotEmittingFlowEffect
+  deriving Show
+
+newtype FlowEffectEmitter =
+  FlowEffectEmitter FlowEffectEmitState
+  deriving Show

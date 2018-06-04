@@ -27,7 +27,9 @@ import           Game.Constants
   , playerPos
   , initialSize
   , screenHeight
-  , screenWidth )
+  , screenWidth
+  , initialJumpG
+  , initialFallG )
 import           Game.Types
   ( Seconds(..)
   , Position(..)
@@ -45,6 +47,7 @@ import           Game.Types
   , AnimationKey(..)
   , FlowMeter(..)
   , HardFlow(..)
+  , FlowEffectEmitter(..), FlowEffectEmitState(..)
   , Step(..)
   , Inbox(..) )
 import           Game.Jump (floating)
@@ -85,12 +88,15 @@ initSystems renderer = void $ do
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
       , Gravity
+        { ascent  = initialJumpG
+        , descent = initialFallG }
       , floating )
-    , FlowMeter
-        { currentFlow = 10
-        , baseFlow    = 20
-        , flowLimit   = 50
-        , counter     = 0  }
+    , ( FlowMeter
+          { currentFlow = 10
+          , baseFlow    = 20
+          , flowLimit   = 50
+          , counter     = 0  }
+      , FlowEffectEmitter NotEmittingFlowEffect )
     , Inbox []
     , SpriteSheet playerSpriteSheet (Animate.initPosition PlayerKey'RIdle) )
 
@@ -130,6 +136,8 @@ initSystems renderer = void $ do
   newEntity ( --hard flow1
       HardFlow
     , Gravity
+        { ascent  = initialJumpG
+        , descent = initialFallG }
     , Position $ V2 2 (screenHeight - 1.5)
     , BoundingBox $ V2 0.25 0.25
     , Velocity $ V2 0 0
