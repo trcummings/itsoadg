@@ -14,6 +14,7 @@ data-files:
 - assets/fonts/*.TTF
 - assets/sprites/*.json
 - assets/sprites/*.png
+- assets/sfx/*.wav
 - assets/gamecontrollerdb.txt
 
 # Metadata used when publishing your package
@@ -30,6 +31,7 @@ dependencies:
 - sdl2
 - sdl2-ttf
 - sdl2-image
+- sdl2-mixer
 - aeson
 - text
 - text-conversions

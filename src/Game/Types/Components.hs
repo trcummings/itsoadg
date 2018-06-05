@@ -1,6 +1,7 @@
 module Game.Types.Components where
 
 import qualified SDL (Texture, Keycode)
+import qualified SDL.Mixer as Mixer (Chunk)
 import qualified Data.Map as Map (Map)
 import qualified Animate
 import           Foreign.C.Types (CInt, CDouble)
@@ -11,7 +12,10 @@ import           KeyState
 
 import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
 import           Game.Types.Physics (Collision(..))
-import           Game.Types.Player (PlayerAction(..), PlayerKey(..))
+import           Game.Types.Player
+  ( PlayerAction(..)
+  , PlayerKey(..)
+  , Player'SFX'Key(..) )
 
 -- Aliases
 type BoxEntity = (BoundingBox, Position, Entity)
@@ -122,4 +126,13 @@ data FlowEffectEmitState =
 
 newtype FlowEffectEmitter =
   FlowEffectEmitter FlowEffectEmitState
+  deriving Show
+
+
+type SFX'Key =
+    Player'SFX'Key
+
+data SoundBank = SoundBank
+  { bank  :: (Map.Map SFX'Key Mixer.Chunk)
+  , inbox :: [SFX'Key] }
   deriving Show

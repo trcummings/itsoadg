@@ -10,10 +10,12 @@
 module Game.Init where
 
 import qualified SDL
+import qualified SDL.Mixer as Mixer (load)
 import qualified Animate
 import           SDL.Font  as TTF (free, load, blended)
 import           SDL (($=))
 import           Linear (V4(..), V2(..))
+import qualified Data.Map as Map (fromList)
 import           Data.Text (singleton)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (liftIO)
@@ -49,7 +51,9 @@ import           Game.Types
   , HardFlow(..)
   , FlowEffectEmitter(..), FlowEffectEmitState(..)
   , Step(..)
-  , Inbox(..) )
+  , Inbox(..)
+  , SoundBank(..)
+  , Player'SFX'Key(..) )
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
 
@@ -79,6 +83,10 @@ initSystems renderer = void $ do
   -- load in player spritesheet
   playerSpriteSheet <- liftIO $
     loadSpriteSheet renderer "assets/sprites/player-32.json" :: SpriteAnimation
+
+  -- load in sfx
+  playerJump <- Mixer.load "assets/sfx/sfx_movement_jump16.wav"
+  playerLand <- Mixer.load "assets/sfx/sfx_movement_jump17_landing.wav"
 
   -- entities
   player <- newEntity ( -- player
@@ -142,3 +150,11 @@ initSystems renderer = void $ do
     , BoundingBox $ V2 0.25 0.25
     , Velocity $ V2 0 0
     , Inbox [] )
+
+  newEntity ( -- audio player
+      SoundBank {
+          bank =  Map.fromList [
+            (Player'SFX'Jump, playerJump)
+          , (Player'SFX'Land, playerLand)
+          ]
+        , inbox = [] } )

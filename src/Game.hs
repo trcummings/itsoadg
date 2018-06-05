@@ -10,9 +10,10 @@
 module Game (main) where
 
 import qualified SDL
-import           Apecs (runSystem, runGC)
 import           SDL.Time (ticks)
 import qualified SDL.Font as TTF (initialize)
+import qualified SDL.Mixer as Mixer (openAudio, defaultAudio)
+import           Apecs (runSystem, runGC)
 import           Control.Monad (when)
 import           Control.Monad.IO.Class (liftIO)
 
@@ -23,6 +24,7 @@ import           Game.Camera (stepCamera)
 import           Game.FlowMeter (stepFlowMeter)
 import           Game.Event (handleEvent, maintainAllInputs)
 import           Game.Physics (stepPhysics)
+import           Game.Audio (stepAudioQueue)
 import           Game.Render (prepNextRender, stepRender, runRender)
 import           Game.Init (initSystems)
 import           Game.Constants (dT, initialSize)
@@ -72,6 +74,9 @@ outerStep nextTime events window renderer = do
   -- render
   stepRender renderer
 
+  -- play audio
+  stepAudioQueue
+
   -- garbage collect. yes, every frame
   runGC
 
@@ -99,6 +104,7 @@ main :: IO ()
 main = do
   SDL.initializeAll -- initialize all SDL systems
   TTF.initialize   -- initialize SDL.Font
+  Mixer.openAudio Mixer.defaultAudio 256 -- initialize SDL.Mixer with 256 chunk size
 
   -- create window and renderer
   window <- SDL.createWindow "ITSOADG" SDL.defaultWindow { SDL.windowInitialSize = initialSize }

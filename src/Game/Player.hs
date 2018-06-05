@@ -16,7 +16,7 @@ import           Game.Types
   , Unit(..)
   , Gravity(..)
   , Seconds(..)
-  , Player(..), PlayerAction(..), PlayerKey(..)
+  , Player(..), PlayerAction(..), PlayerKey(..), Player'SFX'Key(..)
   , Animations(..)
   , SpriteSheet(..)
   , Step(..)
@@ -40,6 +40,7 @@ import           Game.Jump
   , falling
   , floating
   , jumping )
+import           Game.Audio (dispatchToAudioInbox)
 import           Game.Step (smash, peel)
 import           Game.World (System')
 
@@ -147,7 +148,10 @@ stepPlayerState = do
           -- cannot jump while burning
           -- so play some kind of feedback, audio or whatever
           BurningFlow -> return ()
-          _           -> setJump
+          _           -> do
+            setJump
+            when (not isJumping) $ dispatchToAudioInbox Player'SFX'Jump
+
       False -> releaseJump
 
     -- attempt to activate burning state

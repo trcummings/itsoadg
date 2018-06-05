@@ -16,6 +16,11 @@ data PlayerKey =
   | PlayerKey'LIdle
   deriving (Show, Eq, Ord, Bounded, Enum)
 
+data Player'SFX'Key =
+    Player'SFX'Jump
+  | Player'SFX'Land
+  deriving (Show, Eq, Ord, Bounded, Enum)
+
 data PlayerAction =
     PlayerAction'MoveRight
   | PlayerAction'JumpRight

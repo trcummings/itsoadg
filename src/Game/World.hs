@@ -41,7 +41,8 @@ import Game.Types
   , FlowMeter(..)
   , HardFlow(..)
   , Inbox(..)
-  , FlowEffectEmitter(..) )
+  , FlowEffectEmitter(..)
+  , SoundBank(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -120,6 +121,9 @@ instance Component FlowEffectEmitter where
 instance Component Inbox where
   type Storage Inbox = Map Inbox
 
+instance Component SoundBank where
+  type Storage SoundBank = Unique SoundBank
+
 makeWorld "World" [
     ''Position
   , ''Velocity
@@ -142,6 +146,7 @@ makeWorld "World" [
   , ''FlowMeter
   , ''HardFlow
   , ''FlowEffectEmitter
+  , ''SoundBank
   ]
 
 type System' a = System World a
