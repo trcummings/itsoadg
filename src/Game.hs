@@ -22,7 +22,7 @@ import           Game.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTi
 import           Game.Player (stepPlayerState, stepPlayerAction)
 import           Game.Camera (stepCamera)
 import           Game.FlowMeter (stepFlowMeter)
-import           Game.Event (handleEvent, maintainAllInputs)
+import           Game.Input (handleSDLInput, maintainAllInputs)
 import           Game.Physics (stepPhysics)
 import           Game.Audio (stepAudioQueue)
 import           Game.Render (prepNextRender, stepRender, runRender)
@@ -63,7 +63,7 @@ innerStep = do
 outerStep :: Double -> [SDL.Event] -> SDL.Window -> SDL.Renderer -> System' ()
 outerStep nextTime events window renderer = do
   -- update velocity based on arrow key presses
-  mapM handleEvent events
+  mapM handleSDLInput events
 
   -- accumulate fixed time for updates
   accumulateFixedTime nextTime

@@ -85,8 +85,12 @@ initSystems renderer = void $ do
     loadSpriteSheet renderer "assets/sprites/player-32.json" :: SpriteAnimation
 
   -- load in sfx
-  playerJump <- Mixer.load "assets/sfx/sfx_movement_jump16.wav"
-  playerLand <- Mixer.load "assets/sfx/sfx_movement_jump17_landing.wav"
+  playerJump      <- Mixer.load "assets/sfx/sfx_movement_jump16.wav"
+  playerLand      <- Mixer.load "assets/sfx/sfx_movement_jump17_landing.wav"
+  -- playerBurnStart <- Mixer.load "assets/sfx/sfx_sounds_interaction16.wav"
+  -- playerBurnLoop  <- Mixer.load "assets/sfx/sfx_sounds_interaction8.wav"
+  -- playerBurnEnd   <- Mixer.load "assets/sfx/sfx_sounds_interaction9.wav"
+  -- hardFlowEmit    <- Mixer.load
 
   -- entities
   player <- newEntity ( -- player
@@ -154,7 +158,10 @@ initSystems renderer = void $ do
   newEntity ( -- audio player
       SoundBank {
           bank =  Map.fromList [
-            (Player'SFX'Jump, playerJump)
-          , (Player'SFX'Land, playerLand)
+            ( Player'SFX'Jump     , playerJump      )
+          , ( Player'SFX'Land     , playerLand      )
+          -- , ( Player'SFX'BurnStart, playerBurnStart )
+          -- , ( Player'SFX'BurnLoop , playerBurnLoop  )
+          -- , ( Player'SFX'BurnEnd  , playerBurnEnd   )
           ]
         , inbox = [] } )

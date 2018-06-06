@@ -20,7 +20,8 @@ import           Apecs
   , getAll
   , proxy
   , exists
-  , global )
+  , global
+  , modify )
 
 import           Game.World (System')
 import           Game.AABB
@@ -99,14 +100,6 @@ handlePostCollision e c = do
   -- handleFloor e c
   handleJumpCheck e c
 
-dispatchToInbox :: Collision -> Entity -> System' ()
-dispatchToInbox c e = do
-  hasInbox <- exists e (proxy :: Inbox)
-  when (hasInbox) $ do
-    Inbox ibx <- get e :: System' Inbox
-    set e (Inbox $ ibx ++ [c])
-
-
 type GetVelocity  = System' (Velocity)
 type GetAABB      = System' (BoundingBox, Position)
 type GetSweptAABB = System' (BoundingBox, Position, Velocity)
@@ -156,6 +149,9 @@ testCollision e (_, _, e') = do
   -- move on to continued resolution
   handlePostCollision e collision
 
+stepPosition :: (Velocity, Position) -> (Velocity, Position)
+stepPosition (v@(Velocity v'), Position p) =
+  (v, Position $ p + (v' ^* Unit frameDeltaSeconds))
 
 handleCollisions :: System' ()
 handleCollisions = do
@@ -189,6 +185,11 @@ handleCollisions = do
          set entity (Position p'')
      ) dynamics
 
+handleGravity :: (Gravity, Velocity) -> Velocity
+handleGravity (g@(Gravity _ _), Velocity (V2 vx vy)) =
+  if vy > 0
+  then Velocity $ V2 vx (vy + ((descent g) * Unit frameDeltaSeconds))
+  else Velocity $ V2 vx (vy + ((ascent  g) * Unit frameDeltaSeconds))
 
 clampVelocity :: Unit -> Unit
 clampVelocity v =
@@ -196,25 +197,28 @@ clampVelocity v =
   then min v maxSpeed
   else max v (-maxSpeed)
 
+handleVelocityClamp :: Velocity -> Velocity
+handleVelocityClamp (Velocity v@(V2 vx vy)) =
+  if (vx > (-oneBumpPerSecond) && vx < oneBumpPerSecond)
+  then Velocity $ V2 0 vy
+  else Velocity $ clampVelocity <$> v
+
+handleJumpRequest :: (Jump, Velocity) -> (Jump, Velocity)
+handleJumpRequest (jumpState@(Jump _ _ _), v@(Velocity (V2 vx _))) =
+  if (jumpState == jumpRequested)
+  then (jumping, Velocity $ V2 vx (-initialJumpVy))
+  else (jumpState, v)
+
 stepPhysics :: System' ()
 stepPhysics = do
   -- update acceleration based on gravity
-  cmap $ \(g@(Gravity _ _), Velocity (V2 vx vy)) ->
-    if vy > 0
-    then Velocity $ V2 vx (vy + ((descent g) * Unit frameDeltaSeconds))
-    else Velocity $ V2 vx (vy + ((ascent  g) * Unit frameDeltaSeconds))
+  cmap handleGravity
 
   -- jump!
-  cmapM_ $ \(jumpState@(Jump _ _ _), e) -> do
-    Velocity (V2 vx _) <- get e :: System' (Velocity)
-    when (jumpState == jumpRequested) $ do
-      set e (Velocity $ V2 vx (-initialJumpVy), jumping)
+  cmap handleJumpRequest
 
   -- clamp velocity
-  cmap $ \(Velocity v@(V2 vx vy)) ->
-    if (vx > (-oneBumpPerSecond) && vx < oneBumpPerSecond)
-    then Velocity $ V2 0 vy
-    else Velocity $ clampVelocity <$> v
+  cmap handleVelocityClamp
 
   -- collisions
   -- position will only be modified in here (as well as other things)

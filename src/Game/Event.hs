@@ -1,42 +1,22 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Game.Event where
 
-import qualified SDL
-import           Apecs (cmap)
-import qualified Data.Map as Map (lookup, map)
-import           Data.Map (insert, (!))
-import           Control.Monad.IO.Class (liftIO)
-import           KeyState (KeyState(..), updateKeyState, maintainKeyState)
+-- import           Apecs (Has, System, Component, Entity, get, set, global, cmap, modify)
+-- import           Control.Monad.IO.Class (liftIO)
 
-import           Game.World (System')
-import           Game.Types (PlayerInput(..), MousePosition(..))
-import           Game.Constants (frameDeltaSeconds)
+-- import           Game.Types (QueueEvent(..), EventQueue(..))
+-- import           Game.World (System', World)
 
-updateKey :: KeyState Double -> SDL.InputMotion -> KeyState Double
-updateKey ks motion = updateKeyState frameDeltaSeconds ks touched
-  where touched = motion == SDL.Pressed
+-- dispatchToEventQueue :: QueueEvent -> System' ()
+-- dispatchToEventQueue qe = cmap $ \(EventQueue es) ->
+--   EventQueue $ es ++ [qe]
 
-maintainKey :: KeyState Double -> KeyState Double
-maintainKey ks = maintainKeyState frameDeltaSeconds ks
+-- runQueueEvent :: (Has World c, Component c) => Entity -> (c -> c) -> System' ()
+-- runQueueEvent e f = modify e f
 
-handleEvent :: SDL.Event -> System' ()
-handleEvent event = do
-  case SDL.eventPayload event of
-    SDL.KeyboardEvent keyboardEvent ->
-      cmap $ \(PlayerInput m) ->
-        case (Map.lookup keyCode m) of
-          -- NB: Int keys work best performance-wise for maps,
-          --     if performance is slow here, change to Int map
-          Just ks -> PlayerInput $ insert keyCode (updateKey ks motion) m
-          Nothing -> PlayerInput m
-      where
-        keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
-        motion  = SDL.keyboardEventKeyMotion keyboardEvent
-
-    SDL.MouseMotionEvent mouseMotionEvent -> do
-      cmap $ \(MousePosition _) -> MousePosition pos
-      where (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
-
-    _ -> return ()
-
-maintainAllInputs :: System' ()
-maintainAllInputs = cmap $ \(PlayerInput m) -> PlayerInput $ Map.map maintainKey m
+-- stepQueueEvents :: System' ()
+-- stepQueueEvents = do
+--   EventQueue events <- get global
+--   mapM (\(QueueEvent e f) -> runQueueEvent e f) events
+--   cmap $ \(EventQueue _) -> EventQueue []
