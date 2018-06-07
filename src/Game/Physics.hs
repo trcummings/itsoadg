@@ -153,6 +153,15 @@ stepPosition :: (Velocity, Position) -> (Velocity, Position)
 stepPosition (v@(Velocity v'), Position p) =
   (v, Position $ p + (v' ^* Unit frameDeltaSeconds))
 
+handleNotOnGround :: Entity -> System' ()
+handleNotOnGround entity = do
+  -- we are not on the ground if we arent colliding with anything, but we arent
+  -- necessarily jumping
+  hasJump <- exists entity (proxy :: Jump)
+  when hasJump $ do
+    jumpState <- get entity :: System' Jump
+    when (jumpState == onGround || jumpState == landed) $ set entity falling
+
 handleCollisions :: System' ()
 handleCollisions = do
   -- get all entities with a bounding box
@@ -171,15 +180,7 @@ handleCollisions = do
 
        -- when no collisions happened, update position and velocity normally
        when (length actives == 0) $ do
-
-         -- we are not on the ground if we arent colliding with anything, but we arent
-         -- necessarily jumping
-         hasJump <- exists entity (proxy :: Jump)
-         when hasJump $ do
-           jumpState <- get entity :: System' Jump
-
-           when (jumpState == onGround || jumpState == landed) $ set entity falling
-
+         handleNotOnGround entity
          -- update position based on time and velocity
          let p'' = p' + (v' ^* Unit frameDeltaSeconds)
          set entity (Position p'')

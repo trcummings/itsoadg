@@ -21,7 +21,8 @@ import           Game.Types
   , SpriteSheet(..)
   , Step(..)
   , FlowEffectEmitter(..)
-  , FlowEffectEmitState(..) )
+  , FlowEffectEmitState(..)
+  , Audio'Command(..) )
 import           Game.Constants
   ( initialJumpG
   , initialFallG
@@ -150,7 +151,8 @@ stepPlayerState = do
           BurningFlow -> return ()
           _           -> do
             setJump
-            when (not isJumping) $ dispatchToAudioInbox Player'SFX'Jump
+            when (not isJumping) $
+              dispatchToAudioInbox (e, Player'SFX'Jump, Audio'PlayOrSustain)
 
       False -> releaseJump
 

@@ -1,7 +1,7 @@
 module Game.Types.Components where
 
 import qualified SDL (Texture, Keycode)
-import qualified SDL.Mixer as Mixer (Chunk)
+import qualified SDL.Mixer as Mixer (Chunk, Channel)
 import qualified Data.Map as Map (Map)
 import qualified Animate
 import           Foreign.C.Types (CInt, CDouble)
@@ -12,6 +12,7 @@ import           KeyState
 
 import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
 import           Game.Types.Physics (Collision(..))
+import           Game.Types.Commands (Audio'Command)
 import           Game.Types.Player
   ( PlayerAction(..)
   , PlayerKey(..)
@@ -133,6 +134,7 @@ type SFX'Key =
     Player'SFX'Key
 
 data SoundBank = SoundBank
-  { bank  :: (Map.Map SFX'Key Mixer.Chunk)
-  , inbox :: [SFX'Key] }
+  { bank       :: (Map.Map SFX'Key Mixer.Chunk)
+  , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel))
+  , inbox      :: [(Entity, SFX'Key, Audio'Command)] }
   deriving Show
