@@ -6,12 +6,13 @@ module Game (main) where
 import qualified SDL
 import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
-import qualified Apecs as ECS (runSystem)
+import qualified Apecs as ECS           (runSystem)
 import           Control.Monad.IO.Class (MonadIO(..))
-import           Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
+import           Control.Monad.Reader   (MonadReader, ReaderT, runReaderT)
+import           Control.Monad.State    (MonadState , StateT , evalStateT)
 
-import           Game.World (System', World, initWorld)
-import           Game.Types (SDLConfig(..))
+import           Game.World (initWorld)
+import           Game.Types (SDLConfig(..), EventQueue(..))
 import           Game.FlowMeter (stepFlowMeter)
 import           Game.Init (initSystems)
 import           Game.Constants (initialSize)
@@ -28,11 +29,18 @@ import           Game.Wrapper.SDLInput (SDLInput(..), pollEvents')
 import           Game.Wrapper.SDLTime (SDLTime(..), nextTick')
 import           Game.Wrapper.Apecs (Apecs(..), runSystem', runGC')
 
-newtype Game a = Game (ReaderT SDLConfig IO a)
-  deriving (Functor, Applicative, Monad, MonadReader SDLConfig, MonadIO)
+newtype Game a = Game
+  (ReaderT SDLConfig (StateT EventQueue IO) a)
+  deriving
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadReader SDLConfig
+    , MonadState EventQueue
+    , MonadIO )
 
-runGame :: SDLConfig -> Game a -> IO a
-runGame sdlConfig (Game m) = runReaderT m sdlConfig
+runGame :: SDLConfig -> EventQueue -> Game a -> IO a
+runGame sdlConfig eq (Game m) = evalStateT (runReaderT m sdlConfig) eq
 
 main :: IO ()
 main = do
@@ -56,7 +64,7 @@ main = do
   ECS.runSystem (initSystems renderer) world
 
   -- start loop
-  runGame sdlConfig (mainLoop world)
+  runGame sdlConfig (EventQueue [] []) (mainLoop world)
   -- mainLoop window renderer world
 
   -- clean up on quit
