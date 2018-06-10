@@ -20,7 +20,13 @@ import           Control.Monad.State  (MonadState, get, put)
 
 import           Game.Types (SDLConfig(..), EventQueue(..), QueueEvent(..))
 import           Game.World (System', World)
-import           Game.Effect.Event    (Event)
+import           Game.Effect.Event
+  ( Event
+  , prependAndGetEvents
+  , setEvents
+  , byInputEvent
+  , byAudioSystemEvent
+  , byPhysicsSystemEvent )
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import           Game.Wrapper.SDLTime (SDLTime, nextTick)
@@ -70,7 +76,7 @@ innerStep = do
 outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' [QueueEvent]
 outerStep nextTime events renderer = do
   -- update velocity based on arrow key presses
-  mapM handleSDLInput events
+  mapM handleSDLInput (filter byInputEvent events)
 
   -- accumulate fixed time for updates
   accumulateFixedTime nextTime
@@ -99,29 +105,20 @@ mainLoop ::
 mainLoop world = do
   -- prep screen for next render
   clearScreen
-
   -- get next time tick from SDL
-  nextTime <- nextTick
-
+  nextTime   <- nextTick
   -- collect events from SDL
-  sdlEvents <- pollEvents
-
+  sdlEvents  <- pollEvents
   -- collect previous rounds' events + sdlEvents
-  EventQueue queueEvents <- get
-
-  -- run main system
-  renderer <- sdlRenderer <$> ask
-  let events = sdlEvents ++ queueEvents
+  -- prepend input events to queue events to handle input changes 1 frame earlier
+  events     <- prependAndGetEvents sdlEvents
+  renderer   <- sdlRenderer <$> ask
   nextEvents <- runSystem (outerStep nextTime events renderer) world
-
   -- run current render
   drawScreen
-
   -- clear out queue for next round
-  put $ EventQueue nextEvents
-
+  setEvents nextEvents
   -- garbage collect. yes, every frame
   runGC
-
   -- loop
   mainLoop world
