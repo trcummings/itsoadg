@@ -12,7 +12,7 @@ import           KeyState
 
 import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
 import           Game.Types.Physics (Collision(..))
-import           Game.Types.Commands (Audio'Command)
+import           Game.Types.Audio (Audio'Command)
 import           Game.Types.Player
   ( PlayerAction(..)
   , PlayerKey(..)
@@ -134,6 +134,5 @@ type SFX'Key =
 
 data SoundBank = SoundBank
   { bank       :: (Map.Map SFX'Key Mixer.Chunk)
-  , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel))
-  , inbox      :: [(Entity, SFX'Key, Audio'Command)] }
+  , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
   deriving Show

@@ -88,7 +88,7 @@ outerStep nextTime events renderer = do
   stepRender renderer
 
   -- play audio
-  stepAudioQueue
+  stepAudioQueue (filter byAudioSystemEvent events)
 
   -- return events
   return []

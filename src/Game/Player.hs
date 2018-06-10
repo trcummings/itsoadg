@@ -41,7 +41,7 @@ import           Game.Jump
   , falling
   , floating
   , jumping )
-import           Game.Audio (dispatchToAudioInbox)
+-- import           Game.Audio (dispatchToAudioInbox)
 import           Game.Step (smash, peel)
 import           Game.World (System')
 
@@ -124,6 +124,9 @@ idleAction :: Dir -> PlayerAction
 idleAction L = PlayerAction'IdleLeft
 idleAction R = PlayerAction'IdleRight
 
+isPlayerJumping :: Jump -> Bool
+isPlayerJumping j = j == falling || j == floating || j == jumping
+
 stepPlayerState :: System' ()
 stepPlayerState = do
   PlayerInput m <- get global
@@ -139,8 +142,9 @@ stepPlayerState = do
             , Velocity (V2 vx _)
             , FlowEffectEmitter flowState
             , e ) -> do
-    let isJumping  = jump == falling || jump == floating || jump == jumping
-        runBumpSpeed = bumpSpeed (KeyState.isTouched aPress) (KeyState.isTouched dPress)
+    let runBumpSpeed = bumpSpeed
+                         (KeyState.isTouched aPress)
+                         (KeyState.isTouched dPress)
 
     -- attempt to jump
     case (KeyState.isTouched wPress) of
@@ -151,8 +155,8 @@ stepPlayerState = do
           BurningFlow -> return ()
           _           -> do
             setJump
-            when (not isJumping) $
-              dispatchToAudioInbox (e, Player'SFX'Jump, Audio'PlayOrSustain)
+            -- when (not $ isPlayerJumping jump) $
+              -- dispatchToAudioInbox (e, Player'SFX'Jump, Audio'PlayOrSustain)
 
       False -> releaseJump
 
@@ -187,7 +191,7 @@ stepPlayerState = do
           BurningFlow -> return ()
           _           ->
             -- cannot absorb while jumping
-            if isJumping
+            if isPlayerJumping jump
             then return ()
             else set e ( FlowEffectEmitter AbsorbingFlow
                        , Gravity { ascent  = initialJumpG / Unit 2
@@ -212,7 +216,7 @@ stepPlayerState = do
     -- modify player speed
     case flowState of
       BurningFlow           ->
-        if isJumping
+        if isPlayerJumping jump
         then do runBumpSpeed stoppingAccel  runningAccel
         else runBumpSpeed bStoppingAccel bRunningAccel
       AbsorbingFlow         -> runBumpSpeed aStoppingAccel aRunningAccel
@@ -228,8 +232,7 @@ stepPlayerAction = do
             , e ) -> do
     let pastAction = smash pastActionStep
         pastDir    = actionDir pastAction
-        isJumping  = jump == falling || jump == floating || jump == jumping
-        nextAction = if isJumping
+        nextAction = if isPlayerJumping jump
                      then jumpAction pastDir
                      else if (vx == 0)
                           then idleAction pastDir

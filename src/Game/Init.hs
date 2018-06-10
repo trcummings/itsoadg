@@ -164,5 +164,4 @@ initSystems renderer = void $ do
           -- , ( Player'SFX'BurnLoop , playerBurnLoop  )
           -- , ( Player'SFX'BurnEnd  , playerBurnEnd   )
           ]
-        , channelMap = Map.fromList []
-        , inbox = [] } )
+        , channelMap = Map.fromList [] } )
