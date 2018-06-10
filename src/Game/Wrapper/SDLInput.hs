@@ -3,8 +3,10 @@ module Game.Wrapper.SDLInput where
 import qualified SDL
 import           Control.Monad.IO.Class (MonadIO(..))
 
-class Monad m => SDLInput m where
-  pollEvents :: m [SDL.Event]
+import           Game.Types (QueueEvent(..))
 
-pollEvents' :: MonadIO m => m [SDL.Event]
-pollEvents' = SDL.pollEvents
+class Monad m => SDLInput m where
+  pollEvents :: m [QueueEvent]
+
+pollEvents' :: MonadIO m => m [QueueEvent]
+pollEvents' = map InputEvent <$> SDL.pollEvents

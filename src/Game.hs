@@ -6,28 +6,23 @@ module Game (main) where
 import qualified SDL
 import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
-import qualified Apecs as ECS           (runSystem)
-import           Control.Monad.IO.Class (MonadIO(..))
-import           Control.Monad.Reader   (MonadReader, ReaderT, runReaderT)
-import           Control.Monad.State    (MonadState , StateT , evalStateT)
+import qualified Apecs as ECS            (System, runSystem)
+import           Control.Monad.IO.Class  (MonadIO(..))
+import           Control.Monad.Reader    (MonadReader, ReaderT, runReaderT)
+import           Control.Monad.State     (MonadState , StateT , evalStateT)
 
-import           Game.World (initWorld)
+import           Game.World (World, initWorld)
 import           Game.Types (SDLConfig(..), EventQueue(..))
 import           Game.FlowMeter (stepFlowMeter)
 import           Game.Init (initSystems)
 import           Game.Constants (initialSize)
 import           Game.Loop (mainLoop)
-import           Game.Effect.Renderer
-  ( Renderer(..)
-  , clearScreen'
-  , drawScreen' )
-import           Game.Wrapper.SDLRenderer
-  ( SDLRenderer(..)
-  , presentRenderer'
-  , clearRenderer' )
-import           Game.Wrapper.SDLInput (SDLInput(..), pollEvents')
-import           Game.Wrapper.SDLTime (SDLTime(..), nextTick')
-import           Game.Wrapper.Apecs (Apecs(..), runSystem', runGC')
+import           Game.Effect.Renderer     (Renderer(..), clearScreen', drawScreen')
+import           Game.Effect.Event        (Event(..))
+import           Game.Wrapper.SDLRenderer (SDLRenderer(..), presentRenderer', clearRenderer')
+import           Game.Wrapper.SDLInput    (SDLInput(..), pollEvents')
+import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
+import           Game.Wrapper.Apecs       (Apecs(..), runSystem', runGC')
 
 newtype Game a = Game
   (ReaderT SDLConfig (StateT EventQueue IO) a)
@@ -64,7 +59,7 @@ main = do
   ECS.runSystem (initSystems renderer) world
 
   -- start loop
-  runGame sdlConfig (EventQueue [] []) (mainLoop world)
+  runGame sdlConfig (EventQueue []) (mainLoop world)
   -- mainLoop window renderer world
 
   -- clean up on quit
@@ -74,13 +69,15 @@ main = do
   TTF.quit
   SDL.quit
 
-instance SDLRenderer Game where
-  presentRenderer = presentRenderer'
-  clearRenderer   = clearRenderer'
-
 instance Renderer Game where
   clearScreen = clearScreen'
   drawScreen  = drawScreen'
+
+instance Event Game where
+
+instance SDLRenderer Game where
+  presentRenderer = presentRenderer'
+  clearRenderer   = clearRenderer'
 
 instance SDLInput Game where
   pollEvents = pollEvents'

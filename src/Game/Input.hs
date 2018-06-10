@@ -8,7 +8,7 @@ import           Control.Monad.IO.Class (liftIO)
 import           KeyState (KeyState(..), updateKeyState, maintainKeyState)
 
 import           Game.World (System')
-import           Game.Types (PlayerInput(..), MousePosition(..))
+import           Game.Types (PlayerInput(..), MousePosition(..), QueueEvent(..))
 import           Game.Constants (frameDeltaSeconds)
 
 updateKey :: KeyState Double -> SDL.InputMotion -> KeyState Double
@@ -18,8 +18,8 @@ updateKey ks motion = updateKeyState frameDeltaSeconds ks touched
 maintainKey :: KeyState Double -> KeyState Double
 maintainKey ks = maintainKeyState frameDeltaSeconds ks
 
-handleSDLInput :: SDL.Event -> System' ()
-handleSDLInput event = do
+handleSDLInput :: QueueEvent -> System' ()
+handleSDLInput (InputEvent event) = do
   case SDL.eventPayload event of
     SDL.KeyboardEvent keyboardEvent ->
       cmap $ \(PlayerInput m) ->
@@ -37,6 +37,7 @@ handleSDLInput event = do
       where (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
 
     _ -> return ()
+handleSDLInput _ = return ()
 
 maintainAllInputs :: System' ()
 maintainAllInputs = cmap $ \(PlayerInput m) -> PlayerInput $ Map.map maintainKey m

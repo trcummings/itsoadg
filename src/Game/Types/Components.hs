@@ -129,7 +129,6 @@ newtype FlowEffectEmitter =
   FlowEffectEmitter FlowEffectEmitState
   deriving Show
 
-
 type SFX'Key =
     Player'SFX'Key
 

@@ -13,13 +13,14 @@ import qualified SDL
 import           SDL.Time (ticks)
 import qualified SDL.Font as TTF (initialize)
 import qualified SDL.Mixer as Mixer (openAudio, defaultAudio)
--- import qualified Apecs (runSystem, runGC)
-import           Control.Monad (when)
+import           Control.Monad (when, (>=>))
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Reader (MonadReader, ask)
+import           Control.Monad.State  (MonadState, get, put)
 
-import           Game.Types (SDLConfig(..))
+import           Game.Types (SDLConfig(..), EventQueue(..), QueueEvent(..))
 import           Game.World (System', World)
+import           Game.Effect.Event    (Event)
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import           Game.Wrapper.SDLTime (SDLTime, nextTick)
@@ -66,7 +67,7 @@ innerStep = do
     -- recurse if we need to run another fixed step update
     innerStep
 
-outerStep :: Double -> [SDL.Event] -> SDL.Renderer -> System' ()
+outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' [QueueEvent]
 outerStep nextTime events renderer = do
   -- update velocity based on arrow key presses
   mapM handleSDLInput events
@@ -83,28 +84,41 @@ outerStep nextTime events renderer = do
   -- play audio
   stepAudioQueue
 
+  -- return events
+  return []
+
 mainLoop ::
-  ( MonadReader SDLConfig m
+  ( MonadReader SDLConfig  m
+  , MonadState  EventQueue m
   , SDLInput m
   , SDLTime  m
   , Renderer m
   , Apecs    m
+  , Event    m
   ) => World -> m ()
 mainLoop world = do
+  -- prep screen for next render
   clearScreen
 
   -- get next time tick from SDL
   nextTime <- nextTick
 
   -- collect events from SDL
-  events <- pollEvents
+  sdlEvents <- pollEvents
+
+  -- collect previous rounds' events + sdlEvents
+  EventQueue queueEvents <- get
 
   -- run main system
   renderer <- sdlRenderer <$> ask
-  runSystem (outerStep nextTime events renderer) world
+  let events = sdlEvents ++ queueEvents
+  nextEvents <- runSystem (outerStep nextTime events renderer) world
 
   -- run current render
   drawScreen
+
+  -- clear out queue for next round
+  put $ EventQueue nextEvents
 
   -- garbage collect. yes, every frame
   runGC
