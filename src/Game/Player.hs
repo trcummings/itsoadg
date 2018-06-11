@@ -286,8 +286,8 @@ stepPlayerState = do
           . (stepReleaseBurnState m)
           . (stepStartBurnState m)
           . (stepPlayerJump m) ) (p, [])
-      (_, _, _, _, _, e) = p
-  set e p'
+      (a, b, c, d, e, entity) = p'
+  set entity (a, b, c, d, e)
   return qs
 
 
