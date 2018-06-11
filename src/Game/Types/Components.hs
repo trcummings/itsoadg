@@ -94,8 +94,9 @@ newtype GlobalTime =
   deriving Show
 
 -- global input for player
+type PlayerInputMap = (Map.Map SDL.Keycode (KeyState Double))
 data PlayerInput =
-  PlayerInput (Map.Map SDL.Keycode (KeyState Double))
+  PlayerInput PlayerInputMap
   deriving Show
 
 data MousePosition =

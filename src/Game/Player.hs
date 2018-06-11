@@ -1,17 +1,20 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Game.Player where
 
 import qualified SDL
 import qualified KeyState (isTouched, ksCounter, isHeld)
 import qualified Animate
+import           Control.Lens hiding (get, set)
 import           Data.Map ((!))
-import           Control.Monad (when)
+import           Control.Monad (when, foldM)
 import           Control.Monad.IO.Class (liftIO)
-import           Apecs (cmap, cmapM_, get, global, proxy, set)
+import           Apecs (Entity, cmap, cmapM, cmapM_, get, getAll, global, proxy, set)
 import           Linear (V2(..))
 
 import           Game.Types
   ( Velocity(..)
-  , PlayerInput(..)
+  , PlayerInput(..), PlayerInputMap
   , Jump(..)
   , Unit(..)
   , Gravity(..)
@@ -22,7 +25,8 @@ import           Game.Types
   , Step(..)
   , FlowEffectEmitter(..)
   , FlowEffectEmitState(..)
-  , Audio'Command(..) )
+  , Audio'Command(..)
+  , QueueEvent(..) )
 import           Game.Constants
   ( initialJumpG
   , initialFallG
@@ -50,22 +54,23 @@ bumpVelocityX :: Velocity -> Unit -> Velocity
 bumpVelocityX (Velocity (V2 vx vy)) ax =
    Velocity $ V2 (vx + (ax * Unit frameDeltaSeconds)) vy
 
-playerBothButtons :: Unit -> System' ()
-playerBothButtons stopAccel = cmap $ \(Player _, v@(Velocity (V2 vx _))) ->
+playerBothButtons :: Velocity -> Unit -> Velocity
+playerBothButtons v@(Velocity (V2 vx _)) stopAccel =
   bumpVelocityX v (
     if vx > 0
     then   stopAccel
     else (-stopAccel) )
 
-playerRun :: Unit -> Unit -> Unit -> System' ()
-playerRun stopAccel runAccel sign =
-  cmapM_ $ \(Player _, v@(Velocity (V2 vx _)), e) -> do
-    when (abs vx < playerTopSpeed) $ do
-      let ax
-           | sign ==   1  = if (vx < 0) then 3 * (-stopAccel) else   runAccel
-           | sign == (-1) = if (vx > 0) then 3 *   stopAccel  else (-runAccel)
-           | otherwise = 0
-      set e (bumpVelocityX v ax)
+playerRun :: Velocity -> Unit -> Unit -> Unit -> Velocity
+playerRun v@(Velocity (V2 vx _)) stopAccel runAccel sign =
+  if (not $ abs vx < playerTopSpeed)
+  then v
+  else
+    let ax
+          | sign ==   1  = if (vx < 0) then 3 * (-stopAccel) else   runAccel
+          | sign == (-1) = if (vx > 0) then 3 *   stopAccel  else (-runAccel)
+          | otherwise = 0
+    in bumpVelocityX v ax
 
 toZeroVelocity :: Unit -> Unit -> Bool
 toZeroVelocity stopAccel vx =
@@ -74,8 +79,8 @@ toZeroVelocity stopAccel vx =
   else vx - nextVx >= 0
   where nextVx = stopAccel * Unit frameDeltaSeconds
 
-playerStop :: Unit -> System' ()
-playerStop stopAccel = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
+playerStop :: Velocity -> Unit -> Velocity
+playerStop v@(Velocity (V2 vx vy)) stopAccel =
   let ax
        | willStopNext =   0
        | vx >  0      =   stopAccel
@@ -86,19 +91,26 @@ playerStop stopAccel = cmap $ \(Player _, v@(Velocity (V2 vx vy))) ->
      then Velocity $ V2 0 vy
      else bumpVelocityX v ax
 
-setJump :: System' ()
-setJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
-  when (jumpState == onGround) $ set e jumpRequested
+bumpSpeed :: Velocity -> Bool -> Bool -> Unit -> Unit -> Velocity
+bumpSpeed v True  False stopA runA = playerRun v stopA runA (-1)
+bumpSpeed v False True  stopA runA = playerRun v stopA runA   1
+bumpSpeed v False False stopA _    = playerStop v stopA
+bumpSpeed v True  True  stopA _    = playerBothButtons v stopA
 
-releaseJump :: System' ()
-releaseJump = cmapM_ $ \(Player _, jumpState@(Jump _ _ _), e) -> do
-  when (jumpState == landed) $ set e onGround
+isPlayerJumping :: Jump -> Bool
+isPlayerJumping j = j == falling || j == floating || j == jumping
 
-bumpSpeed :: Bool -> Bool -> Unit -> Unit -> System' ()
-bumpSpeed True  False stopA runA = playerRun stopA runA (-1)
-bumpSpeed False True  stopA runA = playerRun stopA runA  1
-bumpSpeed False False stopA _    = playerStop stopA
-bumpSpeed True  True  stopA _    = playerBothButtons stopA
+setJump :: Jump -> Jump
+setJump jumpState =
+  if jumpState == onGround
+  then jumpRequested
+  else jumpState
+
+releaseJump :: Jump -> Jump
+releaseJump jumpState =
+  if (jumpState == landed)
+  then onGround
+  else jumpState
 
 
 data Dir = L | R
@@ -124,103 +136,159 @@ idleAction :: Dir -> PlayerAction
 idleAction L = PlayerAction'IdleLeft
 idleAction R = PlayerAction'IdleRight
 
-isPlayerJumping :: Jump -> Bool
-isPlayerJumping j = j == falling || j == floating || j == jumping
 
-stepPlayerState :: System' ()
+type PlayerStateGroup =
+  ( Player
+  , Jump
+  , Gravity
+  , Velocity
+  , FlowEffectEmitter
+  , Entity )
+
+type StepPlayer = (PlayerStateGroup, [QueueEvent])
+
+setPlayerJumpSFX :: StepPlayer -> StepPlayer
+setPlayerJumpSFX p =
+  let entity = p ^._1._6
+      jump   = p ^._1._2
+      event  = AudioSystemEvent (entity, Player'SFX'Jump, Audio'PlayOrSustain)
+  in if (not $ isPlayerJumping $ jump)
+     then p & _2 %~ ((++) [event])
+     else p
+
+stepPlayerJump :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepPlayerJump m psg =
+  if (KeyState.isTouched $ m ! SDL.KeycodeW)
+  then case (flowState psg) of
+    -- cannot jump while burning
+    -- so play some kind of feedback, audio or whatever
+         FlowEffectEmitter BurningFlow -> psg
+         _                             -> (setPlayerJump . setPlayerJumpSFX) psg
+   else releasePlayerJump psg
+   where flowState         p = p ^._1._5
+         releasePlayerJump p = p & _1._2 %~ releaseJump
+         setPlayerJump     p = p & _1._2 %~ setJump
+
+
+stepStartBurnState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepStartBurnState m psg =
+  -- attempt to activate burning state
+  let nPress    = m ! SDL.KeycodeN
+      flowState = psg ^._1._5
+  in if (not $ KeyState.isHeld nPress)
+     then psg
+     else
+       case (KeyState.ksCounter nPress) of
+         Nothing     -> psg
+         Just nCount ->
+           if (nCount < 0.5)
+           -- charging up
+           then psg
+           -- activated
+           else case flowState of
+             FlowEffectEmitter AbsorbingFlow -> psg
+             _ ->
+               psg & _1._5 .~ FlowEffectEmitter BurningFlow
+                   & _1._3 .~ Gravity { ascent  = initialJumpG
+                                      , descent = initialJumpG / Unit 2 }
+
+
+stepReleaseBurnState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepReleaseBurnState m psg =
+  -- release burning state
+  let nPress                        = m ! SDL.KeycodeN
+      (FlowEffectEmitter flowState) = psg ^._1._5
+  in if (KeyState.isTouched nPress)
+     then psg
+     else
+       case flowState of
+         BurningFlow ->
+           psg & _1._5 .~ FlowEffectEmitter BurningFlow
+               & _1._3 .~ Gravity { ascent  = initialJumpG
+                                  , descent = initialFallG }
+         _ -> psg
+
+
+stepStartAbsorbState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepStartAbsorbState m psg =
+  -- attempt to activate absorbing state
+  let mPress                        = m ! SDL.KeycodeM
+      (FlowEffectEmitter flowState) = psg ^._1._5
+      jumpState                     = psg ^._1._2
+  in if (not $ KeyState.isTouched mPress)
+     then psg
+     else
+       case flowState of
+         BurningFlow -> psg
+         _           ->
+           if (isPlayerJumping jumpState)
+           then psg
+           else psg & _1._5 .~ FlowEffectEmitter AbsorbingFlow
+                    & _1._3 .~ Gravity { ascent  = initialJumpG / Unit 2
+                                       , descent = initialFallG }
+
+
+stepReleaseAbsorbState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepReleaseAbsorbState m psg =
+  -- release absorbing state
+  let mPress    = m ! SDL.KeycodeM
+      (FlowEffectEmitter flowState) = psg ^._1._5
+  in if (KeyState.isTouched mPress)
+     then psg
+     else
+       case flowState of
+         AbsorbingFlow ->
+           psg & _1._5 .~ FlowEffectEmitter NotEmittingFlowEffect
+               & _1._3 .~ Gravity { ascent  = initialJumpG
+                                  , descent = initialFallG }
+         _ -> psg
+
+
+stepPlayerGravity :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepPlayerGravity m psg =
+  -- ensure gravity is set for proper burning state
+  let (FlowEffectEmitter flowState) = psg ^._1._5
+  in case flowState of
+      NotEmittingFlowEffect ->
+        psg & _1._3 .~ Gravity { ascent  = initialJumpG
+                               , descent = initialFallG }
+      _ -> psg
+
+
+stepPlayerSpeed :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepPlayerSpeed m psg =
+  -- modify player speed
+  let (FlowEffectEmitter flowState) = psg ^._1._5
+      jumpState                     = psg ^._1._2
+      velocity                      = psg ^._1._4
+      aPress       = m ! SDL.KeycodeA
+      dPress       = m ! SDL.KeycodeD
+      runBumpSpeed =
+        bumpSpeed velocity (KeyState.isTouched aPress) (KeyState.isTouched dPress)
+  in psg & _1._4 .~ case flowState of
+    BurningFlow           ->
+        if isPlayerJumping jumpState
+        then runBumpSpeed stoppingAccel  runningAccel
+        else runBumpSpeed bStoppingAccel bRunningAccel
+    AbsorbingFlow         -> runBumpSpeed aStoppingAccel aRunningAccel
+    NotEmittingFlowEffect -> runBumpSpeed stoppingAccel  runningAccel
+
+
+stepPlayerState :: System' [QueueEvent]
 stepPlayerState = do
   PlayerInput m <- get global
-  let aPress = m ! SDL.KeycodeA
-      dPress = m ! SDL.KeycodeD
-      wPress = m ! SDL.KeycodeW
-      nPress = m ! SDL.KeycodeN
-      mPress = m ! SDL.KeycodeM
-
-  cmapM_ $ \a@( Player _
-            , jump@(Jump _ _ _)
-            , g@(Gravity _ _)
-            , Velocity (V2 vx _)
-            , FlowEffectEmitter flowState
-            , e ) -> do
-    let runBumpSpeed = bumpSpeed
-                         (KeyState.isTouched aPress)
-                         (KeyState.isTouched dPress)
-
-    -- attempt to jump
-    case (KeyState.isTouched wPress) of
-      True  ->
-        case flowState of
-          -- cannot jump while burning
-          -- so play some kind of feedback, audio or whatever
-          BurningFlow -> return ()
-          _           -> do
-            setJump
-            -- when (not $ isPlayerJumping jump) $
-              -- dispatchToAudioInbox (e, Player'SFX'Jump, Audio'PlayOrSustain)
-
-      False -> releaseJump
-
-    -- attempt to activate burning state
-    when (KeyState.isHeld nPress) $ do
-      case (KeyState.ksCounter nPress) of
-        Just nCount ->
-          if (nCount > 0.5)
-          then case flowState of
-            AbsorbingFlow -> return ()
-            _             -> set e ( FlowEffectEmitter BurningFlow
-                                   , Gravity { ascent  = initialJumpG
-                                             , descent = initialJumpG / Unit 2 } )
-          -- play some kind of sound here to indicate its "charging up"
-          else return ()
-        Nothing     -> return ()
-
-    -- release burning state
-    case (KeyState.isTouched nPress) of
-      True  -> return ()
-      False -> case flowState of
-        BurningFlow ->
-          set e ( FlowEffectEmitter NotEmittingFlowEffect
-                , Gravity { ascent  = initialJumpG
-                          , descent = initialFallG } )
-        _           -> return ()
-
-    -- attempt to activate absorbing state
-    case (KeyState.isTouched mPress) of
-      True  ->
-        case flowState of
-          BurningFlow -> return ()
-          _           ->
-            -- cannot absorb while jumping
-            if isPlayerJumping jump
-            then return ()
-            else set e ( FlowEffectEmitter AbsorbingFlow
-                       , Gravity { ascent  = initialJumpG / Unit 2
-                                 , descent = initialFallG } )
-      False -> return ()
-
-    -- release absorbing state
-    case (KeyState.isTouched mPress) of
-      True  -> return ()
-      False -> case flowState of
-        AbsorbingFlow -> set e ( FlowEffectEmitter NotEmittingFlowEffect
-                               , Gravity { ascent  = initialJumpG
-                                         , descent = initialFallG } )
-        _             -> return ()
-
-    -- ensure gravity is set for proper burning state
-    case flowState of
-      NotEmittingFlowEffect -> set e (Gravity { ascent  = initialJumpG
-                                              , descent = initialFallG })
-      _                     -> return ()
-
-    -- modify player speed
-    case flowState of
-      BurningFlow           ->
-        if isPlayerJumping jump
-        then do runBumpSpeed stoppingAccel  runningAccel
-        else runBumpSpeed bStoppingAccel bRunningAccel
-      AbsorbingFlow         -> runBumpSpeed aStoppingAccel aRunningAccel
-      NotEmittingFlowEffect -> runBumpSpeed stoppingAccel  runningAccel
+  p:_ <- getAll :: System' [PlayerStateGroup]
+  let (p', qs) = (
+          (stepPlayerSpeed m)
+          . (stepPlayerGravity m)
+          . (stepReleaseAbsorbState m)
+          . (stepStartAbsorbState m)
+          . (stepReleaseBurnState m)
+          . (stepStartBurnState m)
+          . (stepPlayerJump m) ) (p, [])
+      (_, _, _, _, _, e) = p
+  set e p'
+  return qs
 
 
 stepPlayerAction :: System' ()
