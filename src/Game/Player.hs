@@ -3,7 +3,7 @@
 module Game.Player where
 
 import qualified SDL
-import qualified KeyState (isTouched, ksCounter, isHeld)
+import qualified KeyState
 import qualified Animate
 import           Control.Lens hiding (get, set)
 import           Data.Map ((!))
@@ -147,13 +147,34 @@ type PlayerStateGroup =
 
 type StepPlayer = (PlayerStateGroup, [QueueEvent])
 
+-- lenses for StepPlayer
+_player :: Lens' StepPlayer Player
+_player = _1._1
+
+_jump :: Lens' StepPlayer Jump
+_jump = _1._2
+
+_gravity :: Lens' StepPlayer Gravity
+_gravity = _1._3
+
+_velocity :: Lens' StepPlayer Velocity
+_velocity = _1._4
+
+_flowState :: Lens' StepPlayer FlowEffectEmitter
+_flowState = _1._5
+
+_entity :: Lens' StepPlayer Entity
+_entity = _1._6
+
+_events :: Lens' StepPlayer [QueueEvent]
+_events = _2
+
+
 setPlayerJumpSFX :: StepPlayer -> StepPlayer
 setPlayerJumpSFX p =
-  let entity = p ^._1._6
-      jump   = p ^._1._2
-      event  = AudioSystemEvent (entity, Player'SFX'Jump, Audio'PlayOrSustain)
-  in if (not $ isPlayerJumping $ jump)
-     then p & _2 %~ ((++) [event])
+  let event  = AudioSystemEvent (p ^._entity, Player'SFX'Jump, Audio'PlayOrSustain)
+  in if (not $ isPlayerJumping $ p ^._jump)
+     then p & _events %~ ((++) [event])
      else p
 
 stepPlayerJump :: PlayerInputMap -> StepPlayer -> StepPlayer
@@ -163,18 +184,18 @@ stepPlayerJump m psg =
     -- cannot jump while burning
     -- so play some kind of feedback, audio or whatever
          FlowEffectEmitter BurningFlow -> psg
-         _                             -> (setPlayerJump . setPlayerJumpSFX) psg
+         _                             -> (setPlayerJumpSFX . setPlayerJump) psg
    else releasePlayerJump psg
-   where flowState         p = p ^._1._5
-         releasePlayerJump p = p & _1._2 %~ releaseJump
-         setPlayerJump     p = p & _1._2 %~ setJump
+   where flowState         p = p ^._flowState
+         releasePlayerJump p = p & _jump %~ releaseJump
+         setPlayerJump     p = p & _jump %~ setJump
 
 
 stepStartBurnState :: PlayerInputMap -> StepPlayer -> StepPlayer
 stepStartBurnState m psg =
   -- attempt to activate burning state
   let nPress    = m ! SDL.KeycodeN
-      flowState = psg ^._1._5
+      flowState = psg ^._flowState
   in if (not $ KeyState.isHeld nPress)
      then psg
      else
@@ -188,24 +209,24 @@ stepStartBurnState m psg =
            else case flowState of
              FlowEffectEmitter AbsorbingFlow -> psg
              _ ->
-               psg & _1._5 .~ FlowEffectEmitter BurningFlow
-                   & _1._3 .~ Gravity { ascent  = initialJumpG
-                                      , descent = initialJumpG / Unit 2 }
+               psg & _flowState .~ FlowEffectEmitter BurningFlow
+                   & _gravity   .~ Gravity { ascent  = initialJumpG
+                                           , descent = initialJumpG / Unit 2 }
 
 
 stepReleaseBurnState :: PlayerInputMap -> StepPlayer -> StepPlayer
 stepReleaseBurnState m psg =
   -- release burning state
   let nPress                        = m ! SDL.KeycodeN
-      (FlowEffectEmitter flowState) = psg ^._1._5
+      (FlowEffectEmitter flowState) = psg ^._flowState
   in if (KeyState.isTouched nPress)
      then psg
      else
        case flowState of
          BurningFlow ->
-           psg & _1._5 .~ FlowEffectEmitter BurningFlow
-               & _1._3 .~ Gravity { ascent  = initialJumpG
-                                  , descent = initialFallG }
+           psg & _flowState .~ FlowEffectEmitter BurningFlow
+               & _gravity   .~ Gravity { ascent  = initialJumpG
+                                       , descent = initialFallG }
          _ -> psg
 
 
@@ -213,8 +234,8 @@ stepStartAbsorbState :: PlayerInputMap -> StepPlayer -> StepPlayer
 stepStartAbsorbState m psg =
   -- attempt to activate absorbing state
   let mPress                        = m ! SDL.KeycodeM
-      (FlowEffectEmitter flowState) = psg ^._1._5
-      jumpState                     = psg ^._1._2
+      (FlowEffectEmitter flowState) = psg ^._flowState
+      jumpState                     = psg ^._jump
   in if (not $ KeyState.isTouched mPress)
      then psg
      else
@@ -223,49 +244,49 @@ stepStartAbsorbState m psg =
          _           ->
            if (isPlayerJumping jumpState)
            then psg
-           else psg & _1._5 .~ FlowEffectEmitter AbsorbingFlow
-                    & _1._3 .~ Gravity { ascent  = initialJumpG / Unit 2
-                                       , descent = initialFallG }
+           else psg & _flowState .~ FlowEffectEmitter AbsorbingFlow
+                    & _gravity   .~ Gravity { ascent  = initialJumpG / Unit 2
+                                            , descent = initialFallG }
 
 
 stepReleaseAbsorbState :: PlayerInputMap -> StepPlayer -> StepPlayer
 stepReleaseAbsorbState m psg =
   -- release absorbing state
   let mPress    = m ! SDL.KeycodeM
-      (FlowEffectEmitter flowState) = psg ^._1._5
+      (FlowEffectEmitter flowState) = psg ^._flowState
   in if (KeyState.isTouched mPress)
      then psg
      else
        case flowState of
          AbsorbingFlow ->
-           psg & _1._5 .~ FlowEffectEmitter NotEmittingFlowEffect
-               & _1._3 .~ Gravity { ascent  = initialJumpG
-                                  , descent = initialFallG }
+           psg & _flowState .~ FlowEffectEmitter NotEmittingFlowEffect
+               & _gravity   .~ Gravity { ascent  = initialJumpG
+                                       , descent = initialFallG }
          _ -> psg
 
 
 stepPlayerGravity :: PlayerInputMap -> StepPlayer -> StepPlayer
 stepPlayerGravity m psg =
   -- ensure gravity is set for proper burning state
-  let (FlowEffectEmitter flowState) = psg ^._1._5
+  let (FlowEffectEmitter flowState) = psg ^._flowState
   in case flowState of
       NotEmittingFlowEffect ->
-        psg & _1._3 .~ Gravity { ascent  = initialJumpG
-                               , descent = initialFallG }
+        psg & _gravity .~ Gravity { ascent  = initialJumpG
+                                  , descent = initialFallG }
       _ -> psg
 
 
 stepPlayerSpeed :: PlayerInputMap -> StepPlayer -> StepPlayer
 stepPlayerSpeed m psg =
   -- modify player speed
-  let (FlowEffectEmitter flowState) = psg ^._1._5
-      jumpState                     = psg ^._1._2
-      velocity                      = psg ^._1._4
+  let (FlowEffectEmitter flowState) = psg ^._flowState
+      jumpState                     = psg ^._jump
+      velocity                      = psg ^._velocity
       aPress       = m ! SDL.KeycodeA
       dPress       = m ! SDL.KeycodeD
       runBumpSpeed =
         bumpSpeed velocity (KeyState.isTouched aPress) (KeyState.isTouched dPress)
-  in psg & _1._4 .~ case flowState of
+  in psg & _velocity .~ case flowState of
     BurningFlow           ->
         if isPlayerJumping jumpState
         then runBumpSpeed stoppingAccel  runningAccel
