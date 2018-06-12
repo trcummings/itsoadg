@@ -63,7 +63,7 @@ playerBothButtons v@(Velocity (V2 vx _)) stopAccel =
 
 playerRun :: Velocity -> Unit -> Unit -> Unit -> Velocity
 playerRun v@(Velocity (V2 vx _)) stopAccel runAccel sign =
-  if (not $ abs vx < playerTopSpeed)
+  if (not (abs vx < playerTopSpeed))
   then v
   else
     let ax
@@ -145,53 +145,47 @@ type PlayerStateGroup =
   , FlowEffectEmitter
   , Entity )
 
-type StepPlayer = (PlayerStateGroup, [QueueEvent])
+-- lenses for PlayerStateGroup
+_player :: Lens' PlayerStateGroup Player
+_player = _1
 
--- lenses for StepPlayer
-_player :: Lens' StepPlayer Player
-_player = _1._1
+_jump :: Lens' PlayerStateGroup Jump
+_jump = _2
 
-_jump :: Lens' StepPlayer Jump
-_jump = _1._2
+_gravity :: Lens' PlayerStateGroup Gravity
+_gravity = _3
 
-_gravity :: Lens' StepPlayer Gravity
-_gravity = _1._3
+_velocity :: Lens' PlayerStateGroup Velocity
+_velocity = _4
 
-_velocity :: Lens' StepPlayer Velocity
-_velocity = _1._4
+_flowState :: Lens' PlayerStateGroup FlowEffectEmitter
+_flowState = _5
 
-_flowState :: Lens' StepPlayer FlowEffectEmitter
-_flowState = _1._5
-
-_entity :: Lens' StepPlayer Entity
-_entity = _1._6
-
-_events :: Lens' StepPlayer [QueueEvent]
-_events = _2
+_entity :: Lens' PlayerStateGroup Entity
+_entity = _6
 
 
-setPlayerJumpSFX :: StepPlayer -> StepPlayer
-setPlayerJumpSFX p =
-  let event  = AudioSystemEvent (p ^._entity, Player'SFX'Jump, Audio'PlayOrSustain)
-  in if (not $ isPlayerJumping $ p ^._jump)
-     then p & _events %~ ((++) [event])
-     else p
+setPlayerJumpSFX :: PlayerStateGroup -> PlayerStateGroup -> [QueueEvent] -> [QueueEvent]
+setPlayerJumpSFX p p' qs =
+  let event  = AudioSystemEvent (p' ^._entity, Player'SFX'Jump, Audio'PlayOrSustain)
+      pastJumping = isPlayerJumping $ p  ^._jump
+      thisJumping = isPlayerJumping $ p' ^._jump
+  in if (not pastJumping && thisJumping)
+     then qs ++ [event]
+     else qs
 
-stepPlayerJump :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepPlayerJump :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepPlayerJump m psg =
   if (KeyState.isTouched $ m ! SDL.KeycodeW)
-  then case (flowState psg) of
+  then case (psg ^._flowState) of
     -- cannot jump while burning
     -- so play some kind of feedback, audio or whatever
          FlowEffectEmitter BurningFlow -> psg
-         _                             -> (setPlayerJumpSFX . setPlayerJump) psg
-   else releasePlayerJump psg
-   where flowState         p = p ^._flowState
-         releasePlayerJump p = p & _jump %~ releaseJump
-         setPlayerJump     p = p & _jump %~ setJump
+         _                             -> psg & _jump %~ setJump
+  else psg & _jump %~ releaseJump
 
 
-stepStartBurnState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepStartBurnState :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepStartBurnState m psg =
   -- attempt to activate burning state
   let nPress    = m ! SDL.KeycodeN
@@ -214,7 +208,7 @@ stepStartBurnState m psg =
                                            , descent = initialJumpG / Unit 2 }
 
 
-stepReleaseBurnState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepReleaseBurnState :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepReleaseBurnState m psg =
   -- release burning state
   let nPress                        = m ! SDL.KeycodeN
@@ -230,7 +224,7 @@ stepReleaseBurnState m psg =
          _ -> psg
 
 
-stepStartAbsorbState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepStartAbsorbState :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepStartAbsorbState m psg =
   -- attempt to activate absorbing state
   let mPress                        = m ! SDL.KeycodeM
@@ -249,7 +243,7 @@ stepStartAbsorbState m psg =
                                             , descent = initialFallG }
 
 
-stepReleaseAbsorbState :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepReleaseAbsorbState :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepReleaseAbsorbState m psg =
   -- release absorbing state
   let mPress    = m ! SDL.KeycodeM
@@ -265,7 +259,7 @@ stepReleaseAbsorbState m psg =
          _ -> psg
 
 
-stepPlayerGravity :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepPlayerGravity :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepPlayerGravity m psg =
   -- ensure gravity is set for proper burning state
   let (FlowEffectEmitter flowState) = psg ^._flowState
@@ -276,7 +270,7 @@ stepPlayerGravity m psg =
       _ -> psg
 
 
-stepPlayerSpeed :: PlayerInputMap -> StepPlayer -> StepPlayer
+stepPlayerSpeed :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepPlayerSpeed m psg =
   -- modify player speed
   let (FlowEffectEmitter flowState) = psg ^._flowState
@@ -299,18 +293,20 @@ stepPlayerState :: System' [QueueEvent]
 stepPlayerState = do
   PlayerInput m <- get global
   p:_ <- getAll :: System' [PlayerStateGroup]
-  let (p', qs) = (
-          (stepPlayerSpeed m)
+  -- apply step fns to create new player entity
+  let p' = (
+            (stepPlayerSpeed m)
           . (stepPlayerGravity m)
           . (stepReleaseAbsorbState m)
           . (stepStartAbsorbState m)
           . (stepReleaseBurnState m)
           . (stepStartBurnState m)
-          . (stepPlayerJump m) ) (p, [])
+          . (stepPlayerJump m) ) p
       (a, b, c, d, e, entity) = p'
+  -- set new player entity
   set entity (a, b, c, d, e)
-  return qs
-
+  -- generate effects
+  return $ setPlayerJumpSFX p p' []
 
 stepPlayerAction :: System' ()
 stepPlayerAction = do

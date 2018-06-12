@@ -52,11 +52,11 @@ innerStep events acc = do
     -- maintain key held or released updates
     maintainAllInputs
 
-    -- run updates based on input map
-    pEvents <- stepPlayerState
-
     -- physics update
     stepPhysics
+
+    -- run updates based on input map
+    pEvents <- stepPlayerState
 
     -- update flow meter
     stepFlowMeter
