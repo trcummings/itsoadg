@@ -23,7 +23,7 @@ import           Game.Constants
   , spriteSize
   , screenWidth
   , screenHeight )
-import           Game.AABB (broadPhaseAABB)
+import           Game.Util.AABB (broadPhaseAABB)
 import           Game.Player (stepPlayerAnimation)
 import           Game.Types
   ( Unit(..)

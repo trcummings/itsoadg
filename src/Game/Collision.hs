@@ -1,8 +1,13 @@
 module Game.Collision where
 
-import Linear (V2(..), (^*), (^/))
-import Apecs (Entity)
+import           Linear (V2(..), (^*), (^/))
+import           Apecs (Entity, set, proxy, getAll, get, exists)
+import           Data.Coerce (coerce)
+import           Control.Monad (when)
+import           Control.Monad.Extra (partitionM)
 
+
+import Game.World (System')
 import Game.Types
   ( Unit(..)
   , Position(..)
@@ -10,48 +15,128 @@ import Game.Types
   , CollisionNormal(..)
   , CollisionTime(..)
   , PenetrationVector(..)
-  , Collision(..) )
+  , Collision(..)
+  , CollisionModule(..)
+  , BoxEntity(..)
+  , BoundingBox(..)
+  , AABB(..), dims, center
+  , Jump(..) )
+import Game.Jump
 import Game.Constants (frameDeltaSeconds)
+import           Game.Util.AABB
+  ( aabbCheck
+  , sweepAABB
+  , penetrationVector
+  , broadPhaseAABB
+  , inNarrowPhase )
+import           Game.Util.Collision
+  ( toVector
+  , resolveBaseCollision
+  , resolveNormalVelocity
+  , inverseNormal )
 
-inverseNormal :: CollisionNormal -> CollisionNormal
-inverseNormal LeftNormal   = RightNormal
-inverseNormal RightNormal  = LeftNormal
-inverseNormal TopNormal    = BottomNormal
-inverseNormal BottomNormal = TopNormal
-inverseNormal NoneNormal   = NoneNormal
+type GetVelocity  = System' (Velocity)
+type GetAABB      = System' (BoundingBox, Position)
+type GetSweptAABB = System' (BoundingBox, Position, Velocity)
 
-toVector :: CollisionNormal -> V2 Unit
-toVector LeftNormal   = V2 (-1)  0
-toVector RightNormal  = V2   1   0
-toVector TopNormal    = V2   0   1
-toVector BottomNormal = V2   0 (-1)
-toVector NoneNormal   = V2   0   0
+hasVelComponent :: BoxEntity -> System' Bool
+hasVelComponent (_, _, _, e) = do
+  hasVelocity <- exists e (proxy :: Velocity)
+  return hasVelocity
 
-resolveBaseCollision :: Collision -> (Position, Velocity) -> (Position, Velocity)
-resolveBaseCollision
-  (Collision (CollisionTime collisionTime) normal _ _)
-  (Position p, Velocity v@(V2 vx vy)) =
-    let cTime = frameDeltaSeconds * collisionTime
-        remainingTime = frameDeltaSeconds * (1 - collisionTime)
-        vNormal@(V2 normalX normalY) = toVector normal
-        dotProd = ((vx * normalY) + (vy * normalX)) * Unit remainingTime
-        v' =
-          if (normal == TopNormal || normal == BottomNormal)
-          then V2 vx (dotProd * normalX)
-          else V2 (dotProd * normalY) vy
-        p' = p + v ^* Unit cTime
-    in (Position p', Velocity v')
+handleBaseCollision :: Entity -> Collision -> System' ()
+handleBaseCollision e c@(Collision _ _ _ _) = do
+  pv <- get e :: System' (Position, Velocity)
+  set e $ resolveBaseCollision c pv
 
-resolveNormalVelocity :: Velocity
-                      -> PenetrationVector
-                      -> CollisionNormal
-                      -> Velocity
-resolveNormalVelocity (Velocity v@(V2 vx vy)) (PenetrationVector pVector) normal =
-  let v' = case normal of
-             NoneNormal   -> v + (pVector ^/ Unit frameDeltaSeconds)
-             TopNormal    -> V2 vx 0
-             BottomNormal -> V2 vx 0
-             LeftNormal   -> V2 0 vy
-             RightNormal  -> V2 0 vy
-  in Velocity v'
+handleJumpCheck :: Entity -> Collision -> System' ()
+handleJumpCheck e (Collision _ normal _ _) = do
+  hasJump <- exists e (proxy :: Jump)
+  when (hasJump && normal == BottomNormal) $ do
+    jumpState <- get e :: System' Jump
+    when (jumpState == jumping) $ set e landed
+    when (jumpState == floating || jumpState == falling) $ set e onGround
 
+handlePostCollision :: Entity -> Collision -> System' ()
+handlePostCollision e c = do
+  -- handleFloor e c
+  handleJumpCheck e c
+
+handleNotOnGround :: Entity -> System' ()
+handleNotOnGround entity = do
+  -- we are not on the ground if we arent colliding with anything, but we arent
+  -- necessarily jumping
+  hasJump <- exists entity (proxy :: Jump)
+  when hasJump $ do
+    jumpState <- get entity :: System' Jump
+    when (jumpState == onGround || jumpState == landed) $ set entity falling
+
+
+testCollision :: Entity -> BoxEntity -> System' ()
+testCollision e (_, _, _, e') = do
+  -- get current collision information
+  (BoundingBox bb1, Position p1, v@(Velocity v')) <- get e :: GetSweptAABB
+  (BoundingBox bb2, Position p2) <- get e' :: GetAABB
+  let box1 = AABB { center = p1, dims = bb1 }
+      box2 = AABB { center = p2, dims = bb2 }
+      (collisionTime, normal) = sweepAABB v box1 box2
+      (pVec, pNormal) = penetrationVector box1 box2
+      pVector = PenetrationVector $ pVec * (toVector pNormal)
+      collision = Collision collisionTime normal pVector e'
+      lowCollisionTime = ((coerce collisionTime :: Double) * frameDeltaSeconds) < 0.00005
+      noPenetration = (abs <$> (coerce pVector :: V2 Unit)) == V2 0 0
+      hasZeroNormal = normal == NoneNormal
+      useSimpleResolution =
+            hasZeroNormal
+        ||  lowCollisionTime
+        || (hasZeroNormal && noPenetration)
+
+  if (useSimpleResolution)
+  -- collision too slow to use swept resolution, or we hit a corner
+  then do
+    let Velocity v'' = resolveNormalVelocity v pVector normal
+        willNotEscape = aabbCheck
+          (broadPhaseAABB (BoundingBox bb1) (Position p1) (Velocity v''))
+          box2
+        -- handle floor corners
+        p' = if (hasZeroNormal && not noPenetration && willNotEscape)
+             -- push out of wall
+             then p1 + (coerce pVector :: V2 Unit)
+             -- otherwise update normally
+             else p1 + (v'' ^* Unit frameDeltaSeconds)
+    set e (Velocity v'', Position p')
+    -- dispatchToInbox
+    --   (Collision collisionTime pNormal pVector e') e
+    -- let reverseVector = PenetrationVector $ negate <$> (coerce pVector :: V2 Unit)
+    --     reverseNormal = inverseNormal pNormal
+    -- dispatchToInbox
+    --   (Collision collisionTime reverseNormal reverseVector e) e'
+  -- we need a swept collision resolution
+  else handleBaseCollision e collision
+  -- move on to continued resolution
+  handlePostCollision e collision
+
+
+handleCollisions :: System' ()
+handleCollisions = do
+  -- get all entities with a bounding box
+  allBoundingBoxes <- getAll :: System' [BoxEntity]
+
+  -- partition into moving boxes & static boxes
+  (dynamics, _) <- partitionM hasVelComponent allBoundingBoxes
+
+  mapM_ (\(CollisionModule, bb@(BoundingBox bb'), p@(Position p'), entity) -> do
+       v@(Velocity v') <- get entity :: System' Velocity
+       let sweptBox = broadPhaseAABB bb p v
+           actives  = filter (inNarrowPhase entity sweptBox) allBoundingBoxes
+
+       -- run all collision updates
+       mapM_ (testCollision entity) actives
+
+       -- when no collisions happened, update position and velocity normally
+       when (length actives == 0) $ do
+         handleNotOnGround entity
+         -- update position based on time and velocity
+         let p'' = p' + (v' ^* Unit frameDeltaSeconds)
+         set entity (Position p'')
+     ) dynamics

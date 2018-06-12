@@ -19,7 +19,7 @@ import           Game.Types.Player
   , Player'SFX'Key(..) )
 
 -- Aliases
-type BoxEntity = (BoundingBox, Position, Entity)
+type BoxEntity = (CollisionModule, BoundingBox, Position, Entity)
 
 type AnimationKey =
   PlayerKey
@@ -137,3 +137,5 @@ data SoundBank = SoundBank
   { bank       :: (Map.Map SFX'Key Mixer.Chunk)
   , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
   deriving Show
+
+data CollisionModule = CollisionModule
