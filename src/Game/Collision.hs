@@ -25,7 +25,10 @@ import Game.Types
   , Jump(..)
   , Player(..)
   , HardFlow(..)
-  , QueueEvent(..) )
+  , QueueEvent(..)
+  , Audio'Command(..)
+  , Player'SFX'Key(..) )
+import Game.Wrapper.Apecs (emap)
 import Game.Jump
 import Game.Constants (frameDeltaSeconds)
 import           Game.Util.AABB
@@ -148,6 +151,26 @@ stepCollisionJump cm (_, jumpState, e) =
      else foldr stepJumpState jumpState collisions
 
 
+stepJump' :: CollisionMap -> (CollisionModule, Jump, Entity) -> (Jump, [QueueEvent])
+stepJump' cm (_, jumpState, e) =
+  let collisions = getCollisions cm e
+  in if (length collisions == 0)
+     then if (jumpState == onGround || jumpState == landed)
+          then (falling, [])
+          else (jumpState, [])
+     else foldr stepJumpState' (jumpState, []) collisions
+     where stepJumpState' ct (j, qs) =
+             if (normal == BottomNormal)
+             then if (j == jumping)
+                  then (landed, qs ++ [AudioSystemEvent (e, Player'SFX'Land, Audio'PlayOrSustain)])
+                  else if (j == floating || j == falling)
+                       then (onGround, qs)
+                       else (jumpState, qs)
+             else (jumpState, qs)
+             where normal = case ct of SimpleCollision (_, normal) -> normal
+                                       SweptCollision  (_, normal) -> normal
+
+
 -- speed
 stepSpeed :: CollisionType -> Velocity -> Velocity
 stepSpeed (SimpleCollision (pVec, normal)) v = resolveNormalVelocity v pVec normal
@@ -184,7 +207,7 @@ stepCollisionPosition cm (_, v@(Velocity v'), p@(Position p'), e) =
 
 
 -- whole system
-stepCollisionSystem :: System' ()
+stepCollisionSystem :: System' [QueueEvent]
 stepCollisionSystem = do
   -- get all entities with a collision module
   allCollidables    <- getAll :: System' [Collidable]
@@ -193,18 +216,7 @@ stepCollisionSystem = do
   let collisions   = concat $ map (processCollidable allCollidables) movingCollidables
       collisionMap = foldr addToCollisionMap Map.empty collisions
   -- process CollisionModule related components
-  -- cmapM_ $ \(Player _, j@(Jump _ _ _), p@(Position _), v@(Velocity _)) -> do
-  --   liftIO $ putStrLn "__________________"
-  --   liftIO $ putStrLn $ show j ++ ", " ++ show p ++ ", " ++ show v
-
   cmap $ (stepCollisionSpeed    collisionMap)
   cmap $ (stepCollisionPosition collisionMap)
-  cmap $ (stepCollisionJump     collisionMap)
-
-  -- liftIO $ putStrLn $ show collisions
-
-  -- cmapM_ $ \(Player _, j@(Jump _ _ _), p@(Position _), v@(Velocity _)) -> do
-  --   liftIO $ putStrLn $ show j ++ ", " ++ show p ++ ", " ++ show v
-  --   liftIO $ putStrLn "__________________"
-  -- cmap $ \(CollisionModule, HardFlow)       -> HardFlow
-  -- cmap $ \(CollisionModule)                 -> CollisionModule
+  jEvts <- emap $ (stepJump' collisionMap)
+  return jEvts

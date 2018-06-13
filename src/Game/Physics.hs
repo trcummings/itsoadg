@@ -36,13 +36,17 @@ import           Game.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
+import           Game.Wrapper.Apecs (emap)
 import           Game.Types
   ( Unit(..)
   , Jump(..), buttonPressed, isJumping, isGrounded
   , Position(..)
   , Velocity(..)
   , Gravity(..)
-  , CollisionModule(..) )
+  , CollisionModule(..)
+  , QueueEvent(..)
+  , Audio'Command(..)
+  , Player'SFX'Key(..) )
 import Game.Jump
   ( landed
   , onGround
@@ -54,9 +58,8 @@ import Game.Jump
 oneBumpPerSecond :: Unit
 oneBumpPerSecond = (4 / 32) * Unit frameDeltaSeconds
 
--- stepPosition :: (Velocity, Position) -> (Velocity, Position)
--- stepPosition (v@(Velocity v'), Position p) =
---   (v, Position $ p + (v' ^* Unit frameDeltaSeconds))
+stepPosition :: (Velocity, Position) -> Position
+stepPosition (Velocity v, Position p) = Position $ p + (v ^* Unit frameDeltaSeconds)
 
 handleNotOnGround :: Entity -> System' ()
 handleNotOnGround entity = do
@@ -91,17 +94,27 @@ handleJumpRequest (jumpState@(Jump _ _ _), v@(Velocity (V2 vx _))) =
   then (jumping, Velocity $ V2 vx (-initialJumpVy))
   else (jumpState, v)
 
-updateNonCollidablePositions :: (Not CollisionModule, Position, Velocity) -> Position
-updateNonCollidablePositions (_, Position p, Velocity v) =
-  Position $ p + (v ^* Unit frameDeltaSeconds)
+stepJump :: (Jump, Velocity, Entity) -> ((Jump, Velocity), [QueueEvent])
+stepJump (jumpState@(Jump _ _ _), v@(Velocity (V2 vx _)), e) =
+  if (jumpState == jumpRequested)
+  then (
+    ( jumping, Velocity $ V2 vx (-initialJumpVy))
+    , [AudioSystemEvent (e, Player'SFX'Jump, Audio'PlayOrSustain)] )
+  else ((jumpState, v), [])
 
-stepPhysicsSystem :: System' ()
+updateNonCollidablePositions :: (Not CollisionModule, Velocity, Position) -> Position
+updateNonCollidablePositions (_, v, p) = stepPosition (v, p)
+
+stepPhysicsSystem :: System' [QueueEvent]
 stepPhysicsSystem = do
   -- update acceleration based on gravity
   cmap handleGravity
   -- jump!
-  cmap handleJumpRequest
+  -- cmap handleJumpRequest
+  evts <- emap stepJump
   -- clamp velocity
   cmap handleVelocityClamp
   -- update positions of all non-colliding entities
   cmap updateNonCollidablePositions
+
+  return evts

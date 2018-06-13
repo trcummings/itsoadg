@@ -52,52 +52,38 @@ innerStep events acc = do
   else do
     -- maintain key held or released updates
     maintainAllInputs
-
     -- run updates based on input map
     pEvents <- stepPlayerState
-
     -- physics update
-    stepPhysicsSystem
-    stepCollisionSystem
-
+    phEvents <- stepPhysicsSystem
+    cEvents <- stepCollisionSystem
     -- update flow meter
     stepFlowMeter
-
     -- update player "action"
     stepPlayerAction
-
     -- update camera
     stepCamera
-
     -- clear away the fixed time we've accumulated
     clearFixedTime
-
     -- get next fixed time for update
     (_, acc') <- getFixedTime
-
     -- recurse if we need to run another fixed step update
-    innerStep (events ++ pEvents) acc'
+    innerStep (events ++ pEvents ++ phEvents ++ cEvents) acc'
 
 outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' ()
 outerStep nextTime events renderer = do
   -- update velocity based on arrow key presses
   mapM handleSDLInput (filter byInputEvent events)
-
   -- accumulate fixed time for updates
   accumulateFixedTime nextTime
-
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
-
   -- run updates
   effectEvents <- innerStep events acc
-
   -- render
   stepRender renderer
-
   -- play audio
   stepAudioQueue (filter byAudioSystemEvent effectEvents)
-
   return ()
 
 mainLoop ::
