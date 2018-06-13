@@ -1,10 +1,13 @@
 module Game.Collision where
 
 import           Linear (V2(..), (^*), (^/))
-import           Apecs (Entity, set, proxy, getAll, get, exists)
+import           Apecs (Entity, cmap, cmapM_, set, proxy, getAll, get, exists)
 import           Data.Coerce (coerce)
+import           Data.Map ((!?))
+import qualified Data.Map as Map (Map, insertWith, empty)
 import           Control.Monad (when)
 import           Control.Monad.Extra (partitionM)
+import           Control.Monad.IO.Class (liftIO)
 
 
 import Game.World (System')
@@ -15,12 +18,14 @@ import Game.Types
   , CollisionNormal(..)
   , CollisionTime(..)
   , PenetrationVector(..)
-  , Collision(..)
   , CollisionModule(..)
   , BoxEntity(..)
   , BoundingBox(..)
   , AABB(..), dims, center
-  , Jump(..) )
+  , Jump(..)
+  , Player(..)
+  , HardFlow(..)
+  , QueueEvent(..) )
 import Game.Jump
 import Game.Constants (frameDeltaSeconds)
 import           Game.Util.AABB
@@ -39,104 +44,167 @@ type GetVelocity  = System' (Velocity)
 type GetAABB      = System' (BoundingBox, Position)
 type GetSweptAABB = System' (BoundingBox, Position, Velocity)
 
-hasVelComponent :: BoxEntity -> System' Bool
-hasVelComponent (_, _, _, e) = do
-  hasVelocity <- exists e (proxy :: Velocity)
-  return hasVelocity
+type Collidable = (CollisionModule, BoundingBox, Position, Entity)
+type DynamicCollidable = (CollisionModule, BoundingBox, Position, Velocity, Entity)
 
-handleBaseCollision :: Entity -> Collision -> System' ()
-handleBaseCollision e c@(Collision _ _ _ _) = do
-  pv <- get e :: System' (Position, Velocity)
-  set e $ resolveBaseCollision c pv
+data To = To Entity deriving Show
+data From = From Entity deriving Show
+data CollisionType =
+    NoCollision
+  | SweptCollision  (CollisionTime    , CollisionNormal)
+  | SimpleCollision (PenetrationVector, CollisionNormal)
+  deriving Show
 
-handleJumpCheck :: Entity -> Collision -> System' ()
-handleJumpCheck e (Collision _ normal _ _) = do
-  hasJump <- exists e (proxy :: Jump)
-  when (hasJump && normal == BottomNormal) $ do
-    jumpState <- get e :: System' Jump
-    when (jumpState == jumping) $ set e landed
-    when (jumpState == floating || jumpState == falling) $ set e onGround
-
-handlePostCollision :: Entity -> Collision -> System' ()
-handlePostCollision e c = do
-  -- handleFloor e c
-  handleJumpCheck e c
-
-handleNotOnGround :: Entity -> System' ()
-handleNotOnGround entity = do
-  -- we are not on the ground if we arent colliding with anything, but we arent
-  -- necessarily jumping
-  hasJump <- exists entity (proxy :: Jump)
-  when hasJump $ do
-    jumpState <- get entity :: System' Jump
-    when (jumpState == onGround || jumpState == landed) $ set entity falling
+type CollisionMap = Map.Map Entity [CollisionType]
+type Collision = (To, From, CollisionType)
 
 
-testCollision :: Entity -> BoxEntity -> System' ()
-testCollision e (_, _, _, e') = do
-  -- get current collision information
-  (BoundingBox bb1, Position p1, v@(Velocity v')) <- get e :: GetSweptAABB
-  (BoundingBox bb2, Position p2) <- get e' :: GetAABB
+determineCollisionType :: DynamicCollidable -> Collidable -> Collision
+determineCollisionType (_, BoundingBox bb1, Position p1, v@(Velocity v'), e1)
+                       (_, BoundingBox bb2, Position p2, e2) =
   let box1 = AABB { center = p1, dims = bb1 }
       box2 = AABB { center = p2, dims = bb2 }
       (collisionTime, normal) = sweepAABB v box1 box2
-      (pVec, pNormal) = penetrationVector box1 box2
-      pVector = PenetrationVector $ pVec * (toVector pNormal)
-      collision = Collision collisionTime normal pVector e'
-      lowCollisionTime = ((coerce collisionTime :: Double) * frameDeltaSeconds) < 0.00005
-      noPenetration = (abs <$> (coerce pVector :: V2 Unit)) == V2 0 0
-      hasZeroNormal = normal == NoneNormal
-      useSimpleResolution =
-            hasZeroNormal
-        ||  lowCollisionTime
-        || (hasZeroNormal && noPenetration)
-
-  if (useSimpleResolution)
-  -- collision too slow to use swept resolution, or we hit a corner
-  then do
-    let Velocity v'' = resolveNormalVelocity v pVector normal
-        willNotEscape = aabbCheck
-          (broadPhaseAABB (BoundingBox bb1) (Position p1) (Velocity v''))
-          box2
-        -- handle floor corners
-        p' = if (hasZeroNormal && not noPenetration && willNotEscape)
-             -- push out of wall
-             then p1 + (coerce pVector :: V2 Unit)
-             -- otherwise update normally
-             else p1 + (v'' ^* Unit frameDeltaSeconds)
-    set e (Velocity v'', Position p')
-    -- dispatchToInbox
-    --   (Collision collisionTime pNormal pVector e') e
-    -- let reverseVector = PenetrationVector $ negate <$> (coerce pVector :: V2 Unit)
-    --     reverseNormal = inverseNormal pNormal
-    -- dispatchToInbox
-    --   (Collision collisionTime reverseNormal reverseVector e) e'
-  -- we need a swept collision resolution
-  else handleBaseCollision e collision
-  -- move on to continued resolution
-  handlePostCollision e collision
+      -- (pVec, pNormal) = penetrationVector box1 box2
+      -- pVector = PenetrationVector $ pVec * (toVector pNormal)
+      -- lowCollisionTime = ((coerce collisionTime :: Double) * frameDeltaSeconds) < 0.00005
+      -- noPenetration = (abs <$> (coerce pVector :: V2 Unit)) == V2 0 0
+      -- hasZeroNormal = normal == NoneNormal
+      toEvent = (,,) (To e1) (From e2)
+      -- useSimpleResolution =
+      --       hasZeroNormal
+      --   ||  lowCollisionTime
+      --   || (hasZeroNormal && noPenetration)
+  in toEvent $ SweptCollision (collisionTime, normal)
+  -- in if (useSimpleResolution)
+  --    then
+  --      let adjustedV = resolveNormalVelocity v pVector normal
+  --          -- adjustedP = Position $ p1 + v' ^* Unit frameDeltaSeconds
+  --          -- adjustedBBB = broadPhaseAABB (BoundingBox bb1) adjustedP adjustedV
+  --          adjustedBBB = broadPhaseAABB (BoundingBox bb1) (Position p1) adjustedV
+  --          willNotEscape = aabbCheck adjustedBBB box2
+  --                in if (hasZeroNormal && not noPenetration && willNotEscape)
+  --         then toEvent $ SimpleCollision (pVector, pNormal)
+  --         else toEvent NoCollision
+  --    else toEvent $ SweptCollision (collisionTime, normal)
 
 
-handleCollisions :: System' ()
-handleCollisions = do
-  -- get all entities with a bounding box
-  allBoundingBoxes <- getAll :: System' [BoxEntity]
+addToCollisionMap :: Collision -> CollisionMap -> CollisionMap
+addToCollisionMap (To e1, From e2, collisionType) m =
+  case collisionType of
+    NoCollision                    -> m
+    SimpleCollision (pVec, normal) ->
+      let reverseVector = PenetrationVector $ negate <$> (coerce pVec :: V2 Unit)
+          reverseNormal = inverseNormal normal
+      in Map.insertWith (++) e2 [SimpleCollision (reverseVector, reverseNormal)] $
+           Map.insertWith (++) e1 [collisionType] m
+    SweptCollision (cTime, normal) ->
+      let reverseNormal = inverseNormal normal
+          neutralVector = PenetrationVector $ V2 0 0
+      in Map.insertWith (++) e2 [SimpleCollision (neutralVector, reverseNormal)] $
+           Map.insertWith (++) e1 [collisionType] m
 
-  -- partition into moving boxes & static boxes
-  (dynamics, _) <- partitionM hasVelComponent allBoundingBoxes
+processCollidable :: [Collidable] -> DynamicCollidable -> [Collision]
+processCollidable allCollidables
+                  cm@( _
+                     , bb@(BoundingBox bb')
+                     , p@(Position p')
+                     , v@(Velocity v')
+                     , entity ) =
+  let sweptBox = broadPhaseAABB bb p v
+      actives  = filter (inNarrowPhase entity sweptBox) allCollidables
+      -- if we have no swept phase collisions
+  in if (length actives == 0)
+     then [(To entity, From entity, NoCollision)]
+     else map (determineCollisionType cm) actives
 
-  mapM_ (\(CollisionModule, bb@(BoundingBox bb'), p@(Position p'), entity) -> do
-       v@(Velocity v') <- get entity :: System' Velocity
-       let sweptBox = broadPhaseAABB bb p v
-           actives  = filter (inNarrowPhase entity sweptBox) allBoundingBoxes
 
-       -- run all collision updates
-       mapM_ (testCollision entity) actives
+-- post collection updates
+-- util
+getCollisions :: CollisionMap -> Entity -> [CollisionType]
+getCollisions cm e = case (cm !? e) of Just c  -> c
+                                       Nothing -> []
 
-       -- when no collisions happened, update position and velocity normally
-       when (length actives == 0) $ do
-         handleNotOnGround entity
-         -- update position based on time and velocity
-         let p'' = p' + (v' ^* Unit frameDeltaSeconds)
-         set entity (Position p'')
-     ) dynamics
+-- jump
+stepJumpState :: CollisionType -> Jump -> Jump
+stepJumpState collisionType jumpState =
+  if (normal == BottomNormal)
+  then if (jumpState == jumping)
+  then landed
+  else if (jumpState == floating || jumpState == falling)
+       then onGround
+       else jumpState
+  else jumpState
+  where normal = case collisionType of SimpleCollision (_, normal) -> normal
+                                       SweptCollision  (_, normal) -> normal
+
+stepCollisionJump :: CollisionMap -> (CollisionModule, Jump, Entity) -> Jump
+stepCollisionJump cm (_, jumpState, e) =
+  let collisions = getCollisions cm e
+  in if (length collisions == 0)
+     then if (jumpState == onGround || jumpState == landed)
+          then falling
+          else jumpState
+     else foldr stepJumpState jumpState collisions
+
+
+-- speed
+stepSpeed :: CollisionType -> Velocity -> Velocity
+stepSpeed (SimpleCollision (pVec, normal)) v = resolveNormalVelocity v pVec normal
+stepSpeed (SweptCollision (cTime, normal)) v = resolveBaseCollision (cTime, normal) v
+
+stepCollisionSpeed :: CollisionMap -> (CollisionModule, Velocity, Entity) -> Velocity
+stepCollisionSpeed cm (_, v, e) =
+  let collisions = getCollisions cm e
+  in if (length collisions == 0)
+     then v
+     else foldr stepSpeed v collisions
+
+
+-- position
+stepPosition :: CollisionType -> (Position, Velocity) -> (Position, Velocity)
+stepPosition (SimpleCollision (pVec, normal))
+             (Position p, v@(Velocity v')) =
+  (Position $ p + (coerce pVec :: V2 Unit), v)
+stepPosition (SweptCollision (CollisionTime cTime, normal))
+             (Position p, v@(Velocity v')) =
+  let cTime' = (coerce cTime :: Double) * frameDeltaSeconds
+      lowCollisionTime = cTime' < 0.00005
+      time = if (lowCollisionTime) then frameDeltaSeconds else cTime'
+  in (Position $ p + v' ^* Unit time, v)
+
+stepCollisionPosition :: CollisionMap
+                      -> (CollisionModule, Velocity, Position, Entity)
+                      -> Position
+stepCollisionPosition cm (_, v@(Velocity v'), p@(Position p'), e) =
+  let collisions = getCollisions cm e
+  in if (length collisions == 0)
+     then Position $ p' + (v' ^* Unit frameDeltaSeconds)
+     else fst $ foldr stepPosition (p, v) collisions
+
+
+-- whole system
+stepCollisionSystem :: System' ()
+stepCollisionSystem = do
+  -- get all entities with a collision module
+  allCollidables    <- getAll :: System' [Collidable]
+  movingCollidables <- getAll :: System' [DynamicCollidable]
+  -- compute collisions, insert in entity-key collision-value map
+  let collisions   = concat $ map (processCollidable allCollidables) movingCollidables
+      collisionMap = foldr addToCollisionMap Map.empty collisions
+  -- process CollisionModule related components
+  -- cmapM_ $ \(Player _, j@(Jump _ _ _), p@(Position _), v@(Velocity _)) -> do
+  --   liftIO $ putStrLn "__________________"
+  --   liftIO $ putStrLn $ show j ++ ", " ++ show p ++ ", " ++ show v
+
+  cmap $ (stepCollisionSpeed    collisionMap)
+  cmap $ (stepCollisionPosition collisionMap)
+  cmap $ (stepCollisionJump     collisionMap)
+
+  -- liftIO $ putStrLn $ show collisions
+
+  -- cmapM_ $ \(Player _, j@(Jump _ _ _), p@(Position _), v@(Velocity _)) -> do
+  --   liftIO $ putStrLn $ show j ++ ", " ++ show p ++ ", " ++ show v
+  --   liftIO $ putStrLn "__________________"
+  -- cmap $ \(CollisionModule, HardFlow)       -> HardFlow
+  -- cmap $ \(CollisionModule)                 -> CollisionModule

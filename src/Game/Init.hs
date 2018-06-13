@@ -151,15 +151,15 @@ initSystems renderer = void $ do
     , CollisionModule
     , BoundingBox $ V2 1 7 )
 
-  newEntity ( --hard flow1
-      HardFlow
-    , Gravity
-        { ascent  = initialJumpG
-        , descent = initialFallG }
-    , Position $ V2 2 (screenHeight - 1.5)
-    , CollisionModule
-    , BoundingBox $ V2 0.25 0.25
-    , Velocity $ V2 0 0 )
+  -- newEntity ( --hard flow1
+  --     HardFlow
+  --   , Gravity
+  --       { ascent  = initialJumpG
+  --       , descent = initialFallG }
+  --   , Position $ V2 2 (screenHeight - 1.5)
+  --   , CollisionModule
+  --   , BoundingBox $ V2 0.25 0.25
+  --   , Velocity $ V2 0 0 )
 
   newEntity ( -- audio player
       SoundBank {

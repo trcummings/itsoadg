@@ -27,20 +27,18 @@ toVector TopNormal    = V2   0   1
 toVector BottomNormal = V2   0 (-1)
 toVector NoneNormal   = V2   0   0
 
-resolveBaseCollision :: Collision -> (Position, Velocity) -> (Position, Velocity)
+resolveBaseCollision :: (CollisionTime, CollisionNormal) -> Velocity -> Velocity
 resolveBaseCollision
-  (Collision (CollisionTime collisionTime) normal _ _)
-  (Position p, Velocity v@(V2 vx vy)) =
-    let cTime = frameDeltaSeconds * collisionTime
-        remainingTime = frameDeltaSeconds * (1 - collisionTime)
-        vNormal@(V2 normalX normalY) = toVector normal
+  (CollisionTime collisionTime, normal)
+  (Velocity (V2 vx vy)) =
+    let remainingTime = frameDeltaSeconds * (1 - collisionTime)
+        (V2 normalX normalY) = toVector normal
         dotProd = ((vx * normalY) + (vy * normalX)) * Unit remainingTime
-        v' =
+        v =
           if (normal == TopNormal || normal == BottomNormal)
           then V2 vx (dotProd * normalX)
           else V2 (dotProd * normalY) vy
-        p' = p + v ^* Unit cTime
-    in (Position p', Velocity v')
+    in Velocity v
 
 resolveNormalVelocity :: Velocity
                       -> PenetrationVector

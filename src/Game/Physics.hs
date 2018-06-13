@@ -13,6 +13,7 @@ import           Linear (V2(..), V4(..), (^*), (*^), (^/))
 import qualified KeyState (isTouched)
 import           Apecs
   ( Entity
+  , Not
   , cmap
   , cmapM_
   , set
@@ -24,7 +25,6 @@ import           Apecs
   , modify )
 
 import           Game.World (System')
-import           Game.Collision (handleCollisions)
 import           Game.Constants
   ( dT
   , frameDeltaSeconds
@@ -41,7 +41,8 @@ import           Game.Types
   , Jump(..), buttonPressed, isJumping, isGrounded
   , Position(..)
   , Velocity(..)
-  , Gravity(..) )
+  , Gravity(..)
+  , CollisionModule(..) )
 import Game.Jump
   ( landed
   , onGround
@@ -53,9 +54,9 @@ import Game.Jump
 oneBumpPerSecond :: Unit
 oneBumpPerSecond = (4 / 32) * Unit frameDeltaSeconds
 
-stepPosition :: (Velocity, Position) -> (Velocity, Position)
-stepPosition (v@(Velocity v'), Position p) =
-  (v, Position $ p + (v' ^* Unit frameDeltaSeconds))
+-- stepPosition :: (Velocity, Position) -> (Velocity, Position)
+-- stepPosition (v@(Velocity v'), Position p) =
+--   (v, Position $ p + (v' ^* Unit frameDeltaSeconds))
 
 handleNotOnGround :: Entity -> System' ()
 handleNotOnGround entity = do
@@ -90,17 +91,17 @@ handleJumpRequest (jumpState@(Jump _ _ _), v@(Velocity (V2 vx _))) =
   then (jumping, Velocity $ V2 vx (-initialJumpVy))
   else (jumpState, v)
 
-stepPhysics :: System' ()
-stepPhysics = do
+updateNonCollidablePositions :: (Not CollisionModule, Position, Velocity) -> Position
+updateNonCollidablePositions (_, Position p, Velocity v) =
+  Position $ p + (v ^* Unit frameDeltaSeconds)
+
+stepPhysicsSystem :: System' ()
+stepPhysicsSystem = do
   -- update acceleration based on gravity
   cmap handleGravity
-
   -- jump!
   cmap handleJumpRequest
-
   -- clamp velocity
   cmap handleVelocityClamp
-
-  -- collisions
-  -- position will only be modified in here (as well as other things)
-  handleCollisions
+  -- update positions of all non-colliding entities
+  cmap updateNonCollidablePositions

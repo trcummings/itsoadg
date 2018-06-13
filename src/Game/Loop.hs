@@ -36,7 +36,8 @@ import           Game.Player (stepPlayerState, stepPlayerAction)
 import           Game.Camera (stepCamera)
 import           Game.FlowMeter (stepFlowMeter)
 import           Game.Input (handleSDLInput, maintainAllInputs)
-import           Game.Physics (stepPhysics)
+import           Game.Physics (stepPhysicsSystem)
+import           Game.Collision (stepCollisionSystem)
 import           Game.Audio (stepAudioQueue)
 import           Game.Render (stepRender)
 import           Game.Init (initSystems)
@@ -53,7 +54,8 @@ innerStep events acc = do
     maintainAllInputs
 
     -- physics update
-    stepPhysics
+    stepPhysicsSystem
+    stepCollisionSystem
 
     -- run updates based on input map
     pEvents <- stepPlayerState
