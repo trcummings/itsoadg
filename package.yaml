@@ -36,6 +36,7 @@ dependencies:
 - transformers
 - lens
 - aeson
+- vector
 - text
 - text-conversions
 - containers
