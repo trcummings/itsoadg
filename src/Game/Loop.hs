@@ -53,12 +53,12 @@ innerStep events acc = do
     -- maintain key held or released updates
     maintainAllInputs
 
+    -- run updates based on input map
+    pEvents <- stepPlayerState
+
     -- physics update
     stepPhysicsSystem
     stepCollisionSystem
-
-    -- run updates based on input map
-    pEvents <- stepPlayerState
 
     -- update flow meter
     stepFlowMeter
@@ -78,7 +78,7 @@ innerStep events acc = do
     -- recurse if we need to run another fixed step update
     innerStep (events ++ pEvents) acc'
 
-outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' [QueueEvent]
+outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' ()
 outerStep nextTime events renderer = do
   -- update velocity based on arrow key presses
   mapM handleSDLInput (filter byInputEvent events)
@@ -90,16 +90,15 @@ outerStep nextTime events renderer = do
   (_, acc) <- getFixedTime
 
   -- run updates
-  nextEvents <- innerStep events acc
+  effectEvents <- innerStep events acc
 
   -- render
   stepRender renderer
 
   -- play audio
-  stepAudioQueue (filter byAudioSystemEvent events)
+  stepAudioQueue (filter byAudioSystemEvent effectEvents)
 
-  -- return events
-  return nextEvents
+  return ()
 
 mainLoop ::
   ( MonadReader SDLConfig  m
@@ -121,11 +120,11 @@ mainLoop world = do
   -- prepend input events to queue events to handle input changes 1 frame earlier
   events     <- prependAndGetEvents sdlEvents
   renderer   <- sdlRenderer <$> ask
-  nextEvents <- runSystem (outerStep nextTime events renderer) world
+  runSystem (outerStep nextTime events renderer) world
   -- run current render
   drawScreen
   -- clear out queue for next round
-  setEvents nextEvents
+  setEvents []
   -- garbage collect. yes, every frame
   runGC
   -- loop
