@@ -65,28 +65,28 @@ determineCollisionType (_, BoundingBox bb1, Position p1, v@(Velocity v'), e1)
   let box1 = AABB { center = p1, dims = bb1 }
       box2 = AABB { center = p2, dims = bb2 }
       (collisionTime, normal) = sweepAABB v box1 box2
-      -- (pVec, pNormal) = penetrationVector box1 box2
-      -- pVector = PenetrationVector $ pVec * (toVector pNormal)
-      -- lowCollisionTime = ((coerce collisionTime :: Double) * frameDeltaSeconds) < 0.00005
-      -- noPenetration = (abs <$> (coerce pVector :: V2 Unit)) == V2 0 0
-      -- hasZeroNormal = normal == NoneNormal
+      (pVec, pNormal) = penetrationVector box1 box2
+      pVector = PenetrationVector $ pVec * (toVector pNormal)
+      lowCollisionTime = ((coerce collisionTime :: Double) * frameDeltaSeconds) < 0.00005
+      noPenetration = (abs <$> (coerce pVector :: V2 Unit)) == V2 0 0
+      hasZeroNormal = normal == NoneNormal
       toEvent = (,,) (To e1) (From e2)
-      -- useSimpleResolution =
-      --       hasZeroNormal
-      --   ||  lowCollisionTime
-      --   || (hasZeroNormal && noPenetration)
-  in toEvent $ SweptCollision (collisionTime, normal)
-  -- in if (useSimpleResolution)
-  --    then
-  --      let adjustedV = resolveNormalVelocity v pVector normal
-  --          -- adjustedP = Position $ p1 + v' ^* Unit frameDeltaSeconds
-  --          -- adjustedBBB = broadPhaseAABB (BoundingBox bb1) adjustedP adjustedV
-  --          adjustedBBB = broadPhaseAABB (BoundingBox bb1) (Position p1) adjustedV
-  --          willNotEscape = aabbCheck adjustedBBB box2
-  --                in if (hasZeroNormal && not noPenetration && willNotEscape)
-  --         then toEvent $ SimpleCollision (pVector, pNormal)
-  --         else toEvent NoCollision
-  --    else toEvent $ SweptCollision (collisionTime, normal)
+      useSimpleResolution =
+            hasZeroNormal
+        ||  lowCollisionTime
+        || (hasZeroNormal && noPenetration)
+  -- in toEvent $ SweptCollision (collisionTime, normal)
+  in if (useSimpleResolution)
+     then
+       let adjustedV = resolveNormalVelocity v pVector normal
+           -- adjustedP = Position $ p1 + v' ^* Unit frameDeltaSeconds
+           -- adjustedBBB = broadPhaseAABB (BoundingBox bb1) adjustedP adjustedV
+           adjustedBBB = broadPhaseAABB (BoundingBox bb1) (Position p1) adjustedV
+           willNotEscape = aabbCheck adjustedBBB box2
+                 in if (hasZeroNormal && not noPenetration && willNotEscape)
+          then toEvent $ SimpleCollision (pVector, pNormal)
+          else toEvent NoCollision
+     else toEvent $ SweptCollision (collisionTime, normal)
 
 
 addToCollisionMap :: Collision -> CollisionMap -> CollisionMap
@@ -169,9 +169,9 @@ stepPosition (SimpleCollision (pVec, normal))
 stepPosition (SweptCollision (CollisionTime cTime, normal))
              (Position p, v@(Velocity v')) =
   let cTime' = (coerce cTime :: Double) * frameDeltaSeconds
-      lowCollisionTime = cTime' < 0.00005
-      time = if (lowCollisionTime) then frameDeltaSeconds else cTime'
-  in (Position $ p + v' ^* Unit time, v)
+      -- lowCollisionTime = cTime' < 0.00005
+      -- time = if (lowCollisionTime) then frameDeltaSeconds else cTime'
+  in (Position $ p + v' ^* Unit cTime', v)
 
 stepCollisionPosition :: CollisionMap
                       -> (CollisionModule, Velocity, Position, Entity)
