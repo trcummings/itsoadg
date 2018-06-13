@@ -12,14 +12,14 @@ import           KeyState
 
 import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
 import           Game.Types.Physics (Collision(..))
-import           Game.Types.Commands (Audio'Command)
+import           Game.Types.Audio (Audio'Command)
 import           Game.Types.Player
   ( PlayerAction(..)
   , PlayerKey(..)
   , Player'SFX'Key(..) )
 
 -- Aliases
-type BoxEntity = (BoundingBox, Position, Entity)
+type BoxEntity = (CollisionModule, BoundingBox, Position, Entity)
 
 type AnimationKey =
   PlayerKey
@@ -94,8 +94,9 @@ newtype GlobalTime =
   deriving Show
 
 -- global input for player
+type PlayerInputMap = (Map.Map SDL.Keycode (KeyState Double))
 data PlayerInput =
-  PlayerInput (Map.Map SDL.Keycode (KeyState Double))
+  PlayerInput PlayerInputMap
   deriving Show
 
 data MousePosition =
@@ -129,12 +130,12 @@ newtype FlowEffectEmitter =
   FlowEffectEmitter FlowEffectEmitState
   deriving Show
 
-
 type SFX'Key =
     Player'SFX'Key
 
 data SoundBank = SoundBank
   { bank       :: (Map.Map SFX'Key Mixer.Chunk)
-  , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel))
-  , inbox      :: [(Entity, SFX'Key, Audio'Command)] }
+  , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
   deriving Show
+
+data CollisionModule = CollisionModule

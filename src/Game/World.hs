@@ -42,7 +42,8 @@ import Game.Types
   , HardFlow(..)
   , Inbox(..)
   , FlowEffectEmitter(..)
-  , SoundBank(..) )
+  , SoundBank(..)
+  , CollisionModule(..) )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -124,6 +125,9 @@ instance Component Inbox where
 instance Component SoundBank where
   type Storage SoundBank = Unique SoundBank
 
+instance Component CollisionModule where
+  type Storage CollisionModule = Map CollisionModule
+
 makeWorld "World" [
     ''Position
   , ''Velocity
@@ -147,6 +151,7 @@ makeWorld "World" [
   , ''HardFlow
   , ''FlowEffectEmitter
   , ''SoundBank
+  , ''CollisionModule
   ]
 
 type System' a = System World a

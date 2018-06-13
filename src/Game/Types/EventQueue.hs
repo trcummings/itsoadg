@@ -1,16 +1,16 @@
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Game.Types.EventQueue where
 
-import           Apecs (System, Entity, Has)
+import qualified SDL
+
+import           Game.Types.Physics (Collision)
+import           Game.Types.Audio (AudioEvent)
 
 data QueueEvent =
-  forall w c. Has w c => QueueEvent Entity (c -> c)
-
-instance Show QueueEvent where
-  show (QueueEvent e _) = "QueueEvent from " ++ show e
-
-newtype EventQueue =
-  EventQueue [QueueEvent]
+    AudioSystemEvent AudioEvent
+  | PhysicsSystemEvent Collision
+  | InputEvent SDL.Event
   deriving Show
+
+data EventQueue = EventQueue [QueueEvent]

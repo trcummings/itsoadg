@@ -32,6 +32,9 @@ dependencies:
 - sdl2-ttf
 - sdl2-image
 - sdl2-mixer
+- mtl
+- transformers
+- lens
 - aeson
 - text
 - text-conversions
