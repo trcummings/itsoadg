@@ -105,16 +105,16 @@ stepJump (jumpState@(Jump _ _ _), v@(Velocity (V2 vx _)), e) =
 updateNonCollidablePositions :: (Not CollisionModule, Velocity, Position) -> Position
 updateNonCollidablePositions (_, v, p) = stepPosition (v, p)
 
-stepPhysicsSystem :: System' [QueueEvent]
-stepPhysicsSystem = do
+stepPhysicsSystem :: [QueueEvent] -> System' [QueueEvent]
+stepPhysicsSystem evts = do
   -- update acceleration based on gravity
   cmap handleGravity
   -- jump!
   -- cmap handleJumpRequest
-  evts <- emap stepJump
+  evts' <- emap stepJump
   -- clamp velocity
   cmap handleVelocityClamp
   -- update positions of all non-colliding entities
   cmap updateNonCollidablePositions
 
-  return evts
+  return (evts ++ evts')

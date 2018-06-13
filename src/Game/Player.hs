@@ -289,8 +289,8 @@ stepPlayerSpeed m psg =
     NotEmittingFlowEffect -> runBumpSpeed stoppingAccel  runningAccel
 
 
-stepPlayerState :: System' [QueueEvent]
-stepPlayerState = do
+stepPlayerState :: [QueueEvent] -> System' [QueueEvent]
+stepPlayerState evts = do
   PlayerInput m <- get global
   p:_ <- getAll :: System' [PlayerStateGroup]
   -- apply step fns to create new player entity
@@ -306,7 +306,7 @@ stepPlayerState = do
   -- set new player entity
   set entity (a, b, c, d, e)
   -- generate effects
-  return $ setPlayerJumpSFX p p' []
+  return $ setPlayerJumpSFX p p' evts
 
 stepPlayerAction :: System' ()
 stepPlayerAction = do

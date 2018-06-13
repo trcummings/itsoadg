@@ -53,10 +53,10 @@ innerStep events acc = do
     -- maintain key held or released updates
     maintainAllInputs
     -- run updates based on input map
-    pEvents <- stepPlayerState
+    events' <- stepPlayerState events
     -- physics update
-    phEvents <- stepPhysicsSystem
-    cEvents <- stepCollisionSystem
+      >>= stepPhysicsSystem
+      >>= stepCollisionSystem
     -- update flow meter
     stepFlowMeter
     -- update player "action"
@@ -68,7 +68,7 @@ innerStep events acc = do
     -- get next fixed time for update
     (_, acc') <- getFixedTime
     -- recurse if we need to run another fixed step update
-    innerStep (events ++ pEvents ++ phEvents ++ cEvents) acc'
+    innerStep events' acc'
 
 outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' ()
 outerStep nextTime events renderer = do

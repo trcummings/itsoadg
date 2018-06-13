@@ -159,10 +159,12 @@ stepJump' cm (_, jumpState, e) =
           then (falling, [])
           else (jumpState, [])
      else foldr stepJumpState' (jumpState, []) collisions
-     where stepJumpState' ct (j, qs) =
+     where
+       landingEvent = AudioSystemEvent (e, Player'SFX'Land, Audio'PlayOrSustain)
+       stepJumpState' ct (j, qs) =
              if (normal == BottomNormal)
              then if (j == jumping)
-                  then (landed, qs ++ [AudioSystemEvent (e, Player'SFX'Land, Audio'PlayOrSustain)])
+                  then (landed, qs ++ [landingEvent])
                   else if (j == floating || j == falling)
                        then (onGround, qs)
                        else (jumpState, qs)
@@ -207,8 +209,8 @@ stepCollisionPosition cm (_, v@(Velocity v'), p@(Position p'), e) =
 
 
 -- whole system
-stepCollisionSystem :: System' [QueueEvent]
-stepCollisionSystem = do
+stepCollisionSystem :: [QueueEvent] -> System' [QueueEvent]
+stepCollisionSystem evts = do
   -- get all entities with a collision module
   allCollidables    <- getAll :: System' [Collidable]
   movingCollidables <- getAll :: System' [DynamicCollidable]
@@ -219,4 +221,4 @@ stepCollisionSystem = do
   cmap $ (stepCollisionSpeed    collisionMap)
   cmap $ (stepCollisionPosition collisionMap)
   jEvts <- emap $ (stepJump' collisionMap)
-  return jEvts
+  return (jEvts ++ evts)
