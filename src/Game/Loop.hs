@@ -19,7 +19,7 @@ import           Control.Monad.Reader (MonadReader, ask)
 import           Control.Monad.State  (MonadState, get, put)
 
 import           Game.Types (SDLConfig(..), EventQueue(..), QueueEvent(..))
-import           Game.World (System', World)
+import           Game.World (System', World, SystemFn)
 import           Game.Effect.Event
   ( Event
   , prependAndGetEvents
@@ -33,7 +33,7 @@ import           Game.Wrapper.SDLTime (SDLTime, nextTick)
 import           Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 import           Game.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
 import           Game.Player (stepPlayerState, stepPlayerAction)
-import           Game.Camera (stepCamera)
+import           Game.Camera (stepCameraPhysics)
 import           Game.FlowMeter (stepFlowMeter)
 import           Game.Input (handleSDLInput, maintainAllInputs)
 import           Game.Physics (stepPhysicsSystem)
@@ -44,8 +44,8 @@ import           Game.Init (initSystems)
 import           Game.Constants (dT, initialSize)
 
 -- update physics multiple times if time step is less than frame update time
-innerStep :: [QueueEvent] -> Double -> System' [QueueEvent]
-innerStep events acc = do
+innerStep :: Double -> SystemFn
+innerStep acc events = do
   if (acc < dT)
   then return events
   -- when we've accumulated a fixed step update
@@ -57,18 +57,17 @@ innerStep events acc = do
     -- physics update
       >>= stepPhysicsSystem
       >>= stepCollisionSystem
+      >>= stepCameraPhysics
     -- update flow meter
     stepFlowMeter
     -- update player "action"
     stepPlayerAction
-    -- update camera
-    stepCamera
     -- clear away the fixed time we've accumulated
     clearFixedTime
     -- get next fixed time for update
     (_, acc') <- getFixedTime
     -- recurse if we need to run another fixed step update
-    innerStep events' acc'
+    innerStep acc' events'
 
 outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' ()
 outerStep nextTime events renderer = do
@@ -79,7 +78,7 @@ outerStep nextTime events renderer = do
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
   -- run updates
-  effectEvents <- innerStep events acc
+  effectEvents <- innerStep acc events
   -- render
   stepRender renderer
   -- play audio

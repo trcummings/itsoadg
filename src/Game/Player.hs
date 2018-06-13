@@ -12,6 +12,7 @@ import           Control.Monad.IO.Class (liftIO)
 import           Apecs (Entity, cmap, cmapM, cmapM_, get, getAll, global, proxy, set)
 import           Linear (V2(..))
 
+import           Game.Wrapper.Apecs (emap)
 import           Game.Types
   ( Velocity(..)
   , PlayerInput(..), PlayerInputMap
@@ -47,7 +48,7 @@ import           Game.Jump
   , jumping )
 -- import           Game.Audio (dispatchToAudioInbox)
 import           Game.Step (smash, peel)
-import           Game.World (System')
+import           Game.World (System', SystemFn)
 
 -- movement
 bumpVelocityX :: Velocity -> Unit -> Velocity
@@ -142,8 +143,7 @@ type PlayerStateGroup =
   , Jump
   , Gravity
   , Velocity
-  , FlowEffectEmitter
-  , Entity )
+  , FlowEffectEmitter )
 
 -- lenses for PlayerStateGroup
 _player :: Lens' PlayerStateGroup Player
@@ -160,19 +160,6 @@ _velocity = _4
 
 _flowState :: Lens' PlayerStateGroup FlowEffectEmitter
 _flowState = _5
-
-_entity :: Lens' PlayerStateGroup Entity
-_entity = _6
-
-
-setPlayerJumpSFX :: PlayerStateGroup -> PlayerStateGroup -> [QueueEvent] -> [QueueEvent]
-setPlayerJumpSFX p p' qs =
-  let event  = AudioSystemEvent (p' ^._entity, Player'SFX'Jump, Audio'PlayOrSustain)
-      pastJumping = isPlayerJumping $ p  ^._jump
-      thisJumping = isPlayerJumping $ p' ^._jump
-  in if (not pastJumping && thisJumping)
-     then qs ++ [event]
-     else qs
 
 stepPlayerJump :: PlayerInputMap -> PlayerStateGroup -> PlayerStateGroup
 stepPlayerJump m psg =
@@ -289,24 +276,18 @@ stepPlayerSpeed m psg =
     NotEmittingFlowEffect -> runBumpSpeed stoppingAccel  runningAccel
 
 
-stepPlayerState :: [QueueEvent] -> System' [QueueEvent]
+stepPlayerState :: SystemFn
 stepPlayerState evts = do
   PlayerInput m <- get global
-  p:_ <- getAll :: System' [PlayerStateGroup]
-  -- apply step fns to create new player entity
-  let p' = (
-            (stepPlayerSpeed m)
-          . (stepPlayerGravity m)
-          . (stepReleaseAbsorbState m)
-          . (stepStartAbsorbState m)
-          . (stepReleaseBurnState m)
-          . (stepStartBurnState m)
-          . (stepPlayerJump m) ) p
-      (a, b, c, d, e, entity) = p'
-  -- set new player entity
-  set entity (a, b, c, d, e)
-  -- generate effects
-  return $ setPlayerJumpSFX p p' evts
+  cmap $ (
+      (stepPlayerSpeed m)
+    . (stepPlayerGravity m)
+    . (stepReleaseAbsorbState m)
+    . (stepStartAbsorbState m)
+    . (stepReleaseBurnState m)
+    . (stepStartBurnState m)
+    . (stepPlayerJump m) )
+  return evts
 
 stepPlayerAction :: System' ()
 stepPlayerAction = do

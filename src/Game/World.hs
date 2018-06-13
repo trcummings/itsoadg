@@ -10,6 +10,7 @@
 module Game.World
   ( World
   , System'
+  , SystemFn
   , initWorld ) where
 
 import           Apecs
@@ -43,7 +44,8 @@ import Game.Types
   , Inbox(..)
   , FlowEffectEmitter(..)
   , SoundBank(..)
-  , CollisionModule(..) )
+  , CollisionModule(..)
+  , QueueEvent )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -155,3 +157,4 @@ makeWorld "World" [
   ]
 
 type System' a = System World a
+type SystemFn = [QueueEvent] -> System World [QueueEvent]

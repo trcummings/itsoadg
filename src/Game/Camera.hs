@@ -3,15 +3,15 @@ module Game.Camera where
 import Linear (V2(..), (*^))
 import Apecs (get, set, cmapM_)
 
-import Game.World (System')
+import Game.World (System', SystemFn)
 import Game.Types
   ( Camera(..), size, ppos
   , CameraTarget(..)
   , Acceleration(..)
   , Position(..) )
 
-stepCamera :: System' ()
-stepCamera = do
+stepCameraPhysics :: SystemFn
+stepCameraPhysics events = do
   -- update camera position based on target
   cmapM_ $ \(
       Camera s@(V2 cw ch) cp
@@ -36,3 +36,4 @@ stepCamera = do
         Camera { size = s, ppos = cpos' }
       , Acceleration $ V2 0 0
       , Position d )
+  return events
