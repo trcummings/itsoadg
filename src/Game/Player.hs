@@ -27,7 +27,8 @@ import           Game.Types
   , FlowEffectEmitter(..)
   , FlowEffectEmitState(..)
   , Audio'Command(..)
-  , QueueEvent(..) )
+  , QueueEvent(..)
+  , Dir(..) )
 import           Game.Constants
   ( initialJumpG
   , initialFallG
@@ -112,9 +113,6 @@ releaseJump jumpState =
   if (jumpState == landed)
   then onGround
   else jumpState
-
-
-data Dir = L | R
 
 actionDir :: PlayerAction -> Dir
 actionDir action = case action of
@@ -278,7 +276,7 @@ stepPlayerSpeed m psg =
 
 stepPlayerState :: SystemFn
 stepPlayerState evts = do
-  PlayerInput m <- get global
+  PlayerInput m _ <- get global
   cmap $ (
       (stepPlayerSpeed m)
     . (stepPlayerGravity m)

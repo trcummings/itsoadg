@@ -27,7 +27,9 @@ import Game.Types
   , HardFlow(..)
   , QueueEvent(..)
   , Audio'Command(..)
-  , Player'SFX'Key(..) )
+  , Player'SFX'Key(..)
+  , To(..)
+  , From(..) )
 import Game.Wrapper.Apecs (emap)
 import Game.Jump
 import Game.Constants (frameDeltaSeconds)
@@ -50,8 +52,6 @@ type GetSweptAABB = System' (BoundingBox, Position, Velocity)
 type Collidable = (CollisionModule, BoundingBox, Position, Entity)
 type DynamicCollidable = (CollisionModule, BoundingBox, Position, Velocity, Entity)
 
-data To = To Entity deriving Show
-data From = From Entity deriving Show
 data CollisionType =
     NoCollision
   | SweptCollision  (CollisionTime    , CollisionNormal)

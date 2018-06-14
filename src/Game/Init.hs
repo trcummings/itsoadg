@@ -53,7 +53,8 @@ import           Game.Types
   , Step(..)
   , SoundBank(..)
   , Player'SFX'Key(..)
-  , CollisionModule(..) )
+  , CollisionModule(..)
+  , Commandable(..) )
 import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
 
@@ -95,6 +96,7 @@ initSystems renderer = void $ do
   -- entities
   player <- newEntity ( -- player
       Player (Step'Sustain PlayerAction'IdleRight)
+    , Commandable
     , ( Position $ V2 7 ((screenHeight / 2) - 2)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0

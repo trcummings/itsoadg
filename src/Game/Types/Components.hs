@@ -94,8 +94,10 @@ newtype GlobalTime =
 
 -- global input for player
 type PlayerInputMap = (Map.Map SDL.Keycode (KeyState Double))
-data PlayerInput =
-  PlayerInput PlayerInputMap
+type NewlyModifiedInputs = (Map.Map SDL.Keycode Bool)
+data PlayerInput = PlayerInput
+  { inputs       :: PlayerInputMap
+  , justModified :: NewlyModifiedInputs }
   deriving Show
 
 data MousePosition =

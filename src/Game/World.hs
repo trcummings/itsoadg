@@ -15,7 +15,7 @@ module Game.World
 
 import           Apecs
 import qualified Animate (KeyName)
-import qualified Data.Map as Map (fromList)
+import qualified Data.Map as Map (fromList, empty)
 import qualified SDL
 import           Linear (V2(..))
 import qualified KeyState (initKeyState)
@@ -94,13 +94,15 @@ instance Component GlobalTime where
   type Storage GlobalTime = Global GlobalTime
 
 instance Monoid PlayerInput where
-  mempty = PlayerInput $ Map.fromList [
-      (SDL.KeycodeA, KeyState.initKeyState)
-    , (SDL.KeycodeD, KeyState.initKeyState)
-    , (SDL.KeycodeW, KeyState.initKeyState)
-    , (SDL.KeycodeN, KeyState.initKeyState)
-    , (SDL.KeycodeM, KeyState.initKeyState)
-    ]
+  mempty = PlayerInput
+    { inputs = Map.fromList [
+          (SDL.KeycodeA, KeyState.initKeyState)
+        , (SDL.KeycodeD, KeyState.initKeyState)
+        , (SDL.KeycodeW, KeyState.initKeyState)
+        , (SDL.KeycodeN, KeyState.initKeyState)
+        , (SDL.KeycodeM, KeyState.initKeyState)
+        ]
+    , justModified = Map.empty }
 instance Component PlayerInput where
   type Storage PlayerInput = Global PlayerInput
 
