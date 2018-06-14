@@ -6,6 +6,7 @@ import qualified SDL
 import qualified KeyState
 import qualified Animate
 import           Control.Lens hiding (get, set)
+import           Control.Arrow ((>>>))
 import           Data.Map ((!))
 import           Control.Monad (when, foldM)
 import           Control.Monad.IO.Class (liftIO)
@@ -278,13 +279,13 @@ stepPlayerState :: SystemFn
 stepPlayerState evts = do
   PlayerInput m _ <- get global
   cmap $ (
-      (stepPlayerSpeed m)
-    . (stepPlayerGravity m)
-    . (stepReleaseAbsorbState m)
-    . (stepStartAbsorbState m)
-    . (stepReleaseBurnState m)
-    . (stepStartBurnState m)
-    . (stepPlayerJump m) )
+        (stepPlayerJump m)
+    >>> (stepStartBurnState m)
+    >>> (stepReleaseBurnState m)
+    >>> (stepStartAbsorbState m)
+    >>> (stepReleaseAbsorbState m)
+    >>> (stepPlayerGravity m)
+    >>> (stepPlayerSpeed m) )
   return evts
 
 stepPlayerAction :: System' ()
