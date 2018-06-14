@@ -11,7 +11,6 @@ import           Apecs (Entity)
 import           KeyState
 
 import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
-import           Game.Types.Physics (Collision(..))
 import           Game.Types.Audio (Audio'Command)
 import           Game.Types.Player
   ( PlayerAction(..)
@@ -102,8 +101,6 @@ data PlayerInput =
 data MousePosition =
   MousePosition (V2 Int32)
 
-newtype Inbox = Inbox [Collision]
-
 data Jump = Jump
   { buttonPressed :: Bool
   , isJumping     :: Bool
@@ -139,3 +136,5 @@ data SoundBank = SoundBank
   deriving Show
 
 data CollisionModule = CollisionModule
+
+data Commandable = Commandable

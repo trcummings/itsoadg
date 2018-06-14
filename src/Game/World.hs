@@ -41,10 +41,10 @@ import Game.Types
   , SpriteSheet(..)
   , FlowMeter(..)
   , HardFlow(..)
-  , Inbox(..)
   , FlowEffectEmitter(..)
   , SoundBank(..)
-  , CollisionModule(..)
+  , CollisionModule
+  , Commandable
   , QueueEvent )
 
 instance Component Position where
@@ -121,21 +121,20 @@ instance Component HardFlow where
 instance Component FlowEffectEmitter where
   type Storage FlowEffectEmitter = Map FlowEffectEmitter
 
-instance Component Inbox where
-  type Storage Inbox = Map Inbox
-
 instance Component SoundBank where
   type Storage SoundBank = Unique SoundBank
 
 instance Component CollisionModule where
   type Storage CollisionModule = Map CollisionModule
 
+instance Component Commandable where
+  type Storage Commandable = Map Commandable
+
 makeWorld "World" [
     ''Position
   , ''Velocity
   , ''Acceleration
   , ''BoundingBox
-  , ''Inbox
   , ''Friction
   , ''Player
   , ''Texture
@@ -154,6 +153,7 @@ makeWorld "World" [
   , ''FlowEffectEmitter
   , ''SoundBank
   , ''CollisionModule
+  , ''Commandable
   ]
 
 type System' a = System World a

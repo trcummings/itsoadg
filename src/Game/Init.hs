@@ -51,7 +51,6 @@ import           Game.Types
   , HardFlow(..)
   , FlowEffectEmitter(..), FlowEffectEmitState(..)
   , Step(..)
-  , Inbox(..)
   , SoundBank(..)
   , Player'SFX'Key(..)
   , CollisionModule(..) )
