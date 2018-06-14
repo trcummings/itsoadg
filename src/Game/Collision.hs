@@ -17,6 +17,7 @@ import Game.Types
   , Velocity(..)
   , CollisionNormal(..)
   , CollisionTime(..)
+  , CollisionType(..)
   , PenetrationVector(..)
   , CollisionModule(..)
   , BoxEntity(..)
@@ -51,12 +52,6 @@ type GetSweptAABB = System' (BoundingBox, Position, Velocity)
 
 type Collidable = (CollisionModule, BoundingBox, Position, Entity)
 type DynamicCollidable = (CollisionModule, BoundingBox, Position, Velocity, Entity)
-
-data CollisionType =
-    NoCollision
-  | SweptCollision  (CollisionTime    , CollisionNormal)
-  | SimpleCollision (PenetrationVector, CollisionNormal)
-  deriving Show
 
 type CollisionMap = Map.Map Entity [CollisionType]
 type Collision = (To, From, CollisionType)
