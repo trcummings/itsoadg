@@ -13,6 +13,7 @@ import           KeyState
   , ksCounter
   , isPressed
   , isTouched
+  , isReleased
   , isHeld )
 
 import           Game.Wrapper.Apecs (emap)
@@ -26,6 +27,7 @@ import           Game.Types
   , To(..)
   , From(..)
   , Dir(..)
+  , Motion(..)
   , MovementCommand(..) )
 import           Game.Constants (frameDeltaSeconds)
 
@@ -71,9 +73,13 @@ maintainInputs m =
 -- if W tapped then jump, but not if held
 addJumpCommand :: PlayerInput -> Entity -> Maybe QueueEvent
 addJumpCommand (PlayerInput m _) e =
-  if (KeyState.isPressed $ m ! SDL.KeycodeW)
-  then Just $ CommandSystemEvent (To e, From e, Command'Jump)
-  else Nothing
+  let toEvent p = Just $ CommandSystemEvent (To e, From e, Command'Jump p)
+      wPress    = m ! SDL.KeycodeW
+  in if (KeyState.isPressed wPress)
+     then if (KeyState.isReleased wPress)
+          then toEvent Released
+          else toEvent Pressed
+     else Nothing
 
 -- if both A & D pressed, pick which ever one was held the least amount
 addMoveCommand :: PlayerInput -> Entity -> Maybe QueueEvent
@@ -82,22 +88,25 @@ addMoveCommand (PlayerInput m _) e =
       rightPress   = m ! SDL.KeycodeD
       leftCount    = ksCounter $ m ! SDL.KeycodeA
       rightCount   = ksCounter $ m ! SDL.KeycodeD
-      toEvent c = Just $ CommandSystemEvent (To e, From e, c)
+      toEvent d = Just $ CommandSystemEvent (To e, From e, Command'Move $ d)
+  -- if pressing both buttons at the same time
   in if (KeyState.isTouched leftPress && KeyState.isTouched rightPress)
+     -- if theyre pressed at EXACTLY the same frame
      then if (leftCount == Nothing && rightCount == Nothing)
           then Nothing
           else case leftCount of
-                 Nothing -> toEvent (Command'Move L)
+                 Nothing -> toEvent $ Just L
                  Just lc -> case rightCount of
-                   Nothing -> toEvent (Command'Move R)
+                   Nothing -> toEvent $ Just R
                    Just rc -> if (lc < rc)
-                              then toEvent (Command'Move L)
-                              else toEvent (Command'Move R)
+                              then toEvent $ Just L
+                              else toEvent $ Just R
      else if (KeyState.isTouched leftPress)
-          then toEvent (Command'Move L)
+          then toEvent $ Just L
           else if (KeyState.isTouched rightPress)
-               then toEvent (Command'Move R)
-               else Nothing
+               then toEvent $ Just R
+               -- if neither touched, stop movement event
+               else toEvent $ Nothing
 
 stepPlayerCommands :: PlayerInput
                    -> (Player, Commandable, Entity)

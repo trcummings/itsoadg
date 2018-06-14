@@ -128,7 +128,7 @@ stepJump' cm (_, jumpState, e) =
   let collisions = getCollisions cm e
   in if (length collisions == 0)
      then if onGround jumpState
-          then (jumpState { onGround = False }, [])
+          then (jumpState { onGround = False, requested = False }, [])
           else (jumpState, [])
      else foldr stepJumpState (jumpState, []) collisions
      where

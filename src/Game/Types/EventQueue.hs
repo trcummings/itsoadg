@@ -9,9 +9,10 @@ data To = To Entity deriving Show
 data From = From Entity deriving Show
 
 data Dir = L | R deriving Show
+data Motion = Pressed | Released deriving Show
 data MovementCommand =
-    Command'Move Dir
-  | Command'Jump
+    Command'Move (Maybe Dir)
+  | Command'Jump Motion
   deriving Show
 
 data QueueEvent =
