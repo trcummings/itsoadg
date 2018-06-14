@@ -41,14 +41,6 @@ import           Game.Constants
   , aStoppingAccel
   , frameDeltaSeconds
   , playerTopSpeed )
-import           Game.Jump
-  ( jumpRequested
-  , onGround
-  , landed
-  , falling
-  , floating
-  , jumping )
--- import           Game.Audio (dispatchToAudioInbox)
 import           Game.Step (smash, peel)
 import           Game.World (System', SystemFn)
 
@@ -100,20 +92,11 @@ bumpSpeed v False True  stopA runA = playerRun v stopA runA   1
 bumpSpeed v False False stopA _    = playerStop v stopA
 bumpSpeed v True  True  stopA _    = playerBothButtons v stopA
 
-isPlayerJumping :: Jump -> Bool
-isPlayerJumping j = j == falling || j == floating || j == jumping
-
 setJump :: Jump -> Jump
-setJump jumpState =
-  if jumpState == onGround
-  then jumpRequested
-  else jumpState
+setJump jumpState = jumpState { requested = True }
 
 releaseJump :: Jump -> Jump
-releaseJump jumpState =
-  if (jumpState == landed)
-  then onGround
-  else jumpState
+releaseJump jumpState = jumpState { requested = False }
 
 actionDir :: PlayerAction -> Dir
 actionDir action = case action of
@@ -222,7 +205,7 @@ stepStartAbsorbState m psg =
        case flowState of
          BurningFlow -> psg
          _           ->
-           if (isPlayerJumping jumpState)
+           if (not $ onGround jumpState)
            then psg
            else psg & _flowState .~ FlowEffectEmitter AbsorbingFlow
                     & _gravity   .~ Gravity { ascent  = initialJumpG / Unit 2
@@ -268,7 +251,7 @@ stepPlayerSpeed m psg =
         bumpSpeed velocity (KeyState.isTouched aPress) (KeyState.isTouched dPress)
   in psg & _velocity .~ case flowState of
     BurningFlow           ->
-        if isPlayerJumping jumpState
+        if not $ onGround jumpState
         then runBumpSpeed stoppingAccel  runningAccel
         else runBumpSpeed bStoppingAccel bRunningAccel
     AbsorbingFlow         -> runBumpSpeed aStoppingAccel aRunningAccel
@@ -291,13 +274,13 @@ stepPlayerState evts = do
 stepPlayerAction :: System' ()
 stepPlayerAction = do
   cmapM_ $ \( Player pastActionStep
-            , jump@(Jump _ _ _)
+            , jump@(Jump _ _)
             , Velocity (V2 vx _)
             , SpriteSheet sheet position
             , e ) -> do
     let pastAction = smash pastActionStep
         pastDir    = actionDir pastAction
-        nextAction = if isPlayerJumping jump
+        nextAction = if not $ onGround jump
                      then jumpAction pastDir
                      else if (vx == 0)
                           then idleAction pastDir

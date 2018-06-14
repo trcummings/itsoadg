@@ -55,7 +55,6 @@ import           Game.Types
   , Player'SFX'Key(..)
   , CollisionModule(..)
   , Commandable(..) )
-import           Game.Jump (floating)
 import           Game.Sprite (loadSpriteSheet)
 
 characters =
@@ -102,10 +101,10 @@ initSystems renderer = void $ do
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
       , CollisionModule
-      , Gravity
-        { ascent  = initialJumpG
-        , descent = initialFallG }
-      , floating )
+      , Gravity { ascent  = initialJumpG
+                , descent = initialFallG }
+      , Jump { requested = False
+             , onGround  = False } )
     , ( FlowMeter
           { currentFlow = 10
           , baseFlow    = 20
@@ -163,12 +162,11 @@ initSystems renderer = void $ do
   --   , Velocity $ V2 0 0 )
 
   newEntity ( -- audio player
-      SoundBank {
-          bank =  Map.fromList [
-            ( Player'SFX'Jump     , playerJump      )
-          , ( Player'SFX'Land     , playerLand      )
-          -- , ( Player'SFX'BurnStart, playerBurnStart )
-          -- , ( Player'SFX'BurnLoop , playerBurnLoop  )
-          -- , ( Player'SFX'BurnEnd  , playerBurnEnd   )
-          ]
-        , channelMap = Map.fromList [] } )
+      SoundBank { bank =  Map.fromList [
+                      ( Player'SFX'Jump     , playerJump      )
+                    , ( Player'SFX'Land     , playerLand      )
+                    -- , ( Player'SFX'BurnStart, playerBurnStart )
+                    -- , ( Player'SFX'BurnLoop , playerBurnLoop  )
+                    -- , ( Player'SFX'BurnEnd  , playerBurnEnd   )
+                    ]
+                , channelMap = Map.fromList [] } )

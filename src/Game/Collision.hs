@@ -32,7 +32,6 @@ import Game.Types
   , To(..)
   , From(..) )
 import Game.Wrapper.Apecs (emap)
-import Game.Jump
 import Game.Constants (frameDeltaSeconds)
 import           Game.Util.AABB
   ( aabbCheck
@@ -124,45 +123,21 @@ getCollisions cm e = case (cm !? e) of Just c  -> c
                                        Nothing -> []
 
 -- jump
-stepJumpState :: CollisionType -> Jump -> Jump
-stepJumpState collisionType jumpState =
-  if (normal == BottomNormal)
-  then if (jumpState == jumping)
-  then landed
-  else if (jumpState == floating || jumpState == falling)
-       then onGround
-       else jumpState
-  else jumpState
-  where normal = case collisionType of SimpleCollision (_, normal) -> normal
-                                       SweptCollision  (_, normal) -> normal
-
-stepCollisionJump :: CollisionMap -> (CollisionModule, Jump, Entity) -> Jump
-stepCollisionJump cm (_, jumpState, e) =
-  let collisions = getCollisions cm e
-  in if (length collisions == 0)
-     then if (jumpState == onGround || jumpState == landed)
-          then falling
-          else jumpState
-     else foldr stepJumpState jumpState collisions
-
-
 stepJump' :: CollisionMap -> (CollisionModule, Jump, Entity) -> (Jump, [QueueEvent])
 stepJump' cm (_, jumpState, e) =
   let collisions = getCollisions cm e
   in if (length collisions == 0)
-     then if (jumpState == onGround || jumpState == landed)
-          then (falling, [])
+     then if onGround jumpState
+          then (jumpState { onGround = False }, [])
           else (jumpState, [])
-     else foldr stepJumpState' (jumpState, []) collisions
+     else foldr stepJumpState (jumpState, []) collisions
      where
        landingEvent = AudioSystemEvent (e, Player'SFX'Land, Audio'PlayOrSustain)
-       stepJumpState' ct (j, qs) =
+       stepJumpState ct (j, qs) =
              if (normal == BottomNormal)
-             then if (j == jumping)
-                  then (landed, qs ++ [landingEvent])
-                  else if (j == floating || j == falling)
-                       then (onGround, qs)
-                       else (jumpState, qs)
+             then if not $ onGround j
+                  then (j { onGround = True }, qs ++ [landingEvent])
+                  else (j, qs)
              else (jumpState, qs)
              where normal = case ct of SimpleCollision (_, normal) -> normal
                                        SweptCollision  (_, normal) -> normal

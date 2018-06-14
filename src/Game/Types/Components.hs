@@ -104,9 +104,8 @@ data MousePosition =
   MousePosition (V2 Int32)
 
 data Jump = Jump
-  { buttonPressed :: Bool
-  , isJumping     :: Bool
-  , isGrounded    :: Bool }
+  { requested :: Bool
+  , onGround  :: Bool }
   deriving (Eq, Show)
 
 data FlowMeter = FlowMeter
