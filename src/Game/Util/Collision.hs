@@ -7,9 +7,11 @@ import Game.Types
   ( Unit(..)
   , Position(..)
   , Velocity(..)
+  , CollisionModule(..)
   , CollisionNormal(..)
   , CollisionTime(..)
-  , PenetrationVector(..) )
+  , PenetrationVector(..)
+  , CollisionLayer(..) )
 import Game.Util.Constants (frameDeltaSeconds)
 
 inverseNormal :: CollisionNormal -> CollisionNormal
@@ -51,3 +53,11 @@ resolveNormalVelocity (Velocity v@(V2 vx vy)) (PenetrationVector pVector) normal
              LeftNormal   -> V2 0 vy
              RightNormal  -> V2 0 vy
   in Velocity v'
+
+areLayersCollidable :: CollisionLayer -> CollisionLayer -> Bool
+areLayersCollidable CollisionLayer'Player _      = True
+areLayersCollidable _ CollisionLayer'Player      = True
+areLayersCollidable CollisionLayer'Surface _     = False
+areLayersCollidable CollisionLayer'Collectible _ = True
+areLayersCollidable CollisionLayer'EmptyLayer _  = False
+areLayersCollidable _ CollisionLayer'EmptyLayer  = False

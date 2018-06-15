@@ -53,7 +53,7 @@ import           Game.Types
   , Step(..)
   , SoundBank(..)
   , Player'SFX'Key(..)
-  , CollisionModule(..)
+  , CollisionModule(..), CollisionLayer(..)
   , Commandable(..) )
 import           Game.Sprite (loadSpriteSheet)
 
@@ -100,7 +100,7 @@ initSystems renderer = void $ do
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
-      , CollisionModule
+      , CollisionModule CollisionLayer'Player
       , Gravity { ascent  = initialJumpG
                 , descent = initialFallG }
       , Jump { requested = False
@@ -126,29 +126,29 @@ initSystems renderer = void $ do
   newEntity ( -- floor
       Position $ V2 0 (screenHeight - 1)
     -- , Friction floorFriction
-    , CollisionModule
+    , CollisionModule CollisionLayer'Surface
     , BoundingBox (V2 screenWidth 1) )
 
   newEntity ( --floating platform
       Position $ V2 5 (screenHeight / 2)
     -- , Friction floorFriction
-    , CollisionModule
+    , CollisionModule CollisionLayer'Surface
     , BoundingBox $ V2 6 1 )
 
   newEntity ( --floating platform 2
       Position $ V2 13 (screenHeight / 2)
     -- , Friction floorFriction
-    , CollisionModule
+    , CollisionModule CollisionLayer'Surface
     , BoundingBox $ V2 6 1 )
 
   newEntity ( --wall
       Position $ V2 (screenWidth - 10) (screenHeight - 5)
-    , CollisionModule
+    , CollisionModule CollisionLayer'Surface
     , BoundingBox $ V2 1 4 )
 
   newEntity ( --wall2
       Position $ V2 (screenWidth - 1) (screenHeight - 8)
-    , CollisionModule
+    , CollisionModule CollisionLayer'Surface
     , BoundingBox $ V2 1 7 )
 
   -- newEntity ( --hard flow1
@@ -157,7 +157,7 @@ initSystems renderer = void $ do
   --       { ascent  = initialJumpG
   --       , descent = initialFallG }
   --   , Position $ V2 2 (screenHeight - 1.5)
-  --   , CollisionModule
+  --   , CollisionModule CollisionLayer'Collectible
   --   , BoundingBox $ V2 0.25 0.25
   --   , Velocity $ V2 0 0 )
 

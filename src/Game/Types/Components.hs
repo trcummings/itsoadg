@@ -11,6 +11,7 @@ import           Apecs (Entity)
 import           KeyState
 
 import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
+import           Game.Types.Physics (CollisionLayer)
 import           Game.Types.Audio (Audio'Command)
 import           Game.Types.Player
   ( PlayerAction(..)
@@ -136,6 +137,6 @@ data SoundBank = SoundBank
   , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
   deriving Show
 
-data CollisionModule = CollisionModule
+data CollisionModule = CollisionModule CollisionLayer
 
 data Commandable = Commandable

@@ -31,3 +31,10 @@ data CollisionType =
   | SweptCollision  (CollisionTime    , CollisionNormal)
   | SimpleCollision (PenetrationVector, CollisionNormal)
   deriving Show
+
+data CollisionLayer =
+    CollisionLayer'Player
+  | CollisionLayer'Collectible
+  | CollisionLayer'Trigger
+  | CollisionLayer'Surface
+  | CollisionLayer'EmptyLayer

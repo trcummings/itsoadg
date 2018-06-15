@@ -20,6 +20,7 @@ import           Game.Types
   , CollisionType(..)
   , PenetrationVector(..)
   , CollisionModule(..)
+  , CollisionLayer(..)
   , BoxEntity(..)
   , BoundingBox(..)
   , AABB(..), dims, center
@@ -43,7 +44,8 @@ import           Game.Util.Collision
   ( toVector
   , resolveBaseCollision
   , resolveNormalVelocity
-  , inverseNormal )
+  , inverseNormal
+  , areLayersCollidable )
 
 type GetVelocity  = System' (Velocity)
 type GetAABB      = System' (BoundingBox, Position)
@@ -52,13 +54,13 @@ type GetSweptAABB = System' (BoundingBox, Position, Velocity)
 type Collidable = (CollisionModule, BoundingBox, Position, Entity)
 type DynamicCollidable = (CollisionModule, BoundingBox, Position, Velocity, Entity)
 
-type CollisionMap = Map.Map Entity [CollisionType]
-type Collision = (To, From, CollisionType)
-
+type CollisionInfo = (CollisionType, CollisionLayer)
+type CollisionMap = Map.Map Entity [CollisionInfo]
+type Collision = (To, From, CollisionType, CollisionLayer)
 
 determineCollisionType :: DynamicCollidable -> Collidable -> Collision
 determineCollisionType (_, BoundingBox bb1, Position p1, v@(Velocity v'), e1)
-                       (_, BoundingBox bb2, Position p2, e2) =
+                       (CollisionModule cLayer, BoundingBox bb2, Position p2, e2) =
   let box1 = AABB { center = p1, dims = bb1 }
       box2 = AABB { center = p2, dims = bb2 }
       (collisionTime, normal) = sweepAABB v box1 box2
@@ -67,7 +69,7 @@ determineCollisionType (_, BoundingBox bb1, Position p1, v@(Velocity v'), e1)
       lowCollisionTime = ((coerce collisionTime :: Double) * frameDeltaSeconds) < 0.00005
       noPenetration = (abs <$> (coerce pVector :: V2 Unit)) == V2 0 0
       hasZeroNormal = normal == NoneNormal
-      toEvent = (,,) (To e1) (From e2)
+      toEvent t = (To e1, From e2, t, cLayer)
       useSimpleResolution =
             hasZeroNormal
         ||  lowCollisionTime
@@ -87,38 +89,44 @@ determineCollisionType (_, BoundingBox bb1, Position p1, v@(Velocity v'), e1)
 
 
 addToCollisionMap :: Collision -> CollisionMap -> CollisionMap
-addToCollisionMap (To e1, From e2, collisionType) m =
+addToCollisionMap (To e1, From e2, collisionType, cLayer) m =
   case collisionType of
     NoCollision                    -> m
     SimpleCollision (pVec, normal) ->
       let reverseVector = PenetrationVector $ negate <$> (coerce pVec :: V2 Unit)
           reverseNormal = inverseNormal normal
-      in Map.insertWith (++) e2 [SimpleCollision (reverseVector, reverseNormal)] $
-           Map.insertWith (++) e1 [collisionType] m
+      in Map.insertWith (++) e2 [(SimpleCollision (reverseVector, reverseNormal), cLayer)] $
+           Map.insertWith (++) e1 [(collisionType, cLayer)] m
     SweptCollision (cTime, normal) ->
       let reverseNormal = inverseNormal normal
           neutralVector = PenetrationVector $ V2 0 0
-      in Map.insertWith (++) e2 [SimpleCollision (neutralVector, reverseNormal)] $
-           Map.insertWith (++) e1 [collisionType] m
+      in Map.insertWith (++) e2 [(SimpleCollision (neutralVector, reverseNormal), cLayer)] $
+           Map.insertWith (++) e1 [(collisionType, cLayer)] m
+
+
+isLegalCollision :: Entity -> AABB -> CollisionLayer -> Collidable -> Bool
+isLegalCollision e box cLayer1 c@(CollisionModule cLayer2, _, _, _) =
+     (areLayersCollidable cLayer1 cLayer2)
+  && (inNarrowPhase e box c)
 
 processCollidable :: [Collidable] -> DynamicCollidable -> [Collision]
 processCollidable allCollidables
-                  cm@( _
+                  cm@( CollisionModule cLayer
                      , bb@(BoundingBox bb')
                      , p@(Position p')
                      , v@(Velocity v')
                      , entity ) =
   let sweptBox = broadPhaseAABB bb p v
-      actives  = filter (inNarrowPhase entity sweptBox) allCollidables
+      actives  = filter (isLegalCollision entity sweptBox cLayer) allCollidables
       -- if we have no swept phase collisions
   in if (length actives == 0)
-     then [(To entity, From entity, NoCollision)]
+     then [(To entity, From entity, NoCollision, CollisionLayer'EmptyLayer)]
      else map (determineCollisionType cm) actives
 
 
 -- post collection updates
 -- util
-getCollisions :: CollisionMap -> Entity -> [CollisionType]
+getCollisions :: CollisionMap -> Entity -> [CollisionInfo]
 getCollisions cm e = case (cm !? e) of Just c  -> c
                                        Nothing -> []
 
@@ -144,9 +152,9 @@ stepJump' cm (_, jumpState, e) =
 
 
 -- speed
-stepSpeed :: CollisionType -> Velocity -> Velocity
-stepSpeed (SimpleCollision (pVec, normal)) v = resolveNormalVelocity v pVec normal
-stepSpeed (SweptCollision (cTime, normal)) v = resolveBaseCollision (cTime, normal) v
+stepSpeed :: CollisionInfo -> Velocity -> Velocity
+stepSpeed (SimpleCollision (pVec, normal), _) v = resolveNormalVelocity v pVec normal
+stepSpeed (SweptCollision (cTime, normal), _) v = resolveBaseCollision (cTime, normal) v
 
 stepCollisionSpeed :: CollisionMap -> (CollisionModule, Velocity, Entity) -> Velocity
 stepCollisionSpeed cm (_, v, e) =
@@ -157,11 +165,11 @@ stepCollisionSpeed cm (_, v, e) =
 
 
 -- position
-stepPosition :: CollisionType -> (Position, Velocity) -> (Position, Velocity)
-stepPosition (SimpleCollision (pVec, normal))
+stepPosition :: CollisionInfo -> (Position, Velocity) -> (Position, Velocity)
+stepPosition (SimpleCollision (pVec, normal), _)
              (Position p, v@(Velocity v')) =
   (Position $ p + (coerce pVec :: V2 Unit), v)
-stepPosition (SweptCollision (CollisionTime cTime, normal))
+stepPosition (SweptCollision (CollisionTime cTime, normal), _)
              (Position p, v@(Velocity v')) =
   let cTime' = (coerce cTime :: Double) * frameDeltaSeconds
       -- lowCollisionTime = cTime' < 0.00005
