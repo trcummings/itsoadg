@@ -39,7 +39,7 @@ import           Game.Constants
 import           Game.Wrapper.Apecs (emap)
 import           Game.Types
   ( Unit(..)
-  , Jump(..), buttonPressed, isJumping, isGrounded
+  , Jump(..)
   , Position(..)
   , Velocity(..)
   , Gravity(..)
@@ -47,28 +47,12 @@ import           Game.Types
   , QueueEvent(..)
   , Audio'Command(..)
   , Player'SFX'Key(..) )
-import Game.Jump
-  ( landed
-  , onGround
-  , jumpRequested
-  , jumping
-  , floating
-  , falling )
 
 oneBumpPerSecond :: Unit
 oneBumpPerSecond = (4 / 32) * Unit frameDeltaSeconds
 
 stepPosition :: (Velocity, Position) -> Position
 stepPosition (Velocity v, Position p) = Position $ p + (v ^* Unit frameDeltaSeconds)
-
-handleNotOnGround :: Entity -> System' ()
-handleNotOnGround entity = do
-  -- we are not on the ground if we arent colliding with anything, but we arent
-  -- necessarily jumping
-  hasJump <- exists entity (proxy :: Jump)
-  when hasJump $ do
-    jumpState <- get entity :: System' Jump
-    when (jumpState == onGround || jumpState == landed) $ set entity falling
 
 handleGravity :: (Gravity, Velocity) -> Velocity
 handleGravity (g@(Gravity _ _), Velocity (V2 vx vy)) =
@@ -88,19 +72,13 @@ handleVelocityClamp (Velocity v@(V2 vx vy)) =
   then Velocity $ V2 0 vy
   else Velocity $ clampVelocity <$> v
 
-handleJumpRequest :: (Jump, Velocity) -> (Jump, Velocity)
-handleJumpRequest (jumpState@(Jump _ _ _), v@(Velocity (V2 vx _))) =
-  if (jumpState == jumpRequested)
-  then (jumping, Velocity $ V2 vx (-initialJumpVy))
-  else (jumpState, v)
-
-stepJump :: (Jump, Velocity, Entity) -> ((Jump, Velocity), [QueueEvent])
-stepJump (jumpState@(Jump _ _ _), v@(Velocity (V2 vx _)), e) =
-  if (jumpState == jumpRequested)
-  then (
-    ( jumping, Velocity $ V2 vx (-initialJumpVy))
+stepJump :: (Jump, Velocity, Entity) -> (Velocity, [QueueEvent])
+stepJump (jumpState@(Jump _ _), v@(Velocity (V2 vx _)), e) =
+  if (requested jumpState && onGround jumpState)
+  then
+    ( Velocity $ V2 vx (-initialJumpVy)
     , [AudioSystemEvent (e, Player'SFX'Jump, Audio'PlayOrSustain)] )
-  else ((jumpState, v), [])
+  else (v, [])
 
 updateNonCollidablePositions :: (Not CollisionModule, Velocity, Position) -> Position
 updateNonCollidablePositions (_, v, p) = stepPosition (v, p)
@@ -110,11 +88,9 @@ stepPhysicsSystem evts = do
   -- update acceleration based on gravity
   cmap handleGravity
   -- jump!
-  -- cmap handleJumpRequest
   evts' <- emap stepJump
   -- clamp velocity
   cmap handleVelocityClamp
   -- update positions of all non-colliding entities
   cmap updateNonCollidablePositions
-
   return (evts ++ evts')

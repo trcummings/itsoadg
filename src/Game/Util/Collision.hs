@@ -9,8 +9,7 @@ import Game.Types
   , Velocity(..)
   , CollisionNormal(..)
   , CollisionTime(..)
-  , PenetrationVector(..)
-  , Collision(..) )
+  , PenetrationVector(..) )
 import Game.Constants (frameDeltaSeconds)
 
 inverseNormal :: CollisionNormal -> CollisionNormal

@@ -1,7 +1,6 @@
 module Game.Types.Physics where
 
 import           Linear (V2(..))
-import           Apecs (Entity(..))
 
 import           Game.Types.Util (Unit(..))
 
@@ -10,8 +9,6 @@ data AABB = AABB
   { center :: (V2 Unit)   -- x y pos
   , dims   :: (V2 Unit) } -- width and height
   deriving Show
-
--- type BoxEntity = (BoundingBox, Position, Entity)
 
 newtype PenetrationVector =
   PenetrationVector (V2 Unit)
@@ -29,6 +26,8 @@ data CollisionNormal =
   | NoneNormal -- the "zero normal"
   deriving (Eq, Show)
 
-data Collision =
-  Collision CollisionTime CollisionNormal PenetrationVector Entity
+data CollisionType =
+    NoCollision
+  | SweptCollision  (CollisionTime    , CollisionNormal)
+  | SimpleCollision (PenetrationVector, CollisionNormal)
   deriving Show

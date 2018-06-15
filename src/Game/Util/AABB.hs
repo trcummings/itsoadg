@@ -11,9 +11,8 @@ import Game.Types
   , CollisionNormal(..)
   , CollisionTime(..)
   , PenetrationVector(..)
-  , Collision(..)
   , AABB(..)
-  , BoxEntity)
+  , BoxEntity )
 import Game.Constants (frameDeltaSeconds)
 import Game.Util.Collision (toVector)
 

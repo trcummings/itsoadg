@@ -51,11 +51,10 @@ import           Game.Types
   , HardFlow(..)
   , FlowEffectEmitter(..), FlowEffectEmitState(..)
   , Step(..)
-  , Inbox(..)
   , SoundBank(..)
   , Player'SFX'Key(..)
-  , CollisionModule(..) )
-import           Game.Jump (floating)
+  , CollisionModule(..)
+  , Commandable(..) )
 import           Game.Sprite (loadSpriteSheet)
 
 characters =
@@ -96,15 +95,16 @@ initSystems renderer = void $ do
   -- entities
   player <- newEntity ( -- player
       Player (Step'Sustain PlayerAction'IdleRight)
+    , Commandable
     , ( Position $ V2 7 ((screenHeight / 2) - 2)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
       , CollisionModule
-      , Gravity
-        { ascent  = initialJumpG
-        , descent = initialFallG }
-      , floating )
+      , Gravity { ascent  = initialJumpG
+                , descent = initialFallG }
+      , Jump { requested = False
+             , onGround  = False } )
     , ( FlowMeter
           { currentFlow = 10
           , baseFlow    = 20
@@ -162,12 +162,11 @@ initSystems renderer = void $ do
   --   , Velocity $ V2 0 0 )
 
   newEntity ( -- audio player
-      SoundBank {
-          bank =  Map.fromList [
-            ( Player'SFX'Jump     , playerJump      )
-          , ( Player'SFX'Land     , playerLand      )
-          -- , ( Player'SFX'BurnStart, playerBurnStart )
-          -- , ( Player'SFX'BurnLoop , playerBurnLoop  )
-          -- , ( Player'SFX'BurnEnd  , playerBurnEnd   )
-          ]
-        , channelMap = Map.fromList [] } )
+      SoundBank { bank =  Map.fromList [
+                      ( Player'SFX'Jump     , playerJump      )
+                    , ( Player'SFX'Land     , playerLand      )
+                    -- , ( Player'SFX'BurnStart, playerBurnStart )
+                    -- , ( Player'SFX'BurnLoop , playerBurnLoop  )
+                    -- , ( Player'SFX'BurnEnd  , playerBurnEnd   )
+                    ]
+                , channelMap = Map.fromList [] } )

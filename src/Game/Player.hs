@@ -6,6 +6,7 @@ import qualified SDL
 import qualified KeyState
 import qualified Animate
 import           Control.Lens hiding (get, set)
+import           Control.Arrow ((>>>))
 import           Data.Map ((!))
 import           Control.Monad (when, foldM)
 import           Control.Monad.IO.Class (liftIO)
@@ -27,7 +28,12 @@ import           Game.Types
   , FlowEffectEmitter(..)
   , FlowEffectEmitState(..)
   , Audio'Command(..)
-  , QueueEvent(..) )
+  , QueueEvent(..)
+  , MovementCommand(..)
+  , Dir(..)
+  , To(..)
+  , From(..)
+  , Motion(..) )
 import           Game.Constants
   ( initialJumpG
   , initialFallG
@@ -39,14 +45,6 @@ import           Game.Constants
   , aStoppingAccel
   , frameDeltaSeconds
   , playerTopSpeed )
-import           Game.Jump
-  ( jumpRequested
-  , onGround
-  , landed
-  , falling
-  , floating
-  , jumping )
--- import           Game.Audio (dispatchToAudioInbox)
 import           Game.Step (smash, peel)
 import           Game.World (System', SystemFn)
 
@@ -98,23 +96,14 @@ bumpSpeed v False True  stopA runA = playerRun v stopA runA   1
 bumpSpeed v False False stopA _    = playerStop v stopA
 bumpSpeed v True  True  stopA _    = playerBothButtons v stopA
 
-isPlayerJumping :: Jump -> Bool
-isPlayerJumping j = j == falling || j == floating || j == jumping
-
 setJump :: Jump -> Jump
 setJump jumpState =
-  if jumpState == onGround
-  then jumpRequested
+  if (onGround jumpState)
+  then jumpState { requested = True }
   else jumpState
 
 releaseJump :: Jump -> Jump
-releaseJump jumpState =
-  if (jumpState == landed)
-  then onGround
-  else jumpState
-
-
-data Dir = L | R
+releaseJump jumpState = jumpState { requested = False }
 
 actionDir :: PlayerAction -> Dir
 actionDir action = case action of
@@ -223,7 +212,7 @@ stepStartAbsorbState m psg =
        case flowState of
          BurningFlow -> psg
          _           ->
-           if (isPlayerJumping jumpState)
+           if (not $ onGround jumpState)
            then psg
            else psg & _flowState .~ FlowEffectEmitter AbsorbingFlow
                     & _gravity   .~ Gravity { ascent  = initialJumpG / Unit 2
@@ -269,36 +258,79 @@ stepPlayerSpeed m psg =
         bumpSpeed velocity (KeyState.isTouched aPress) (KeyState.isTouched dPress)
   in psg & _velocity .~ case flowState of
     BurningFlow           ->
-        if isPlayerJumping jumpState
+        if not $ onGround jumpState
         then runBumpSpeed stoppingAccel  runningAccel
         else runBumpSpeed bStoppingAccel bRunningAccel
     AbsorbingFlow         -> runBumpSpeed aStoppingAccel aRunningAccel
     NotEmittingFlowEffect -> runBumpSpeed stoppingAccel  runningAccel
 
 
+bumpSpeed' :: Velocity -> Maybe Dir -> Unit -> Unit -> Velocity
+bumpSpeed' v (Just L) stopA runA = playerRun v stopA runA (-1)
+bumpSpeed' v (Just R) stopA runA = playerRun v stopA runA   1
+bumpSpeed' v Nothing  stopA runA = playerStop v stopA
+
+
+stepPlayerXSpeed :: Maybe Dir -> PlayerStateGroup -> PlayerStateGroup
+stepPlayerXSpeed dir psg =
+  -- modify player speed
+  let (FlowEffectEmitter flowState) = psg ^._flowState
+      jumpState                     = psg ^._jump
+      velocity                      = psg ^._velocity
+      runBumpSpeed                  = bumpSpeed' velocity dir
+  in psg & _velocity .~ case flowState of
+    BurningFlow           ->
+        if not $ onGround jumpState
+        then runBumpSpeed stoppingAccel  runningAccel
+        else runBumpSpeed bStoppingAccel bRunningAccel
+    AbsorbingFlow         -> runBumpSpeed aStoppingAccel aRunningAccel
+    NotEmittingFlowEffect -> runBumpSpeed stoppingAccel  runningAccel
+
+stepPlayerJump' :: Motion -> PlayerStateGroup -> PlayerStateGroup
+stepPlayerJump' m psg =
+  case m of
+    Pressed  ->
+      case (psg ^._flowState) of
+        -- cannot jump while burning
+        -- so play some kind of feedback, audio or whatever
+        FlowEffectEmitter BurningFlow -> psg
+        _                             -> psg & _jump %~ setJump
+    Released -> psg & _jump %~ releaseJump
+
+processCommandEvent :: Entity -> QueueEvent -> PlayerStateGroup -> PlayerStateGroup
+processCommandEvent e (CommandSystemEvent (To to, From from, cmd)) psg =
+  -- if the event isnt for our entity, ignore it
+  if ((not $ e == to) || (not $ e == from))
+  then psg
+  else case cmd of Command'Jump motion -> stepPlayerJump' motion psg
+                   Command'Move dir    -> stepPlayerXSpeed dir psg
+processCommandEvent _ _ psg = psg
+
 stepPlayerState :: SystemFn
 stepPlayerState evts = do
-  PlayerInput m <- get global
+  ps <- getAll :: System' [(PlayerStateGroup, Entity)]
+  mapM (\(psg, e) -> set e $ foldr (processCommandEvent e) psg evts) ps
+  PlayerInput m _ <- get global
   cmap $ (
-      (stepPlayerSpeed m)
-    . (stepPlayerGravity m)
-    . (stepReleaseAbsorbState m)
-    . (stepStartAbsorbState m)
-    . (stepReleaseBurnState m)
-    . (stepStartBurnState m)
-    . (stepPlayerJump m) )
+        -- (stepPlayerJump m)
+        (stepStartBurnState m)
+    >>> (stepReleaseBurnState m)
+    >>> (stepStartAbsorbState m)
+    >>> (stepReleaseAbsorbState m)
+    >>> (stepPlayerGravity m) )
+    -- >>> (stepPlayerSpeed m) )
   return evts
 
 stepPlayerAction :: System' ()
 stepPlayerAction = do
   cmapM_ $ \( Player pastActionStep
-            , jump@(Jump _ _ _)
+            , jump@(Jump _ _)
             , Velocity (V2 vx _)
             , SpriteSheet sheet position
             , e ) -> do
     let pastAction = smash pastActionStep
         pastDir    = actionDir pastAction
-        nextAction = if isPlayerJumping jump
+        nextAction = if not $ onGround jump
                      then jumpAction pastDir
                      else if (vx == 0)
                           then idleAction pastDir

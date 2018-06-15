@@ -15,7 +15,7 @@ module Game.World
 
 import           Apecs
 import qualified Animate (KeyName)
-import qualified Data.Map as Map (fromList)
+import qualified Data.Map as Map (fromList, empty)
 import qualified SDL
 import           Linear (V2(..))
 import qualified KeyState (initKeyState)
@@ -41,10 +41,10 @@ import Game.Types
   , SpriteSheet(..)
   , FlowMeter(..)
   , HardFlow(..)
-  , Inbox(..)
   , FlowEffectEmitter(..)
   , SoundBank(..)
-  , CollisionModule(..)
+  , CollisionModule
+  , Commandable
   , QueueEvent )
 
 instance Component Position where
@@ -94,13 +94,15 @@ instance Component GlobalTime where
   type Storage GlobalTime = Global GlobalTime
 
 instance Monoid PlayerInput where
-  mempty = PlayerInput $ Map.fromList [
-      (SDL.KeycodeA, KeyState.initKeyState)
-    , (SDL.KeycodeD, KeyState.initKeyState)
-    , (SDL.KeycodeW, KeyState.initKeyState)
-    , (SDL.KeycodeN, KeyState.initKeyState)
-    , (SDL.KeycodeM, KeyState.initKeyState)
-    ]
+  mempty = PlayerInput
+    { inputs = Map.fromList [
+          (SDL.KeycodeA, KeyState.initKeyState)
+        , (SDL.KeycodeD, KeyState.initKeyState)
+        , (SDL.KeycodeW, KeyState.initKeyState)
+        , (SDL.KeycodeN, KeyState.initKeyState)
+        , (SDL.KeycodeM, KeyState.initKeyState)
+        ]
+    , justModified = Map.empty }
 instance Component PlayerInput where
   type Storage PlayerInput = Global PlayerInput
 
@@ -121,21 +123,20 @@ instance Component HardFlow where
 instance Component FlowEffectEmitter where
   type Storage FlowEffectEmitter = Map FlowEffectEmitter
 
-instance Component Inbox where
-  type Storage Inbox = Map Inbox
-
 instance Component SoundBank where
   type Storage SoundBank = Unique SoundBank
 
 instance Component CollisionModule where
   type Storage CollisionModule = Map CollisionModule
 
+instance Component Commandable where
+  type Storage Commandable = Map Commandable
+
 makeWorld "World" [
     ''Position
   , ''Velocity
   , ''Acceleration
   , ''BoundingBox
-  , ''Inbox
   , ''Friction
   , ''Player
   , ''Texture
@@ -154,6 +155,7 @@ makeWorld "World" [
   , ''FlowEffectEmitter
   , ''SoundBank
   , ''CollisionModule
+  , ''Commandable
   ]
 
 type System' a = System World a

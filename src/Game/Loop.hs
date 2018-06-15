@@ -25,8 +25,7 @@ import           Game.Effect.Event
   , prependAndGetEvents
   , setEvents
   , byInputEvent
-  , byAudioSystemEvent
-  , byPhysicsSystemEvent )
+  , byAudioSystemEvent )
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import           Game.Wrapper.SDLTime (SDLTime, nextTick)
@@ -35,7 +34,7 @@ import           Game.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTi
 import           Game.Player (stepPlayerState, stepPlayerAction)
 import           Game.Camera (stepCameraPhysics)
 import           Game.FlowMeter (stepFlowMeter)
-import           Game.Input (handleSDLInput, maintainAllInputs)
+import           Game.Input (handleSDLInput, stepInputSystem)
 import           Game.Physics (stepPhysicsSystem)
 import           Game.Collision (stepCollisionSystem)
 import           Game.Audio (stepAudioQueue)
@@ -50,12 +49,9 @@ innerStep acc events = do
   then return events
   -- when we've accumulated a fixed step update
   else do
-    -- maintain key held or released updates
-    maintainAllInputs
-    -- run updates based on input map
-    events' <- stepPlayerState events
-    -- physics update
-      >>= stepPhysicsSystem
+    events' <- stepInputSystem events -- maintain key held or released updates
+      >>= stepPlayerState  -- run updates based on input map
+      >>= stepPhysicsSystem -- physics update
       >>= stepCollisionSystem
       >>= stepCameraPhysics
     -- update flow meter
@@ -71,14 +67,14 @@ innerStep acc events = do
 
 outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' ()
 outerStep nextTime events renderer = do
-  -- update velocity based on arrow key presses
+  -- update player input button-key keystate-value map
   mapM handleSDLInput (filter byInputEvent events)
   -- accumulate fixed time for updates
   accumulateFixedTime nextTime
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
   -- run updates
-  effectEvents <- innerStep acc events
+  effectEvents <- innerStep acc []
   -- render
   stepRender renderer
   -- play audio

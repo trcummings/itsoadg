@@ -26,7 +26,3 @@ byInputEvent _              = False
 byAudioSystemEvent :: QueueEvent -> Bool
 byAudioSystemEvent (AudioSystemEvent _) = True
 byAudioSystemEvent _                    = False
-
-byPhysicsSystemEvent :: QueueEvent -> Bool
-byPhysicsSystemEvent (PhysicsSystemEvent _) = True
-byPhysicsSystemEvent _                      = False

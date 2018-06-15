@@ -11,7 +11,6 @@ import           Apecs (Entity)
 import           KeyState
 
 import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
-import           Game.Types.Physics (Collision(..))
 import           Game.Types.Audio (Audio'Command)
 import           Game.Types.Player
   ( PlayerAction(..)
@@ -95,19 +94,18 @@ newtype GlobalTime =
 
 -- global input for player
 type PlayerInputMap = (Map.Map SDL.Keycode (KeyState Double))
-data PlayerInput =
-  PlayerInput PlayerInputMap
+type NewlyModifiedInputs = (Map.Map SDL.Keycode Bool)
+data PlayerInput = PlayerInput
+  { inputs       :: PlayerInputMap
+  , justModified :: NewlyModifiedInputs }
   deriving Show
 
 data MousePosition =
   MousePosition (V2 Int32)
 
-newtype Inbox = Inbox [Collision]
-
 data Jump = Jump
-  { buttonPressed :: Bool
-  , isJumping     :: Bool
-  , isGrounded    :: Bool }
+  { requested :: Bool
+  , onGround  :: Bool }
   deriving (Eq, Show)
 
 data FlowMeter = FlowMeter
@@ -139,3 +137,5 @@ data SoundBank = SoundBank
   deriving Show
 
 data CollisionModule = CollisionModule
+
+data Commandable = Commandable
