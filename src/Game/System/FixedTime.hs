@@ -1,9 +1,9 @@
-module Game.FixedTime where
+module Game.System.FixedTime where
 
 import           Apecs (cmap, get, global)
 
 import           Game.World (System')
-import           Game.Constants (dT)
+import           Game.Util.Constants (dT)
 import           Game.Types
   ( PhysicsTime(..), time, accum
   , GlobalTime(..) )

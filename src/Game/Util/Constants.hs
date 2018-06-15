@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Game.Constants where
+module Game.Util.Constants where
 
 import qualified SDL
 import           Linear (V2(..))

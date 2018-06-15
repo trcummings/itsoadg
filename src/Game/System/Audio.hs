@@ -1,4 +1,4 @@
-module Game.Audio where
+module Game.System.Audio where
 
 import qualified SDL.Mixer as Mixer
   ( Channel

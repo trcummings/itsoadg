@@ -7,7 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell       #-}
 
-module Game.Init where
+module Game.System.Init where
 
 import qualified SDL
 import qualified SDL.Mixer as Mixer (load)
@@ -21,9 +21,9 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class (liftIO)
 import           Apecs (newEntity)
 
-import           Game.Render (loadTexture, toTexture)
+import           Game.System.Render (loadTexture, toTexture)
 import           Game.World (System')
-import           Game.Constants
+import           Game.Util.Constants
   ( spriteSize
   , floorFriction
   , playerPos

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Game.Physics where
+module Game.System.Physics where
 
 import qualified SDL
 import           Control.Monad (when, unless)
@@ -10,7 +10,6 @@ import           Data.Map ((!))
 import           Data.Coerce (coerce)
 import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^), (^/))
-import qualified KeyState (isTouched)
 import           Apecs
   ( Entity
   , Not
@@ -25,7 +24,7 @@ import           Apecs
   , modify )
 
 import           Game.World (System')
-import           Game.Constants
+import           Game.Util.Constants
   ( dT
   , frameDeltaSeconds
   , maxSpeed

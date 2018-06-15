@@ -1,4 +1,4 @@
-module Game.Collision where
+module Game.System.Collision where
 
 import           Linear (V2(..), (^*), (^/))
 import           Apecs (Entity, cmap, cmapM_, set, proxy, getAll, get, exists)
@@ -10,8 +10,8 @@ import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
 
 
-import Game.World (System')
-import Game.Types
+import           Game.World (System')
+import           Game.Types
   ( Unit(..)
   , Position(..)
   , Velocity(..)
@@ -31,8 +31,8 @@ import Game.Types
   , Player'SFX'Key(..)
   , To(..)
   , From(..) )
-import Game.Wrapper.Apecs (emap)
-import Game.Constants (frameDeltaSeconds)
+import           Game.Wrapper.Apecs (emap)
+import           Game.Util.Constants (frameDeltaSeconds)
 import           Game.Util.AABB
   ( aabbCheck
   , sweepAABB

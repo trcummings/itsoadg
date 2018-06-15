@@ -1,4 +1,4 @@
-module Game.Camera where
+module Game.System.Camera where
 
 import Linear (V2(..), (*^))
 import Apecs (get, set, cmapM_)

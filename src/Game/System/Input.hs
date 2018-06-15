@@ -1,4 +1,4 @@
-module Game.Input where
+module Game.System.Input where
 
 import qualified SDL
 import           Apecs (Entity, cmap, global, get, set)
@@ -29,7 +29,7 @@ import           Game.Types
   , Dir(..)
   , Motion(..)
   , MovementCommand(..) )
-import           Game.Constants (frameDeltaSeconds)
+import           Game.Util.Constants (frameDeltaSeconds)
 
 updateKey :: KeyState Double -> SDL.InputMotion -> KeyState Double
 updateKey ks motion = updateKeyState frameDeltaSeconds ks touched

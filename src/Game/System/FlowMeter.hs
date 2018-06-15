@@ -1,10 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-module Game.FlowMeter where
+module Game.System.FlowMeter where
 
 import           Apecs (cmap)
 
-import           Game.Constants (frameDeltaSeconds)
+import           Game.Util.Constants (frameDeltaSeconds)
 import           Game.Types (FlowMeter(..))
 import           Game.World (System')
 

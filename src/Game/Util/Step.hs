@@ -1,4 +1,4 @@
-module Game.Step where
+module Game.Util.Step where
 
 import           Game.Types (Step(..) )
 

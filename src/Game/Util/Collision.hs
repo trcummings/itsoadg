@@ -10,7 +10,7 @@ import Game.Types
   , CollisionNormal(..)
   , CollisionTime(..)
   , PenetrationVector(..) )
-import Game.Constants (frameDeltaSeconds)
+import Game.Util.Constants (frameDeltaSeconds)
 
 inverseNormal :: CollisionNormal -> CollisionNormal
 inverseNormal LeftNormal   = RightNormal

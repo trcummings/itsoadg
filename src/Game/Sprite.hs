@@ -16,7 +16,7 @@ import           Linear (V2(..), V4(..))
 import           Data.Text
 import           Control.Monad.IO.Class (liftIO)
 
-import           Game.Constants
+import           Game.Util.Constants
   ( frameDeltaSeconds
   , toPixels )
 -- import           Game.Render (renderTexture)

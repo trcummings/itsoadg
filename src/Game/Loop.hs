@@ -20,6 +20,7 @@ import           Control.Monad.State  (MonadState, get, put)
 
 import           Game.Types (SDLConfig(..), EventQueue(..), QueueEvent(..))
 import           Game.World (System', World, SystemFn)
+
 import           Game.Effect.Event
   ( Event
   , prependAndGetEvents
@@ -27,20 +28,23 @@ import           Game.Effect.Event
   , byInputEvent
   , byAudioSystemEvent )
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
+
 import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import           Game.Wrapper.SDLTime (SDLTime, nextTick)
 import           Game.Wrapper.Apecs (Apecs, runGC, runSystem)
-import           Game.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
-import           Game.Player (stepPlayerState, stepPlayerAction)
-import           Game.Camera (stepCameraPhysics)
-import           Game.FlowMeter (stepFlowMeter)
-import           Game.Input (handleSDLInput, stepInputSystem)
-import           Game.Physics (stepPhysicsSystem)
-import           Game.Collision (stepCollisionSystem)
-import           Game.Audio (stepAudioQueue)
-import           Game.Render (stepRender)
-import           Game.Init (initSystems)
-import           Game.Constants (dT, initialSize)
+
+import           Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
+import           Game.System.Player (stepPlayerState, stepPlayerAction)
+import           Game.System.Camera (stepCameraPhysics)
+import           Game.System.FlowMeter (stepFlowMeter)
+import           Game.System.Input (handleSDLInput, stepInputSystem)
+import           Game.System.Physics (stepPhysicsSystem)
+import           Game.System.Collision (stepCollisionSystem)
+import           Game.System.Audio (stepAudioQueue)
+import           Game.System.Render (stepRender)
+import           Game.System.Init (initSystems)
+
+import           Game.Util.Constants (dT, initialSize)
 
 -- update physics multiple times if time step is less than frame update time
 innerStep :: Double -> SystemFn

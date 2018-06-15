@@ -13,7 +13,7 @@ import Game.Types
   , PenetrationVector(..)
   , AABB(..)
   , BoxEntity )
-import Game.Constants (frameDeltaSeconds)
+import Game.Util.Constants (frameDeltaSeconds)
 import Game.Util.Collision (toVector)
 
 aabbCheck :: AABB -> AABB -> Bool

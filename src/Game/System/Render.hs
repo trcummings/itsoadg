@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Game.Render where
+module Game.System.Render where
 
 import qualified SDL
 import           SDL (($=), Point(..))
@@ -15,16 +15,17 @@ import           Apecs (cmapM_, cmap, set)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe (catMaybes)
 import           Data.Coerce (coerce)
+import           Paths_itsoadg (getDataFileName)
 
 import           Game.World (System')
 import           Game.Sprite (rectFromClip)
-import           Game.Constants
+import           Game.Util.Constants
   ( toPixels
   , spriteSize
   , screenWidth
   , screenHeight )
 import           Game.Util.AABB (broadPhaseAABB)
-import           Game.Player (stepPlayerAnimation)
+import           Game.System.Player (stepPlayerAnimation)
 import           Game.Types
   ( Unit(..)
   , Camera(..)
@@ -42,7 +43,6 @@ import           Game.Types
   , FlowMeter(..)
   , AABB(..), dims, center )
 
-import Paths_itsoadg (getDataFileName)
 
 toTexture :: SDL.Renderer -> SDL.Surface -> IO Texture
 toTexture r surface = do

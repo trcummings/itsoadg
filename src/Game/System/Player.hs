@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Game.Player where
+module Game.System.Player where
 
 import qualified SDL
 import qualified KeyState
@@ -34,7 +34,7 @@ import           Game.Types
   , To(..)
   , From(..)
   , Motion(..) )
-import           Game.Constants
+import           Game.Util.Constants
   ( initialJumpG
   , initialFallG
   , stoppingAccel
@@ -45,7 +45,7 @@ import           Game.Constants
   , aStoppingAccel
   , frameDeltaSeconds
   , playerTopSpeed )
-import           Game.Step (smash, peel)
+import           Game.Util.Step (smash, peel)
 import           Game.World (System', SystemFn)
 
 -- movement
