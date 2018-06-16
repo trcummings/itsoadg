@@ -85,7 +85,7 @@ updateNonCollidablePositions (_, v, p) = stepPosition (v, p)
 stepPhysicsSystem :: [QueueEvent] -> System' [QueueEvent]
 stepPhysicsSystem evts = do
   -- update acceleration based on gravity
-  -- cmap handleGravity
+  cmap handleGravity
   -- jump!
   evts' <- emap stepJump
   -- clamp velocity
