@@ -25,6 +25,7 @@ import           Game.Util.Constants
   , screenWidth
   , screenHeight )
 import           Game.Util.AABB (broadPhaseAABB)
+import           Game.Util.TileMap (basicTilemap')
 import           Game.System.Player (stepPlayerAnimation)
 import           Game.Types
   ( Unit(..)
@@ -41,7 +42,8 @@ import           Game.Types
   , SpriteSheet(..)
   , Animations(..)
   , FlowMeter(..)
-  , AABB(..), dims, center )
+  , AABB(..), dims, center
+  , TileType(..) )
 
 
 toTexture :: SDL.Renderer -> SDL.Surface -> IO Texture
@@ -147,6 +149,20 @@ stepRender renderer = do
         renderer
         (makeRect (toPixels <$> ((center aabb) - cameraPos)) (toPixels <$> (dims aabb)))
 
+    liftIO $ mapM_ (\(ttype, pos) -> do
+                     let pos' = (Unit <$> fromIntegral <$> pos) :: V2 Unit
+                     case ttype of
+                       E -> return ()
+                       S -> do
+                         liftIO $
+                           SDL.rendererDrawColor renderer $= V4 255 0 maxBound maxBound
+                         liftIO $
+                           SDL.drawRect
+                           renderer
+                           (makeRect (toPixels <$> (pos' - cameraPos)) (V2 32 32))
+                 ) basicTilemap'
+
+
   -- render flow meter
   cmapM_ $ \(Font f, Position p) -> do
     cmapM_ $ \(Player _, flow@(FlowMeter _ _ _ _)) -> do
@@ -178,6 +194,7 @@ stepRender renderer = do
         bb = toPixels <$> (V2 (Unit 0.25) (Unit 0.25))
     liftIO $ SDL.rendererDrawColor renderer $= V4 161 62 180 maxBound
     liftIO $ SDL.drawRect renderer (Just $ SDL.Rectangle (P $ V2 px py) bb)
+
 
 prepNextRender :: SDL.Renderer -> IO ()
 prepNextRender renderer = do

@@ -63,6 +63,7 @@ characters =
   ++ ['0'..'9']
   ++ [' ', ':', ',', '-', '.']
 
+
 type SpriteAnimation = System' (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
 
 initSystems :: SDL.Renderer -> System' ()
@@ -123,33 +124,33 @@ initSystems renderer = void $ do
       Position $ V2 0 0
     , Font fontMap )
 
-  newEntity ( -- floor
-      Position $ V2 0 (screenHeight - 1)
-    -- , Friction floorFriction
-    , CollisionModule CL'Surface
-    , BoundingBox (V2 screenWidth 1) )
+  -- newEntity ( -- floor
+  --     Position $ V2 0 (screenHeight - 1)
+  --   -- , Friction floorFriction
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox (V2 screenWidth 1) )
 
-  newEntity ( --floating platform
-      Position $ V2 5 (screenHeight / 2)
-    -- , Friction floorFriction
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 6 1 )
+  -- newEntity ( --floating platform
+  --     Position $ V2 5 (screenHeight / 2)
+  --   -- , Friction floorFriction
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 6 1 )
 
-  newEntity ( --floating platform 2
-      Position $ V2 13 (screenHeight / 2)
-    -- , Friction floorFriction
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 6 1 )
+  -- newEntity ( --floating platform 2
+  --     Position $ V2 13 (screenHeight / 2)
+  --   -- , Friction floorFriction
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 6 1 )
 
-  newEntity ( --wall
-      Position $ V2 (screenWidth - 10) (screenHeight - 5)
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 1 4 )
+  -- newEntity ( --wall
+  --     Position $ V2 (screenWidth - 10) (screenHeight - 5)
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 1 4 )
 
-  newEntity ( --wall2
-      Position $ V2 (screenWidth - 1) (screenHeight - 8)
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 1 7 )
+  -- newEntity ( --wall2
+  --     Position $ V2 (screenWidth - 1) (screenHeight - 8)
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 1 7 )
 
   -- newEntity ( --hard flow1
   --     HardFlow
