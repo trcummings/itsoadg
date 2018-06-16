@@ -55,9 +55,9 @@ resolveNormalVelocity (Velocity v@(V2 vx vy)) (PenetrationVector pVector) normal
   in Velocity v'
 
 areLayersCollidable :: CollisionLayer -> CollisionLayer -> Bool
-areLayersCollidable CollisionLayer'Player _      = True
-areLayersCollidable _ CollisionLayer'Player      = True
-areLayersCollidable CollisionLayer'Surface _     = False
-areLayersCollidable CollisionLayer'Collectible _ = True
-areLayersCollidable CollisionLayer'EmptyLayer _  = False
-areLayersCollidable _ CollisionLayer'EmptyLayer  = False
+areLayersCollidable CL'Player _      = True
+areLayersCollidable _ CL'Player      = True
+areLayersCollidable CL'Surface _     = False
+areLayersCollidable CL'Collectible _ = True
+areLayersCollidable CL'EmptyLayer _  = False
+areLayersCollidable _ CL'EmptyLayer  = False

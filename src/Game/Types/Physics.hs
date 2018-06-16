@@ -33,8 +33,8 @@ data CollisionType =
   deriving Show
 
 data CollisionLayer =
-    CollisionLayer'Player
-  | CollisionLayer'Collectible
-  | CollisionLayer'Trigger
-  | CollisionLayer'Surface
-  | CollisionLayer'EmptyLayer
+    CL'Player
+  | CL'Collectible
+  | CL'Trigger
+  | CL'Surface
+  | CL'EmptyLayer

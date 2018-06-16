@@ -120,7 +120,7 @@ processCollidable allCollidables
       actives  = filter (isLegalCollision entity sweptBox cLayer) allCollidables
       -- if we have no swept phase collisions
   in if (length actives == 0)
-     then [(To entity, From entity, NoCollision, CollisionLayer'EmptyLayer)]
+     then [(To entity, From entity, NoCollision, CL'EmptyLayer)]
      else map (determineCollisionType cm) actives
 
 
@@ -141,7 +141,7 @@ stepJump' cm (_, jumpState, e) =
      else foldr stepJumpState (jumpState, []) collisions
      where
        landingEvent = AudioSystemEvent (e, Player'SFX'Land, Audio'PlayOrSustain)
-       stepJumpState ct (j, qs) =
+       stepJumpState (ct, cl) (j, qs) =
              if (normal == BottomNormal)
              then if not $ onGround j
                   then (j { onGround = True }, qs ++ [landingEvent])
@@ -197,6 +197,8 @@ stepCollisionSystem evts = do
       collisionMap = foldr addToCollisionMap Map.empty collisions
   -- process CollisionModule related components
   cmap $ (stepCollisionSpeed    collisionMap)
+  -- cmap $ \(CollisionModule _, Position p, Velocity v) ->
+  --   Position $ p + (v ^* Unit frameDeltaSeconds)
   cmap $ (stepCollisionPosition collisionMap)
   jEvts <- emap $ (stepJump' collisionMap)
   return (jEvts ++ evts)
