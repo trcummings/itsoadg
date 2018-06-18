@@ -12,6 +12,9 @@ import           Game.Types (Unit(..), Seconds(..))
 pixelsPerUnit :: Double
 pixelsPerUnit = 32
 
+onePixel :: Unit
+onePixel = Unit $ 1 / pixelsPerUnit
+
 toPixels :: Unit -> CInt
 toPixels (Unit a) = round (pixelsPerUnit * a)
 

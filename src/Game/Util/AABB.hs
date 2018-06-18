@@ -23,17 +23,33 @@ aabbCheck (AABB (V2 x1 y1) (V2 w1 h1)) (AABB (V2 x2 y2) (V2 w2 h2)) =
       || (y1 + h1) < y2
       || y1 > (y2 + h2) )
 
--- aabbMin :: AABB -> V2 Unit
--- aabbMin a =
---   let (V2 x y) = center a
---       (V2 w h) = dims   a
---   in V2 (x - (w / 2)) (y - (h / 2))
+-- top left
+aabbMin :: AABB -> V2 Unit
+aabbMin a =
+  let (V2 x y) = center a
+      (V2 w h) = dims   a
+  in V2 (x - (w / 2)) (y - (h / 2))
 
--- aabbMax :: AABB -> V2 Unit
--- aabbMax a =
---   let (V2 x y) = center a
---       (V2 w h) = dims   a
---   in V2 (x + (w / 2)) (y + (h / 2))
+-- bottom right
+aabbMax :: AABB -> V2 Unit
+aabbMax a =
+  let (V2 x y) = center a
+      (V2 w h) = dims   a
+  in V2 (x + (w / 2)) (y + (h / 2))
+
+-- top right
+aabbTopRight :: AABB -> V2 Unit
+aabbTopRight a =
+  let V2 _ y = aabbMin a
+      V2 x _ = aabbMax a
+  in  V2 x y
+
+-- bottom left
+aabbBottomLeft :: AABB -> V2 Unit
+aabbBottomLeft a =
+  let V2 x _ = aabbMin a
+      V2 _ y = aabbMax a
+  in  V2 x y
 
 -- minkowskiDiff :: AABB -> AABB -> AABB
 -- minkowskiDiff a b =

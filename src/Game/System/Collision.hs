@@ -4,6 +4,7 @@ import           Linear (V2(..), (^*), (^/))
 import           Apecs (Entity, cmap, cmapM_, set, proxy, getAll, get, exists)
 import           Data.Coerce (coerce)
 import           Data.Map ((!?))
+import           Data.Maybe (catMaybes)
 import qualified Data.Map as Map (Map, insertWith, empty)
 import           Control.Monad (when)
 import           Control.Monad.Extra (partitionM)
@@ -31,12 +32,23 @@ import           Game.Types
   , Audio'Command(..)
   , Player'SFX'Key(..)
   , To(..)
-  , From(..) )
+  , From(..)
+  , TileMap(..)
+  , TileType(..) )
 import           Game.Wrapper.Apecs (emap)
-import           Game.Util.Constants (frameDeltaSeconds)
+import           Game.Util.Constants (frameDeltaSeconds, onePixel)
+import           Game.Util.TileMap
+  ( basicTilemap
+  , getTileTypeAt
+  , raycastAlongX
+  , raycastAlongY )
 import           Game.Util.AABB
   ( aabbCheck
   , sweepAABB
+  , aabbMin
+  , aabbMax
+  , aabbBottomLeft
+  , aabbTopRight
   , penetrationVector
   , broadPhaseAABB
   , inNarrowPhase )
@@ -57,6 +69,25 @@ type DynamicCollidable = (CollisionModule, BoundingBox, Position, Velocity, Enti
 type CollisionInfo = (CollisionType, CollisionLayer)
 type CollisionMap = Map.Map Entity [CollisionInfo]
 type Collision = (To, From, CollisionType, CollisionLayer)
+
+-- data SensorDirection =
+--     Sensor'Top
+--   | Sensor'Left
+--   | Sensor'Right
+--   | Sensor'Bottom
+--   deriving Show
+
+-- data SensorCollision = SensorCollision
+--   { plane = SensorDirection
+--   , side  = SensorDirection }
+--   deriving Show
+
+-- data RaycastHit = RaycastHit
+--  { distance :: Unit
+--  , fraction :: Double
+--  , normal   :: V2 Unit }
+--  deriving Show
+
 
 determineCollisionType :: DynamicCollidable -> Collidable -> Collision
 determineCollisionType (_, BoundingBox bb1, Position p1, v@(Velocity v'), e1)
@@ -185,10 +216,37 @@ stepCollisionPosition cm (_, v@(Velocity v'), p@(Position p'), e) =
      then Position $ p' + (v' ^* Unit frameDeltaSeconds)
      else fst $ foldr stepPosition (p, v) collisions
 
+-- dispatch raycast debug event also
+resolveXTiles :: TileMap -> DynamicCollidable -> ((Velocity, Position), [QueueEvent])
+resolveXTiles tMap
+            cm@( CollisionModule cLayer
+               , bb@(BoundingBox bb')
+               , p@(Position p')
+               , v@(Velocity v'@(V2 vx vy))
+               , entity ) =
+  let box                = AABB { center = p', dims = bb' }
+      V2 xOrigin yOrigin =
+        if vx > 0
+        -- pick moving edge & cast from 1 pixel away
+        then aabbMax        box + V2   onePixel  onePixel
+        else aabbBottomLeft box + V2 (-onePixel) onePixel
+      V2 xFinal yFinal   =
+        if vx > 0
+        then aabbMin      box + V2   onePixel  (-onePixel)
+        else aabbTopRight box + V2 (-onePixel) (-onePixel)
+      tiles              =
+        (raycastAlongX tMap (Position $ V2 xOrigin yOrigin) v)
+        ++
+        (raycastAlongX tMap (Position $ V2 xFinal  yFinal ) v)
+  in ((v, p), [])
+  -- in if (length tiles == 0)
+  --    then ((v, Position $ p' + ((v' ^* Unit frameDeltaSeconds))), [])
+  --    else ((Velocity $ v' * V2 0 1, p), [])
 
 -- whole system
 stepCollisionSystem :: [QueueEvent] -> System' [QueueEvent]
-stepCollisionSystem evts = do
+stepCollisionSystem events = do
+  cEvents <- emap $ (resolveXTiles basicTilemap)
   -- get all entities with a collision module
   allCollidables    <- getAll :: System' [Collidable]
   movingCollidables <- getAll :: System' [DynamicCollidable]
@@ -197,8 +255,8 @@ stepCollisionSystem evts = do
       collisionMap = foldr addToCollisionMap Map.empty collisions
   -- process CollisionModule related components
   cmap $ (stepCollisionSpeed    collisionMap)
-  -- cmap $ \(CollisionModule _, Position p, Velocity v) ->
-  --   Position $ p + (v ^* Unit frameDeltaSeconds)
+  cmap $ \(CollisionModule _, Position p, Velocity v) ->
+    Position $ p + (v ^* Unit frameDeltaSeconds)
   cmap $ (stepCollisionPosition collisionMap)
-  jEvts <- emap $ (stepJump' collisionMap)
-  return (jEvts ++ evts)
+  jEvents <- emap $ (stepJump' collisionMap)
+  return $ events ++ cEvents ++ jEvents

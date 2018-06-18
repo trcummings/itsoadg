@@ -17,3 +17,5 @@ data Step a
   = Step'Change a a -- | Prev, Next
   | Step'Sustain a
   deriving (Show, Eq)
+
+data Axis = X | Y deriving (Eq, Show)
