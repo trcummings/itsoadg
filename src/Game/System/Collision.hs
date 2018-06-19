@@ -40,8 +40,9 @@ import           Game.Util.Constants (frameDeltaSeconds, onePixel)
 import           Game.Util.TileMap
   ( basicTilemap
   , getTileTypeAt
-  , raycastAlongX
-  , raycastAlongY )
+  -- , raycastAlongX
+  -- , raycastAlongY
+  , getIntersectingTiles )
 import           Game.Util.AABB
   ( aabbCheck
   , sweepAABB
@@ -81,13 +82,6 @@ type Collision = (To, From, CollisionType, CollisionLayer)
 --   { plane = SensorDirection
 --   , side  = SensorDirection }
 --   deriving Show
-
--- data RaycastHit = RaycastHit
---  { distance :: Unit
---  , fraction :: Double
---  , normal   :: V2 Unit }
---  deriving Show
-
 
 determineCollisionType :: DynamicCollidable -> Collidable -> Collision
 determineCollisionType (_, BoundingBox bb1, Position p1, v@(Velocity v'), e1)
@@ -216,29 +210,31 @@ stepCollisionPosition cm (_, v@(Velocity v'), p@(Position p'), e) =
      then Position $ p' + (v' ^* Unit frameDeltaSeconds)
      else fst $ foldr stepPosition (p, v) collisions
 
--- dispatch raycast debug event also
+
 resolveXTiles :: TileMap -> DynamicCollidable -> ((Velocity, Position), [QueueEvent])
 resolveXTiles tMap
             cm@( CollisionModule cLayer
                , bb@(BoundingBox bb')
                , p@(Position p')
                , v@(Velocity v'@(V2 vx vy))
-               , entity ) =
-  let box                = AABB { center = p', dims = bb' }
-      V2 xOrigin yOrigin =
-        if vx > 0
-        -- pick moving edge & cast from 1 pixel away
-        then aabbMax        box + V2   onePixel  onePixel
-        else aabbBottomLeft box + V2 (-onePixel) onePixel
-      V2 xFinal yFinal   =
-        if vx > 0
-        then aabbMin      box + V2   onePixel  (-onePixel)
-        else aabbTopRight box + V2 (-onePixel) (-onePixel)
-      tiles              =
-        (raycastAlongX tMap (Position $ V2 xOrigin yOrigin) v)
-        ++
-        (raycastAlongX tMap (Position $ V2 xFinal  yFinal ) v)
-  in ((v, p), [])
+               , entity ) = ((v, p), [])
+  -- let box                = AABB { center = p', dims = bb' }
+  --     -- sweptBox = broadPhaseAABB bb p v
+  --     -- sweptTiles = getIntersectingTiles sweptBox
+  --     V2 xOrigin yOrigin =
+  --       if vx > 0
+  --       -- pick moving edge & cast from 1 pixel away
+  --       then aabbMax        box + V2   onePixel  onePixel
+  --       else aabbBottomLeft box + V2 (-onePixel) onePixel
+  --     V2 xFinal yFinal   =
+  --       if vx > 0
+  --       then aabbMin      box + V2   onePixel  (-onePixel)
+  --       else aabbTopRight box + V2 (-onePixel) (-onePixel)
+  --     tiles              =
+  --       (raycastAlongX tMap (Position $ V2 xOrigin yOrigin) v)
+  --       ++
+  --       (raycastAlongX tMap (Position $ V2 xFinal  yFinal ) v)
+  -- in ((v, p), [])
   -- in if (length tiles == 0)
   --    then ((v, Position $ p' + ((v' ^* Unit frameDeltaSeconds))), [])
   --    else ((Velocity $ v' * V2 0 1, p), [])

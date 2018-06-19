@@ -38,3 +38,11 @@ data CollisionLayer =
   | CL'Trigger
   | CL'Surface
   | CL'EmptyLayer
+
+data RaycastHit = RaycastHit
+ { distance :: Unit
+ , fraction :: Unit
+ , position :: V2 Unit
+ , normal   :: V2 Unit }
+ deriving Show
+
