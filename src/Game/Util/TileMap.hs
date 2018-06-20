@@ -57,7 +57,6 @@ basicTilemap' = toTileList basicTilemap
 getTileTypeAt :: TileMap -> V2 Int -> Maybe TileType
 getTileTypeAt (TileMap tMap) (V2 x y) = tMap ^? element y . element x
 
-
 getIntersectingTiles :: TileMap -> AABB -> [(TileType, V2 Unit)]
 getIntersectingTiles tMap box =
   let (V2 xMin yMin) =
