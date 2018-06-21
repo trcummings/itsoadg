@@ -39,6 +39,15 @@ data CollisionLayer =
   | CL'Surface
   | CL'EmptyLayer
 
+data Axis = X | Y deriving (Eq, Show)
+
+data SensorDirection =
+    Sensor'Top
+  | Sensor'Left
+  | Sensor'Right
+  | Sensor'Bottom
+  deriving Show
+
 data Ray = Ray
   { origin    :: V2 Unit
   , delta     :: V2 Unit }
@@ -49,6 +58,6 @@ data RaycastHit = RaycastHit
  , distance :: V2 Unit
  , position :: V2 Unit
  , normal   :: V2 Unit }
- deriving Show
+ deriving (Eq, Show)
 
 type CollisionEvent = RaycastHit
