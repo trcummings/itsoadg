@@ -39,10 +39,16 @@ data CollisionLayer =
   | CL'Surface
   | CL'EmptyLayer
 
+data Ray = Ray
+  { origin    :: V2 Unit
+  , delta     :: V2 Unit }
+  deriving (Eq, Show)
+
 data RaycastHit = RaycastHit
- { distance :: Unit
- , fraction :: Unit
+ { hitTime  :: Unit
+ , distance :: V2 Unit
  , position :: V2 Unit
  , normal   :: V2 Unit }
  deriving Show
 
+type CollisionEvent = RaycastHit

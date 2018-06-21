@@ -1,6 +1,6 @@
 module Game.System.Collision where
 
-import           Linear (V2(..), (^*), (^/))
+import           Linear (V2(..), (^*), (^/), normalize)
 import           Apecs (Entity, cmap, cmapM_, set, proxy, getAll, get, exists)
 import           Data.Coerce (coerce)
 import           Data.Map ((!?))
@@ -34,7 +34,8 @@ import           Game.Types
   , To(..)
   , From(..)
   , TileMap(..)
-  , TileType(..) )
+  , TileType(..)
+  , RaycastHit(..) )
 import           Game.Wrapper.Apecs (emap)
 import           Game.Util.Constants (frameDeltaSeconds, onePixel)
 import           Game.Util.TileMap
@@ -212,115 +213,118 @@ stepCollisionPosition cm (_, v@(Velocity v'), p@(Position p'), e) =
      else fst $ foldr stepPosition (p, v) collisions
 
 
+
+
 tileToBox :: (TileType, V2 Unit) -> (AABB, TileType)
 tileToBox (t, p) = ( AABB { center = p + V2 0.5 0.5, dims = V2 1 1 }
                    , t )
 
-resolveXTiles :: TileMap -> DynamicCollidable -> System' ()
-resolveXTiles tMap
-            cm@( CollisionModule cLayer
-               , bb@(BoundingBox bb')
-               , p@(Position p')
-               , v@(Velocity v'@(V2 vx vy))
-               , entity ) = do
-  when (not $ vx == 0) $ do
-    let box        = AABB { center = p', dims = bb' }
-        sweptBox   = broadPhaseAABB bb p v
-        sweptTiles = getIntersectingTiles tMap sweptBox
-        dir        = getRaycastDir X v
-        boxTiles   = map tileToBox sweptTiles
-        (V2 xL _)  = v' ^* Unit frameDeltaSeconds
-        tPos       = getRaycastPos Sensor'Top    v box
-        bPos       = getRaycastPos Sensor'Bottom v box
-        topHit     = raycast (Position tPos) dir xL boxTiles
-        bottomHit  = raycast (Position bPos) dir xL boxTiles
-    case topHit    of Nothing -> return ()
-                      Just tH -> do
-                        liftIO $ putStrLn $ "Top hit params: "
-                          ++ "Position: "    ++ show tPos ++ ", "
-                          ++ "Direction: "   ++ show dir  ++ ", "
-                          ++ "Length: "      ++ show xL
-                        liftIO $ putStrLn $ show tH
-    case bottomHit of Nothing -> return ()
-                      Just bH -> do
-                        liftIO $ putStrLn $ "Bottom hit params: "
-                          ++ "Position: "    ++ show bPos ++ ", "
-                          ++ "Direction: "   ++ show dir  ++ ", "
-                          ++ "Length: "      ++ show xL
-                        liftIO $ putStrLn $ show bH
-
-data Axis = X | Y
+data Axis = X | Y deriving (Eq, Show)
 
 getRaycastDir :: Axis -> Velocity -> V2 Unit
-getRaycastDir X (Velocity (V2 vx _)) = if (vx > 0) then V2 1 0 else V2 (-1) 0
-getRaycastDir Y (Velocity (V2 _ vy)) = if (vy > 0) then V2 0 1 else V2 0 (-1)
+getRaycastDir X (Velocity v) = Unit <$> normalize (coerce v :: V2 Double) * V2 1 0
+getRaycastDir Y (Velocity v) = Unit <$> normalize (coerce v :: V2 Double) * V2 0 1
 
-getRaycastPos :: SensorDirection -> Velocity -> AABB -> V2 Unit
-getRaycastPos Sensor'Top    (Velocity (V2 vx _)) box =
-  if (vx > 0)
-  then aabbMin        box + V2   onePixel  (-onePixel)
-  else aabbTopRight   box + V2 (-onePixel) (-onePixel)
-getRaycastPos Sensor'Bottom (Velocity (V2 vx _)) box =
+getRaycastPos :: SensorDirection -> Velocity -> AABB -> Position
+getRaycastPos Sensor'Top    (Velocity (V2 vx _)) box = Position $
   if vx > 0
-  then aabbMax        box + V2   onePixel  onePixel
-  else aabbBottomLeft box + V2 (-onePixel) onePixel
-getRaycastPos Sensor'Right  (Velocity (V2 _ vy)) box =
+  then aabbMin        box + V2 (-onePixel)   onePixel
+  else aabbTopRight   box + V2   onePixel    onePixel
+getRaycastPos Sensor'Bottom (Velocity (V2 vx _)) box = Position $
+  if vx > 0
+  then aabbMax        box + V2   onePixel  (-onePixel)
+  else aabbBottomLeft box + V2 (-onePixel) (-onePixel)
+getRaycastPos Sensor'Right  (Velocity (V2 _ vy)) box = Position $
   if vy > 0
-  then aabbMax        box + V2   onePixel  onePixel
+  then aabbMax        box + V2 (-onePixel)  onePixel
   else aabbTopRight   box + V2 (-onePixel) (-onePixel)
-getRaycastPos Sensor'Left   (Velocity (V2 _ vy)) box =
-  if (vy > 0)
+getRaycastPos Sensor'Left   (Velocity (V2 _ vy)) box = Position $
+  if vy > 0
   then aabbMin        box + V2   onePixel  (-onePixel)
-  else aabbBottomLeft box + V2 (-onePixel) onePixel
+  else aabbBottomLeft box + V2   onePixel    onePixel
 
-resolveYTiles :: TileMap -> DynamicCollidable -> System' ()
-resolveYTiles tMap
-            cm@( CollisionModule cLayer
-               , bb@(BoundingBox bb')
-               , p@(Position p')
-               , v@(Velocity v'@(V2 vx vy))
-               , entity ) = do
-  when (not $ vy == 0) $ do
+getRaycastLength :: Axis -> Velocity -> Unit
+getRaycastLength axis (Velocity v) =
+  let (V2 xL yL)  = v ^* Unit frameDeltaSeconds
+  in case axis of X -> abs xL
+                  Y -> abs yL
+
+processRay :: Axis
+         -> SensorDirection
+         -> AABB
+         -> [(AABB, TileType)]
+         -> (Velocity, [QueueEvent])
+         -> (Velocity, [QueueEvent])
+processRay axis sDir box tiles (v@(Velocity v'@(V2 vx vy)), qs) =
+  let dir        = getRaycastDir    axis v
+      castLength = getRaycastLength axis v
+      pos        = getRaycastPos sDir v box
+      v0Check    = if axis == X then vx else vy
+  in if v0Check == 0
+     then (v, qs)
+     else case (raycast pos dir castLength tiles) of
+            Nothing        -> (v, qs)
+            Just (hit, tt) ->
+              ( Velocity (distance hit - (normal hit ^* onePixel))
+              , qs ++ [CollisionSystemEvent hit] )
+
+resolveXTiles :: TileMap -> DynamicCollidable -> (Velocity, [QueueEvent])
+resolveXTiles tMap cm@( CollisionModule _
+                      , bb@(BoundingBox bb')
+                      , p@(Position p')
+                      , v@(Velocity v'@(V2 vx _))
+                      , entity ) =
+  if (vx == 0)
+  then (v, [])
+  else
     let box        = AABB { center = p', dims = bb' }
         sweptBox   = broadPhaseAABB bb p v
         sweptTiles = getIntersectingTiles tMap sweptBox
-        dir        = getRaycastDir Y v
         boxTiles   = map tileToBox sweptTiles
-        (V2 _ yL)  = v' ^* Unit frameDeltaSeconds
-        lPos       = getRaycastPos Sensor'Left  v box
-        rPos       = getRaycastPos Sensor'Right v box
-        topHit     = raycast (Position lPos) dir yL boxTiles
-        bottomHit  = raycast (Position rPos) dir yL boxTiles
-    case topHit    of Nothing -> return ()
-                      Just tH -> do
-                        liftIO $ putStrLn $ "Left hit params: "
-                          ++ "Position: "    ++ show lPos ++ ", "
-                          ++ "Direction: "   ++ show dir  ++ ", "
-                          ++ "Length: "      ++ show yL
-                        liftIO $ putStrLn $ show tH
-    case bottomHit of Nothing -> return ()
-                      Just bH -> do
-                        liftIO $ putStrLn $ "Right hit params: "
-                          ++ "Position: "    ++ show rPos ++ ", "
-                          ++ "Direction: "   ++ show dir  ++ ", "
-                          ++ "Length: "      ++ show yL
-                        liftIO $ putStrLn $ show bH
+    in ( (processRay X Sensor'Top box boxTiles)
+       . (processRay X Sensor'Bottom box boxTiles) ) (v, [])
+
+resolveYTiles :: TileMap -> DynamicCollidable -> (Velocity, [QueueEvent])
+resolveYTiles tMap cm@( CollisionModule _
+                      , bb@(BoundingBox bb')
+                      , p@(Position p')
+                      , v@(Velocity v'@(V2 _ vy))
+                      , entity ) =
+  if (vy == 0)
+  then (v, [])
+  else
+    let box        = AABB { center = p', dims = bb' }
+        sweptBox   = broadPhaseAABB bb p v
+        sweptTiles = getIntersectingTiles tMap sweptBox
+        boxTiles   = map tileToBox sweptTiles
+    in ( (processRay Y Sensor'Right box boxTiles)
+       . (processRay Y Sensor'Left box boxTiles) ) (v, [])
+
+
 
 -- whole system
 stepCollisionSystem :: [QueueEvent] -> System' [QueueEvent]
 stepCollisionSystem events = do
-  cmapM_ $ (resolveXTiles basicTilemap)
-  cmapM_ $ (resolveYTiles basicTilemap)
+  -- cmapM_ $ \(CollisionModule _, Position p, Velocity v) -> do
+  --   liftIO $ putStrLn $ show (Position p) ++ ", " ++ show (Velocity v)
+  xEvents <- emap $ (resolveXTiles basicTilemap)
+  yEvents <- emap $ (resolveYTiles basicTilemap)
+  -- when (length xEvents > 0) $ liftIO $ putStrLn $ "X Events: " ++ show xEvents
+  -- when (length yEvents > 0) $
+  --   cmapM_ $ \(CollisionModule _, Position p, Velocity v) -> do
+  --     liftIO $ putStrLn $ show (Position p) ++ ", " ++ show (Velocity v)
+  --     liftIO $ putStrLn $ "Y Events: " ++ show yEvents
   -- get all entities with a collision module
-  allCollidables    <- getAll :: System' [Collidable]
-  movingCollidables <- getAll :: System' [DynamicCollidable]
-  -- compute collisions, insert in entity-key collision-value map
-  let collisions   = concat $ map (processCollidable allCollidables) movingCollidables
-      collisionMap = foldr addToCollisionMap Map.empty collisions
-  -- process CollisionModule related components
-  cmap $ (stepCollisionSpeed    collisionMap)
+  -- allCollidables    <- getAll :: System' [Collidable]
+  -- movingCollidables <- getAll :: System' [DynamicCollidable]
+  -- -- compute collisions, insert in entity-key collision-value map
+  -- let collisions   = concat $ map (processCollidable allCollidables) movingCollidables
+  --     collisionMap = foldr addToCollisionMap Map.empty collisions
+  -- -- process CollisionModule related components
+  -- cmap $ (stepCollisionSpeed    collisionMap)
   cmap $ \(CollisionModule _, Position p, Velocity v) ->
     Position $ p + (v ^* Unit frameDeltaSeconds)
-  cmap $ (stepCollisionPosition collisionMap)
-  jEvents <- emap $ (stepJump' collisionMap)
-  return $ events ++ jEvents
+  -- cmap $ (stepCollisionPosition collisionMap)
+  -- jEvents <- emap $ (stepJump' collisionMap)
+  -- return $ events ++ jEvents
+  return events

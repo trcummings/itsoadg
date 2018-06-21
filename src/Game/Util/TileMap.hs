@@ -35,7 +35,7 @@ basicTilemap = TileMap [
   , [S, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, S]
   , [S, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, S]
   , [S, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, S]
-  , [S, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, S]
+  , [S, E, E, E, E, E, E, E, E, E, E, E, E, S, S, S, S, E, E, S]
   , [S, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, S]
   , [S, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, S]
   , [S, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, S]

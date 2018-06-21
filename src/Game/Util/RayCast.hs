@@ -1,6 +1,7 @@
 module Game.Util.RayCast where
 
-import           Linear (V2(..), (*^))
+import           Linear (V2(..), (*^), _x, _y)
+import           Control.Lens
 import           Data.Coerce (coerce)
 import           Data.Maybe (catMaybes)
 import           Data.List (sortBy)
@@ -9,64 +10,47 @@ import           Data.Ord (comparing)
 import           Game.Util.AABB (aabbMin, aabbMax)
 import           Game.Types
   ( AABB(..)
+  , Ray(..)
   , RaycastHit(..)
   , Unit(..)
   , Position(..) )
 
-checkIntersection :: Unit -> Unit -> Unit -> Unit -> Maybe Unit
-checkIntersection o d i h =
-  if (d == 0 && not (o < i || o > h))
-  then Nothing
-  else
-    let t1 = (i - o) / d
-        t2 = (h - o) / d
-    in if t1 > t2
-       then
-         let tNear = t2
-             tFar  = t1
-         in if (tNear > tFar || tFar < 0) then Nothing else Just tNear
-       else
-         let tNear = t1
-             tFar  = t2
-         in if (tNear > tFar || tFar < 0) then Nothing else Just tNear
-
 sortByDistance :: [(RaycastHit, a)] -> [(RaycastHit, a)]
 sortByDistance = sortBy (comparing (distance . fst))
 
-castRayOnBox :: Position -> V2 Unit -> Unit -> AABB -> Maybe RaycastHit
-castRayOnBox (Position origin) direction len box =
-  let (V2 xMin yMin) = aabbMin box
-      (V2 xMax yMax) = aabbMax box
-      (V2 dX dY)     = origin + (len *^ direction)
-      (V2 oX oY)     = origin
-      iX = checkIntersection oX dX xMin xMax
-      iY = checkIntersection oY dY yMin yMax
-   in case iX of
-        Nothing  -> Nothing
-        Just iX' ->
-          case iY of
-            Nothing  -> Nothing
-            Just iY' ->
-               let distance = Unit $ sqrt $
-                     ((coerce $ ((oX - iX') ** 2) + ((oY - iY') ** 2)) :: Double)
-                   xNormal  = if oX < xMin
-                              then (-1)
-                              else if oX > xMax then 1 else 0
-                   yNormal  = if oY < yMin
-                              then (-1)
-                              else if oY > yMax then 1 else 0
-               in Just $ RaycastHit
-                  { distance = distance
-                  , fraction = distance / len
-                  , position = V2 iX' iY'
-                  , normal   = V2 xNormal yNormal }
+rayIntersection2d :: Ray -> AABB -> Maybe RaycastHit
+rayIntersection2d ray box =
+  let bMin                     = aabbMin box
+      bMax                     = aabbMax box
+      scale                    = 1 / delta ray
+      (V2 nearTimeX nearTimeY) = (bMin - origin ray) * scale
+      (V2 farTimeX  farTimeY ) = (bMax - origin ray) * scale
+      nearTime = max nearTimeX nearTimeY
+      farTime  = min farTimeX  farTimeY
+   in if nearTime > farTimeY || nearTimeY > farTimeX
+      then Nothing
+      else if nearTime >= 1 || farTime <= 0
+           then Nothing
+           else
+             let hitTime = max 0 $ min 1 nearTime
+                 normal  = if nearTimeX > nearTimeY
+                           then V2 (signum $ scale ^. _x) 0
+                           else V2 (signum $ scale ^. _y) 0
+                 distance = hitTime *^ delta ray
+                 position = origin ray + distance
+             in Just $ RaycastHit { hitTime  = hitTime
+                                  , distance = distance
+                                  , position = position
+                                  , normal   = normal }
 
 raycast :: Position -> V2 Unit -> Unit -> [(AABB, a)] -> Maybe (RaycastHit, a)
-raycast pos dir len boxes =
-  let hits = sortByDistance $
+raycast (Position pos) dir len boxes =
+  let ray  = Ray { origin = pos
+                 , delta  = len *^ dir }
+      hits = sortByDistance $
              catMaybes $
              map (\(box, a) ->
-                    let hit = castRayOnBox pos dir len box
+                    let hit = rayIntersection2d ray box
                     in fmap (\h -> (h, a)) hit
                  ) boxes
   in if (length hits == 0) then Nothing else Just $ head hits
