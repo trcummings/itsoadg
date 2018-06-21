@@ -215,7 +215,7 @@ stepCollisionPosition cm (_, v@(Velocity v'), p@(Position p'), e) =
 
 
 tileToBox :: (TileType, V2 Unit) -> (AABB, TileType)
-tileToBox (t, p) = ( AABB { center = p + V2 0.5 0.5, dims = V2 1 1 }
+tileToBox (t, p) = ( AABB { center = p, dims = V2 1 1 }
                    , t )
 
 processRay :: Axis
@@ -234,7 +234,8 @@ processRay axis sDir box tiles (v@(Velocity v'@(V2 vx vy)), qs) =
      else case (raycast pos dir castLength tiles) of
             Nothing        -> (v, qs)
             Just (hit, tt) ->
-              let delta' = distance hit + (normal hit ^* onePixel)
+              let delta' = distance hit
+                  -- delta' = distance hit + (normal hit ^* onePixel)
                   v'     = delta' ^/ Unit frameDeltaSeconds
               in ( Velocity v'
                  , qs ++ [CollisionSystemEvent hit] )
