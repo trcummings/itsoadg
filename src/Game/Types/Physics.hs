@@ -60,4 +60,4 @@ data RaycastHit = RaycastHit
  , normal   :: V2 Unit }
  deriving (Eq, Show)
 
-type CollisionEvent = RaycastHit
+type CollisionEvent = (RaycastHit, (V2 Unit, V2 Unit))

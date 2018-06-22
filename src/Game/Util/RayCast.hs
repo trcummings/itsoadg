@@ -14,7 +14,6 @@ import           Game.Types
   , Ray(..)
   , RaycastHit(..)
   , Unit(..)
-  , Position(..)
   , Velocity(..)
   , Axis(..)
   , SensorDirection(..) )
@@ -23,29 +22,44 @@ getRaycastDir :: Axis -> Velocity -> V2 Unit
 getRaycastDir X (Velocity v) = signum <$> v * V2 1 0
 getRaycastDir Y (Velocity v) = signum <$> v * V2 0 1
 
-getRaycastPos :: SensorDirection -> Velocity -> AABB -> Position
-getRaycastPos Sensor'Top    (Velocity (V2 vx _)) box = Position $
+getRaycastPos :: SensorDirection -> Velocity -> AABB -> V2 Unit
+getRaycastPos Sensor'Top    (Velocity (V2 vx _)) box =
   if vx > 0
-  then aabbMin        box + V2 (-onePixel)   onePixel
-  else aabbTopRight   box + V2   onePixel    onePixel
-getRaycastPos Sensor'Bottom (Velocity (V2 vx _)) box = Position $
+  then aabbMin        box
+  else aabbTopRight   box
+getRaycastPos Sensor'Bottom (Velocity (V2 vx _)) box =
   if vx > 0
-  then aabbMax        box + V2   onePixel  (-onePixel)
-  else aabbBottomLeft box + V2 (-onePixel) (-onePixel)
-getRaycastPos Sensor'Right  (Velocity (V2 _ vy)) box = Position $
+  then aabbMax        box
+  else aabbBottomLeft box
+getRaycastPos Sensor'Right  (Velocity (V2 _ vy)) box =
   if vy > 0
-  then aabbMax        box + V2 (-onePixel)  onePixel
-  else aabbTopRight   box + V2 (-onePixel) (-onePixel)
-getRaycastPos Sensor'Left   (Velocity (V2 _ vy)) box = Position $
+  then aabbMax        box
+  else aabbTopRight   box
+getRaycastPos Sensor'Left   (Velocity (V2 _ vy)) box =
   if vy > 0
-  then aabbMin        box + V2   onePixel  (-onePixel)
-  else aabbBottomLeft box + V2   onePixel    onePixel
+  then aabbMin        box
+  else aabbBottomLeft box
 
-getRaycastLength :: Axis -> Velocity -> Unit
-getRaycastLength axis (Velocity v) =
-  let (V2 xL yL)  = v ^* Unit frameDeltaSeconds
-  in case axis of X -> abs xL
-                  Y -> abs yL
+getRaycastPosOffset :: SensorDirection -> Velocity -> V2 Unit
+getRaycastPosOffset Sensor'Top    (Velocity (V2 vx _)) =
+  if vx > 0
+  then V2 (-onePixel)   onePixel
+  else V2   onePixel    onePixel
+getRaycastPosOffset Sensor'Bottom (Velocity (V2 vx _)) =
+  if vx > 0
+  then V2   onePixel  (-onePixel)
+  else V2 (-onePixel) (-onePixel)
+getRaycastPosOffset Sensor'Right  (Velocity (V2 _ vy)) =
+  if vy > 0
+  then V2 (-onePixel)  onePixel
+  else V2 (-onePixel) (-onePixel)
+getRaycastPosOffset Sensor'Left   (Velocity (V2 _ vy)) =
+  if vy > 0
+  then V2   onePixel  (-onePixel)
+  else V2   onePixel    onePixel
+
+getRaycastLength :: Velocity -> V2 Unit -> V2 Unit
+getRaycastLength (Velocity v) normal = normal * v ^* Unit frameDeltaSeconds
 
 rayIntersection2d :: Ray -> AABB -> Maybe RaycastHit
 rayIntersection2d ray box =
@@ -64,7 +78,7 @@ rayIntersection2d ray box =
              let hitTime = max 0 $ min 1 nearTime
                  normal  = if nearTimeX > nearTimeY
                            then V2 (signum $ scale ^. _x) 0
-                           else V2 (signum $ scale ^. _y) 0
+                           else V2 0 (signum $ scale ^. _y)
                  distance = hitTime *^ delta ray
                  position = origin ray + distance
              in Just $ RaycastHit { hitTime  = hitTime
@@ -75,10 +89,10 @@ rayIntersection2d ray box =
 sortByDistance :: [(RaycastHit, a)] -> [(RaycastHit, a)]
 sortByDistance = sortBy (comparing (distance . fst))
 
-raycast :: Position -> V2 Unit -> Unit -> [(AABB, a)] -> Maybe (RaycastHit, a)
-raycast (Position pos) dir len boxes =
+raycast :: V2 Unit -> V2 Unit -> [(AABB, a)] -> Maybe (RaycastHit, a)
+raycast pos delta boxes =
   let ray  = Ray { origin = pos
-                 , delta  = len *^ dir }
+                 , delta  = delta }
       hits = sortByDistance $
              catMaybes $
              map (\(box, a) ->

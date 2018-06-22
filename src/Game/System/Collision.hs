@@ -1,11 +1,12 @@
 module Game.System.Collision where
 
-import           Linear (V2(..), (^*), (^/))
+import           Linear (V2(..), (^*), (*^), (^/), dot, _x, _y)
 import           Apecs (Entity, cmap, cmapM_, set, proxy, getAll, get, exists)
 import           Data.Coerce (coerce)
 import           Data.Map ((!?))
 import           Data.Maybe (catMaybes)
 import qualified Data.Map as Map (Map, insertWith, empty)
+import           Control.Lens
 import           Control.Monad (when)
 import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
@@ -50,7 +51,8 @@ import           Game.Util.Raycast
   ( raycast
   , getRaycastDir
   , getRaycastLength
-  , getRaycastPos )
+  , getRaycastPos
+  , getRaycastPosOffset )
 import           Game.Util.AABB
   ( aabbCheck
   , sweepAABB
@@ -226,19 +228,19 @@ processRay :: Axis
          -> (Velocity, [QueueEvent])
 processRay axis sDir box tiles (v@(Velocity v'@(V2 vx vy)), qs) =
   let dir        = getRaycastDir    axis v
-      castLength = getRaycastLength axis v
+      castLength = getRaycastLength v dir
       pos        = getRaycastPos sDir v box
-      v0Check    = if axis == X then vx else vy
-  in if v0Check == 0
+      offset     = getRaycastPosOffset sDir v
+      mainV      = if axis == X then V2 1 0 else V2 0 1
+      secondV    = if axis == X then V2 0 1 else V2 1 0
+  in if ((axis == X && v' ^. _x == 0) || (axis == Y && v' ^. _y == 0))
      then (v, qs)
-     else case (raycast pos dir castLength tiles) of
+     else case (raycast (pos + offset) castLength tiles) of
             Nothing        -> (v, qs)
             Just (hit, tt) ->
-              let delta' = distance hit
-                  -- delta' = distance hit + (normal hit ^* onePixel)
-                  v'     = delta' ^/ Unit frameDeltaSeconds
-              in ( Velocity v'
-                 , qs ++ [CollisionSystemEvent hit] )
+              let newV = distance hit - offset
+              in ( Velocity $ (newV * mainV) + (v' * secondV)
+                 , qs ++ [CollisionSystemEvent (hit, (pos + offset, castLength))] )
 
 resolveXTiles :: TileMap -> DynamicCollidable -> (Velocity, [QueueEvent])
 resolveXTiles tMap cm@( CollisionModule _
