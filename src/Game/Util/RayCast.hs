@@ -43,8 +43,8 @@ getRaycastPos Sensor'Left   (Velocity (V2 _ vy)) box =
 getRaycastPosOffset :: SensorDirection -> Velocity -> V2 Unit
 getRaycastPosOffset Sensor'Top    (Velocity (V2 vx _)) =
   if vx > 0
-  then V2 (-onePixel)   onePixel
-  else V2   onePixel    onePixel
+  then V2 (-onePixel)   0
+  else V2   onePixel    0
 getRaycastPosOffset Sensor'Bottom (Velocity (V2 vx _)) =
   if vx > 0
   then V2   onePixel  (-onePixel)
@@ -60,6 +60,14 @@ getRaycastPosOffset Sensor'Left   (Velocity (V2 _ vy)) =
 
 getRaycastLength :: Velocity -> V2 Unit -> V2 Unit
 getRaycastLength (Velocity v) normal = normal * v ^* Unit frameDeltaSeconds
+
+numRays :: Unit -> Unit
+numRays x =
+  let x' = coerce x :: Double
+  -- if whole number
+  in if (x' == fromInteger (round x'))
+  then Unit $ (2 * x') + 1
+  else Unit $ (fromInteger $ ceiling x') * 2
 
 rayIntersection2d :: Ray -> AABB -> Maybe RaycastHit
 rayIntersection2d ray box =

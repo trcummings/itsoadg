@@ -3,6 +3,7 @@ module Game.Types.Physics where
 import           Linear (V2(..))
 
 import           Game.Types.Util (Unit(..))
+import           Game.Types.TileMap (TileType)
 
 -- Physics Types
 data AABB = AABB
@@ -32,12 +33,17 @@ data CollisionType =
   | SimpleCollision (PenetrationVector, CollisionNormal)
   deriving Show
 
+data CollisionLayerType =
+    CLT'Solid
+  | CLT'NonSolid
+  | CLT'NonCollidable
+  deriving (Eq, Show)
+
 data CollisionLayer =
     CL'Player
   | CL'Collectible
-  | CL'Trigger
-  | CL'Surface
-  | CL'EmptyLayer
+  | CL'Tile
+  deriving (Eq, Show)
 
 data Axis = X | Y deriving (Eq, Show)
 

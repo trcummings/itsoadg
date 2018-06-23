@@ -15,7 +15,7 @@ import qualified Animate
 import           SDL.Font  as TTF (free, load, blended)
 import           SDL (($=))
 import           Linear (V4(..), V2(..))
-import qualified Data.Map as Map (fromList)
+import qualified Data.Map as Map (empty, fromList)
 import           Data.Text (singleton)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (liftIO)
@@ -101,7 +101,8 @@ initSystems renderer = void $ do
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
-      , CollisionModule CL'Player
+      , CollisionModule { layer = CL'Player
+                        , layerCollisions = Map.empty }
       , Gravity { ascent  = initialJumpG
                 , descent = initialFallG }
       , Jump { requested = False
@@ -152,15 +153,16 @@ initSystems renderer = void $ do
   --   , CollisionModule CL'Surface
   --   , BoundingBox $ V2 1 7 )
 
-  -- newEntity ( --hard flow1
-  --     HardFlow
-  --   , Gravity
-  --       { ascent  = initialJumpG
-  --       , descent = initialFallG }
-  --   , Position $ V2 2 (screenHeight - 1.5)
-  --   , CollisionModule CL'Collectible
-  --   , BoundingBox $ V2 0.25 0.25
-  --   , Velocity $ V2 0 0 )
+  newEntity ( --hard flow1
+      HardFlow
+    , Gravity
+        { ascent  = initialJumpG
+        , descent = initialFallG }
+    , Position $ V2 2 (screenHeight - 1.5)
+    , CollisionModule { layer = CL'Collectible
+                      , layerCollisions = Map.empty }
+    , BoundingBox $ V2 0.25 0.25
+    , Velocity $ V2 0 0 )
 
   newEntity ( -- audio player
       SoundBank { bank =  Map.fromList [
