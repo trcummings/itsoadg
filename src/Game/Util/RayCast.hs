@@ -89,10 +89,11 @@ rayIntersection2d ray box =
                            else V2 0 (signum $ scale ^. _y)
                  distance = hitTime *^ delta ray
                  position = origin ray + distance
-             in Just $ RaycastHit { hitTime  = hitTime
-                                  , distance = distance
-                                  , position = position
-                                  , normal   = normal }
+             in Just $ RaycastHit { hitTime   = hitTime
+                                  , rayOrigin = origin ray
+                                  , distance  = distance
+                                  , position  = position
+                                  , normal    = normal }
 
 sortByDistance :: [(RaycastHit, a)] -> [(RaycastHit, a)]
 sortByDistance = sortBy (comparing (distance . fst))

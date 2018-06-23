@@ -60,10 +60,11 @@ data Ray = Ray
   deriving (Eq, Show)
 
 data RaycastHit = RaycastHit
- { hitTime  :: Unit
- , distance :: V2 Unit
- , position :: V2 Unit
- , normal   :: V2 Unit }
+ { hitTime   :: Unit
+ , rayOrigin :: V2 Unit
+ , distance  :: V2 Unit
+ , position  :: V2 Unit
+ , normal    :: V2 Unit }
  deriving (Eq, Show)
 
 type CollisionEvent = (RaycastHit, (V2 Unit, V2 Unit))
