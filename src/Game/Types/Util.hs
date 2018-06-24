@@ -7,7 +7,7 @@ import           Data.Aeson (FromJSON(..), ToJSON(..))
 -- Utility types
 newtype Unit =
   Unit Double
-  deriving (Eq, Ord, Show, Num, Fractional)
+  deriving (Eq, Ord, Show, Num, Fractional, Floating)
 
 newtype Seconds =
   Seconds Float

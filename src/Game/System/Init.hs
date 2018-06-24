@@ -15,7 +15,7 @@ import qualified Animate
 import           SDL.Font  as TTF (free, load, blended)
 import           SDL (($=))
 import           Linear (V4(..), V2(..))
-import qualified Data.Map as Map (fromList)
+import qualified Data.Map as Map (empty, fromList)
 import           Data.Text (singleton)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (liftIO)
@@ -63,6 +63,7 @@ characters =
   ++ ['0'..'9']
   ++ [' ', ':', ',', '-', '.']
 
+
 type SpriteAnimation = System' (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
 
 initSystems :: SDL.Renderer -> System' ()
@@ -96,11 +97,12 @@ initSystems renderer = void $ do
   player <- newEntity ( -- player
       Player (Step'Sustain PlayerAction'IdleRight)
     , Commandable
-    , ( Position $ V2 7 ((screenHeight / 2) - 2.55)
+    , ( Position $ V2 7.5 ((screenHeight / 2) - 2.55)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
-      , CollisionModule CL'Player
+      , CollisionModule { layer = CL'Player
+                        , layerCollisions = [] }
       , Gravity { ascent  = initialJumpG
                 , descent = initialFallG }
       , Jump { requested = False
@@ -123,43 +125,44 @@ initSystems renderer = void $ do
       Position $ V2 0 0
     , Font fontMap )
 
-  newEntity ( -- floor
-      Position $ V2 0 (screenHeight - 1)
-    -- , Friction floorFriction
-    , CollisionModule CL'Surface
-    , BoundingBox (V2 screenWidth 1) )
+  -- newEntity ( -- floor
+  --     Position $ V2 0 (screenHeight - 1)
+  --   -- , Friction floorFriction
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox (V2 screenWidth 1) )
 
-  newEntity ( --floating platform
-      Position $ V2 5 (screenHeight / 2)
-    -- , Friction floorFriction
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 6 1 )
+  -- newEntity ( --floating platform
+  --     Position $ V2 5 (screenHeight / 2)
+  --   -- , Friction floorFriction
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 6 1 )
 
-  newEntity ( --floating platform 2
-      Position $ V2 13 (screenHeight / 2)
-    -- , Friction floorFriction
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 6 1 )
+  -- newEntity ( --floating platform 2
+  --     Position $ V2 13 (screenHeight / 2)
+  --   -- , Friction floorFriction
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 6 1 )
 
-  newEntity ( --wall
-      Position $ V2 (screenWidth - 10) (screenHeight - 5)
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 1 4 )
+  -- newEntity ( --wall
+  --     Position $ V2 (screenWidth - 10) (screenHeight - 5)
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 1 4 )
 
-  newEntity ( --wall2
-      Position $ V2 (screenWidth - 1) (screenHeight - 8)
-    , CollisionModule CL'Surface
-    , BoundingBox $ V2 1 7 )
+  -- newEntity ( --wall2
+  --     Position $ V2 (screenWidth - 1) (screenHeight - 8)
+  --   , CollisionModule CL'Surface
+  --   , BoundingBox $ V2 1 7 )
 
-  -- newEntity ( --hard flow1
-  --     HardFlow
-  --   , Gravity
-  --       { ascent  = initialJumpG
-  --       , descent = initialFallG }
-  --   , Position $ V2 2 (screenHeight - 1.5)
-  --   , CollisionModule CL'Collectible
-  --   , BoundingBox $ V2 0.25 0.25
-  --   , Velocity $ V2 0 0 )
+  newEntity ( --hard flow1
+      HardFlow
+    , Gravity
+        { ascent  = initialJumpG
+        , descent = initialFallG }
+    , Position $ V2 2 (screenHeight - 1.5)
+    , CollisionModule { layer = CL'Collectible
+                      , layerCollisions = [] }
+    , BoundingBox $ V2 0.25 0.25
+    , Velocity $ V2 0 0 )
 
   newEntity ( -- audio player
       SoundBank { bank =  Map.fromList [

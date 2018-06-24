@@ -79,8 +79,8 @@ stepJump (jumpState@(Jump _ _), v@(Velocity (V2 vx _)), e) =
     , [AudioSystemEvent (e, Player'SFX'Jump, Audio'PlayOrSustain)] )
   else (v, [])
 
-updateNonCollidablePositions :: (Not CollisionModule, Velocity, Position) -> Position
-updateNonCollidablePositions (_, v, p) = stepPosition (v, p)
+updateNonCollidablePositions :: (Velocity, Position, Not CollisionModule) -> Position
+updateNonCollidablePositions (v, p, _) = stepPosition (v, p)
 
 stepPhysicsSystem :: [QueueEvent] -> System' [QueueEvent]
 stepPhysicsSystem evts = do

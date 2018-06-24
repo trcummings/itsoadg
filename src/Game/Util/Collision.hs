@@ -11,7 +11,8 @@ import Game.Types
   , CollisionNormal(..)
   , CollisionTime(..)
   , PenetrationVector(..)
-  , CollisionLayer(..) )
+  , CollisionLayer(..)
+  , CollisionLayerType(..) )
 import Game.Util.Constants (frameDeltaSeconds)
 
 inverseNormal :: CollisionNormal -> CollisionNormal
@@ -54,10 +55,13 @@ resolveNormalVelocity (Velocity v@(V2 vx vy)) (PenetrationVector pVector) normal
              RightNormal  -> V2 0 vy
   in Velocity v'
 
+
+getCollisionType :: CollisionLayer -> CollisionLayer -> CollisionLayerType
+getCollisionType CL'Player      CL'Tile        = CLT'Solid
+getCollisionType CL'Player      CL'Collectible = CLT'NonSolid
+getCollisionType CL'Collectible CL'Player      = CLT'NonSolid
+getCollisionType CL'Collectible CL'Tile        = CLT'Solid
+getCollisionType _         _                   = CLT'NonCollidable
+
 areLayersCollidable :: CollisionLayer -> CollisionLayer -> Bool
-areLayersCollidable CL'Player _      = True
-areLayersCollidable _ CL'Player      = True
-areLayersCollidable CL'Surface _     = False
-areLayersCollidable CL'Collectible _ = True
-areLayersCollidable CL'EmptyLayer _  = False
-areLayersCollidable _ CL'EmptyLayer  = False
+areLayersCollidable a b = not $ getCollisionType a b == CLT'NonCollidable
