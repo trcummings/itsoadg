@@ -54,7 +54,8 @@ import           Game.Util.Raycast
   , getRaycastDir
   , getRaycastLength
   , getRaycastPos
-  , getRaycastPosOffset )
+  -- , getRaycastPosOffset
+  , shrinkBox )
 import           Game.Util.AABB
   ( aabbCheck
   , sweepAABB
@@ -150,57 +151,75 @@ isSolidInteraction :: CollisionLayer -> CollisionInfo -> Bool
 isSolidInteraction cLayer1 (_, (cLayer2, _)) =
   getCollisionType cLayer1 cLayer2 == CLT'Solid
 
+
+
+getSweptCollidables :: TileMap -> [Collidable] -> DynamicCollidable -> [CollisionInfo]
+getSweptCollidables tileMap allCollidableEntities (cm, bb, p, v, e) =
+  let sweptBox      = broadPhaseAABB bb p v
+      sweptTiles    = map tileToLayerInfo $
+        if (areLayersCollidable (layer cm) CL'Tile)
+        then getIntersectingTiles tileMap sweptBox
+        else []
+      sweptEntities = map collidableToLayerInfo $
+        filter (isLegalCollision e sweptBox (layer cm)) allCollidableEntities
+   in sweptTiles ++ sweptEntities
+
 processCollidable :: TileMap
                   -> [Collidable]
                   -> DynamicCollidable
-                  -> (Velocity, [QueueEvent])
+                  -> (CollisionModule, Velocity, Position)
 processCollidable tileMap
                   allCollidableEntities
-                  ( CollisionModule cLayer _
-                  , bb@(BoundingBox bb')
-                  , p@(Position p')
-                  , v@(Velocity v')
-                  , entity ) =
-  let box                 = AABB { center = p', dims = bb' }
-      sweptBox            = broadPhaseAABB bb p v
-      sweptTiles          = map tileToLayerInfo $
-        if (areLayersCollidable cLayer CL'Tile)
-        then getIntersectingTiles tileMap sweptBox
-        else []
-      sweptEntities       = map collidableToLayerInfo $
-        filter (isLegalCollision entity sweptBox cLayer) allCollidableEntities
+                  dc@( cm@(CollisionModule cLayer _)
+                     , bb@(BoundingBox bb')
+                     , p@(Position p')
+                     , Velocity v
+                     , entity ) =
+  let sweptCollidables = getSweptCollidables tileMap allCollidableEntities dc
+      -- x axis
+      boxX                 = AABB { center = p', dims = bb' }
+      sweptBoxX            = broadPhaseAABB bb p (Velocity $ v * V2 1 0)
+      xCollidables = filter ((aabbCheck sweptBoxX) . fst) sweptCollidables
       -- partition collidable entities into solids, which force physics resolution
       -- and produce effects, & nonsolids, which produce effects
-      (solids, nonsolids) =
-        partition (isSolidInteraction cLayer) (sweptTiles ++ sweptEntities)
-      -- process horizontal collisions first
-  in ( (processRay X Sensor'Top    box solids)
-     . (processRay X Sensor'Bottom box solids)
-     -- then process vertical collisions
-     . (processRay Y Sensor'Right  box solids)
-     . (processRay Y Sensor'Left   box solids) ) (v, [])
+      (solidsX, nonsolidsX) =
+        partition (isSolidInteraction cLayer) xCollidables
+      (Velocity vX, cmX) = ( (processRay X Sensor'Top    boxX solidsX)
+                           . (processRay X Sensor'Bottom boxX solidsX) ) (Velocity v, cm)
+      pX = p' + ((vX * V2 1 0) ^* Unit frameDeltaSeconds)
+      -- y axis
+      boxY = AABB { center = pX, dims = bb' }
+      sweptBoxY = broadPhaseAABB bb (Position pX) (Velocity $ vX * V2 0 1)
+      yCollidables = filter ((aabbCheck sweptBoxY) . fst) sweptCollidables
+      (solidsY, nonsolidsY) =
+        partition (isSolidInteraction cLayer) yCollidables
+      (Velocity vY, cmY) = ( (processRay Y Sensor'Right boxY solidsY)
+                           . (processRay Y Sensor'Left  boxY solidsY) ) (Velocity vX, cmX)
+      pY = pX + ((vY * V2 0 1) ^* Unit frameDeltaSeconds)
+  in (cmY, Velocity vY, Position pY)
 
 processRay :: Axis
            -> SensorDirection
            -> AABB
            -> [CollisionInfo]
-           -> (Velocity, [QueueEvent])
-           -> (Velocity, [QueueEvent])
-processRay axis sDir box tiles (v@(Velocity v'@(V2 vx vy)), qs) =
-  let dir        = getRaycastDir    axis v
-      castLength = getRaycastLength v dir
+           -> (Velocity, CollisionModule)
+           -> (Velocity, CollisionModule)
+processRay axis sDir box tiles (v@(Velocity v'@(V2 vx vy)), cm) =
+      -- direction vector for raycast
+  let dir        = getRaycastDir axis v
       pos        = getRaycastPos sDir v box
-      offset     = getRaycastPosOffset sDir v
+      offset     = dir * (V2 onePixel (-onePixel))
+      castLength = getRaycastLength v dir
       mainV      = if axis == X then V2 1 0 else V2 0 1
       secondV    = if axis == X then V2 0 1 else V2 1 0
   in if ((axis == X && v' ^. _x == 0) || (axis == Y && v' ^. _y == 0))
-     then (v, qs)
-     else case (raycast (pos + offset) castLength tiles) of
-            Nothing        -> (v, qs)
-            Just (hit, tt) ->
-              let newV = distance hit - offset
+     then (v, cm)
+     else case (raycast pos castLength tiles) of
+            Nothing              -> (v, cm)
+            Just (hit, (cl, li)) ->
+              let newV = distance hit
               in ( Velocity $ (newV * mainV) + (v' * secondV)
-                 , qs ++ [CollisionSystemEvent (hit, (pos + offset, castLength))] )
+                 , cm { layerCollisions = layerCollisions cm ++ [(cl, hit, li)] } )
 
 -- -- post collection updates
 -- -- util
@@ -209,25 +228,22 @@ processRay axis sDir box tiles (v@(Velocity v'@(V2 vx vy)), qs) =
 --                                        Nothing -> []
 
 -- -- jump
--- stepJump' :: CollisionMap -> (CollisionModule, Jump, Entity) -> (Jump, [QueueEvent])
--- stepJump' cm (_, jumpState, e) =
---   let collisions = getCollisions cm e
---   in if (length collisions == 0)
---      then if onGround jumpState
---           then (jumpState { onGround = False, requested = False }, [])
---           else (jumpState, [])
---      else foldr stepJumpState (jumpState, []) collisions
---      where
---        landingEvent = AudioSystemEvent (e, Player'SFX'Land, Audio'PlayOrSustain)
---        stepJumpState (ct, cl) (j, qs) =
---              if (normal == BottomNormal)
---              then if not $ onGround j
---                   then (j { onGround = True }, qs ++ [landingEvent])
---                   else (j, qs)
---              else (jumpState, qs)
---              where normal = case ct of SimpleCollision (_, normal) -> normal
---                                        SweptCollision  (_, normal) -> normal
-
+stepJump' :: (CollisionModule, Jump, Entity) -> (Jump, [QueueEvent])
+stepJump' (cm, jumpState, e) =
+  let collisions = layerCollisions cm
+  in if (length collisions == 0)
+     then if onGround jumpState
+          then (jumpState { onGround = False, requested = False }, [])
+          else (jumpState, [])
+     else foldr stepJumpState (jumpState, []) collisions
+     where
+       landingEvent = AudioSystemEvent (e, Player'SFX'Land, Audio'PlayOrSustain)
+       stepJumpState (cl, hit, li) (j, qs) =
+             if (normal hit == V2 0 1)
+             then if not $ onGround j
+                  then (j { onGround = True }, qs ++ [landingEvent])
+                  else (j, qs)
+             else (jumpState, qs)
 
 -- -- speed
 -- stepSpeed :: CollisionInfo -> Velocity -> Velocity
@@ -267,16 +283,15 @@ processRay axis sDir box tiles (v@(Velocity v'@(V2 vx vy)), qs) =
 stepCollisionSystem :: [QueueEvent] -> System' [QueueEvent]
 stepCollisionSystem events = do
   -- clear collision layer map from collision modules
-  cmap $ \(cm@(CollisionModule _ _)) -> cm { layerCollisions = Map.empty }
+  cmap $ \(cm@(CollisionModule _ _)) -> cm { layerCollisions = [] }
   -- get all entities with a collision module
   allCollidables    <- getAll :: System' [Collidable]
-  movingCollidables <- getAll :: System' [DynamicCollidable]
   -- -- compute collisions, insert in entity-key collision-value map
-  nEvents <- emap $ (processCollidable basicTilemap allCollidables)
-  -- liftIO $ putStrLn $ show nEvents
-  cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
-    Position $ p + (v ^* Unit frameDeltaSeconds)
+  cmap $ (processCollidable basicTilemap allCollidables)
+  cmapM_ $ \(Player _, cm@(CollisionModule _ _)) -> liftIO $ putStrLn $ "Player: " ++ show cm
+  cmapM_ $ \(HardFlow, cm@(CollisionModule _ _)) -> liftIO $ putStrLn $ "HF: " ++ show cm
+  -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
+  --   Position $ p + (v ^* Unit frameDeltaSeconds)
   -- cmap $ \(HardFlow, cm@(CollisionModule _ _)) ->
-  -- jEvents <- emap $ (stepJump' collisionMap)
-  -- return $ events ++ jEvents
-  return events
+  jEvents <- emap $ stepJump'
+  return $ events ++ jEvents

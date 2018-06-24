@@ -97,12 +97,12 @@ initSystems renderer = void $ do
   player <- newEntity ( -- player
       Player (Step'Sustain PlayerAction'IdleRight)
     , Commandable
-    , ( Position $ V2 7 ((screenHeight / 2) - 2.55)
+    , ( Position $ V2 7.5 ((screenHeight / 2) - 2.55)
       , Velocity $ V2 0 0
       -- , Acceleration $ V2 0 0
       , BoundingBox $ V2 1 1.55
       , CollisionModule { layer = CL'Player
-                        , layerCollisions = Map.empty }
+                        , layerCollisions = [] }
       , Gravity { ascent  = initialJumpG
                 , descent = initialFallG }
       , Jump { requested = False
@@ -160,7 +160,7 @@ initSystems renderer = void $ do
         , descent = initialFallG }
     , Position $ V2 2 (screenHeight - 1.5)
     , CollisionModule { layer = CL'Collectible
-                      , layerCollisions = Map.empty }
+                      , layerCollisions = [] }
     , BoundingBox $ V2 0.25 0.25
     , Velocity $ V2 0 0 )
 

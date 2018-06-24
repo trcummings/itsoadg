@@ -40,24 +40,6 @@ getRaycastPos Sensor'Left   (Velocity (V2 _ vy)) box =
   then aabbMin        box
   else aabbBottomLeft box
 
-getRaycastPosOffset :: SensorDirection -> Velocity -> V2 Unit
-getRaycastPosOffset Sensor'Top    (Velocity (V2 vx _)) =
-  if vx > 0
-  then V2 (-onePixel)   0
-  else V2   onePixel    0
-getRaycastPosOffset Sensor'Bottom (Velocity (V2 vx _)) =
-  if vx > 0
-  then V2   onePixel  (-onePixel)
-  else V2 (-onePixel) (-onePixel)
-getRaycastPosOffset Sensor'Right  (Velocity (V2 _ vy)) =
-  if vy > 0
-  then V2 (-onePixel)  onePixel
-  else V2 (-onePixel) (-onePixel)
-getRaycastPosOffset Sensor'Left   (Velocity (V2 _ vy)) =
-  if vy > 0
-  then V2   onePixel  (-onePixel)
-  else V2   onePixel    onePixel
-
 getRaycastLength :: Velocity -> V2 Unit -> V2 Unit
 getRaycastLength (Velocity v) normal = normal * v ^* Unit frameDeltaSeconds
 
@@ -68,6 +50,9 @@ numRays x =
   in if (x' == fromInteger (round x'))
   then Unit $ (2 * x') + 1
   else Unit $ (fromInteger $ ceiling x') * 2
+
+shrinkBox :: AABB -> V2 Unit -> AABB
+shrinkBox box shrink = box { dims = dims box - shrink }
 
 rayIntersection2d :: Ray -> AABB -> Maybe RaycastHit
 rayIntersection2d ray box =
