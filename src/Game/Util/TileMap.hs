@@ -69,32 +69,3 @@ getIntersectingTiles tMap box =
                  <*> (getTileTypeAt tMap $ V2 x y)
                | x <- [xMin..xMax]
                , y <- [yMin..yMax] ]
-
--- getCastBounds :: Unit -> Unit -> (Int, Int)
--- getCastBounds (Unit p) (Unit pv) =
---   let
---     p'Int = (fromIntegral $ floor $ p + (pv * frameDeltaSeconds)) :: Int
---     pInt  = (fromIntegral $ floor p) :: Int
---   in if p'Int > pInt then (pInt, p'Int) else (p'Int, pInt)
-
--- raycastAlong :: Axis -> TileMap -> Position -> Velocity -> [(TileType, V2 Unit)]
--- raycastAlong X tMap (Position (V2 x y)) (Velocity (V2 vx _)) =
---   let (xMin, xMax) = getCastBounds x vx
---       y' = (fromIntegral $ floor (coerce y :: Double)) :: Int
---   in filter (\(t, _) -> not $ E == t) $
---      catMaybes [ (Just $ \t -> (t, (Unit <$> (fromIntegral <$> V2 x' y') :: V2 Unit)))
---                  <*> (getTileTypeAt tMap $ V2 x' y')
---                | x' <- [xMin..xMax] ]
--- raycastAlong Y tMap (Position (V2 x y)) (Velocity (V2 _ vy)) =
---   let (yMin, yMax) = getCastBounds y vy
---       x' = (fromIntegral $ floor (coerce x :: Double)) :: Int
---   in filter (\(t, _) -> not $ E == t) $
---      catMaybes [ (Just $ \t -> (t, (Unit <$> (fromIntegral <$> V2 x' y') :: V2 Unit)))
---                  <*> (getTileTypeAt tMap $ V2 x' y')
---                | y' <- [yMin..yMax] ]
-
--- raycastAlongX :: TileMap -> Position -> Velocity -> [(TileType, V2 Unit)]
--- raycastAlongX = raycastAlong X
-
--- raycastAlongY :: TileMap -> Position -> Velocity -> [(TileType, V2 Unit)]
--- raycastAlongY = raycastAlong Y

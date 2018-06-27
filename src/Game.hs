@@ -61,14 +61,16 @@ main = do
   joysticks <- SDL.availableJoysticks
   mapM_ SDL.openJoystick joysticks
 
-  -- initialize Apecs world & add entities
+  -- initialize game
   world <- initWorld
   ECS.runSystem (initSystems renderer) world
+  -- tileMap <- initTilemap basicTilemap world
 
   -- start loop
   let gameState = GameState { gsRunState   = RunState'Running
                             , gsEventQueue = EventQueue []
                             , gsTileMap    = basicTilemap }
+  -- start loop
   runGame sdlConfig gameState (mainLoop world)
 
   -- clean up on quit
