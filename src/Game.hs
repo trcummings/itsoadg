@@ -12,7 +12,11 @@ import           Control.Monad.Reader    (MonadReader, ReaderT, runReaderT)
 import           Control.Monad.State     (MonadState , StateT , evalStateT)
 
 import           Game.World (World, initWorld)
-import           Game.Types (SDLConfig(..), EventQueue(..))
+import           Game.Types
+  ( SDLConfig(..)
+  , EventQueue(..)
+  , RunningState(..)
+  , GameState(..) )
 import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
 import           Game.Loop (mainLoop)
@@ -24,16 +28,16 @@ import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
 import           Game.Wrapper.Apecs       (Apecs(..), runSystem', runGC')
 
 newtype Game a = Game
-  (ReaderT SDLConfig (StateT EventQueue IO) a)
+  (ReaderT SDLConfig (StateT GameState IO) a)
   deriving
     ( Functor
     , Applicative
     , Monad
     , MonadReader SDLConfig
-    , MonadState EventQueue
+    , MonadState GameState
     , MonadIO )
 
-runGame :: SDLConfig -> EventQueue -> Game a -> IO a
+runGame :: SDLConfig -> GameState -> Game a -> IO a
 runGame sdlConfig eq (Game m) = evalStateT (runReaderT m sdlConfig) eq
 
 main :: IO ()
@@ -47,7 +51,8 @@ main = do
     "ITSOADG"
     SDL.defaultWindow { SDL.windowInitialSize = initialSize }
   renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
-  let sdlConfig = SDLConfig { sdlWindow = window, sdlRenderer = renderer }
+  let sdlConfig = SDLConfig { sdlWindow   = window
+                            , sdlRenderer = renderer }
 
   -- register joystick to receive events from it
   joysticks <- SDL.availableJoysticks
@@ -58,7 +63,9 @@ main = do
   ECS.runSystem (initSystems renderer) world
 
   -- start loop
-  runGame sdlConfig (EventQueue []) (mainLoop world)
+  let gameState = GameState { runningState = RunningState'Running
+                            , eventQueue   = EventQueue [] }
+  runGame sdlConfig gameState (mainLoop world)
   -- mainLoop window renderer world
 
   -- clean up on quit

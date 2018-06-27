@@ -18,7 +18,11 @@ import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Reader (MonadReader, ask)
 import           Control.Monad.State  (MonadState, get, put)
 
-import           Game.Types (SDLConfig(..), EventQueue(..), QueueEvent(..))
+import           Game.Types
+  ( SDLConfig(..)
+  , GameState(..)
+  , EventQueue(..)
+  , QueueEvent(..) )
 import           Game.World (System', World, SystemFn)
 
 import           Game.Effect.Event
@@ -86,8 +90,8 @@ outerStep nextTime events renderer = do
   return ()
 
 mainLoop ::
-  ( MonadReader SDLConfig  m
-  , MonadState  EventQueue m
+  ( MonadReader SDLConfig m
+  , MonadState  GameState m
   , SDLInput m
   , SDLTime  m
   , Renderer m

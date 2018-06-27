@@ -4,20 +4,23 @@ module Game.Effect.Event where
 
 import           Control.Monad.State (MonadState(..), get, put)
 
-import           Game.Types (EventQueue(..), QueueEvent(..))
+import           Game.Types (GameState(..), EventQueue(..), QueueEvent(..))
 
 class Monad m => Event m where
   prependAndGetEvents :: [QueueEvent] -> m [QueueEvent]
   setEvents :: [QueueEvent] -> m ()
 
-prependAndGetEvents' :: (Event m, MonadState EventQueue m) => [QueueEvent] -> m [QueueEvent]
+prependAndGetEvents' :: (Event m, MonadState GameState m)
+                     =>   [QueueEvent]
+                     -> m [QueueEvent]
 prependAndGetEvents' inputs = do
-  EventQueue queueEvents <- get
+  EventQueue queueEvents <- eventQueue <$> get
   return $ inputs ++ queueEvents
 
-setEvents' :: (Event m, MonadState EventQueue m) => [QueueEvent] -> m ()
+setEvents' :: (Event m, MonadState GameState m) => [QueueEvent] -> m ()
 setEvents' evts = do
-  put $ EventQueue evts
+  gs <- get
+  put $ gs { eventQueue = EventQueue evts }
 
 byInputEvent :: QueueEvent -> Bool
 byInputEvent (InputEvent _) = True
