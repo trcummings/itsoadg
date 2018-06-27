@@ -15,7 +15,7 @@ import           Game.World (World, initWorld)
 import           Game.Types
   ( SDLConfig(..)
   , EventQueue(..)
-  , RunningState(..)
+  , RunState(..)
   , GameState(..) )
 import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
@@ -24,6 +24,7 @@ import           Game.Util.TileMap (basicTilemap)
 import           Game.Loop (mainLoop)
 import           Game.Effect.Renderer     (Renderer(..), clearScreen', drawScreen')
 import           Game.Effect.Event        (Event(..), prependAndGetEvents', setEvents')
+import           Game.Effect.WithRunState (WithRunState(..), getRunState')
 import           Game.Wrapper.SDLRenderer (SDLRenderer(..), presentRenderer', clearRenderer')
 import           Game.Wrapper.SDLInput    (SDLInput(..), pollEvents')
 import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
@@ -65,11 +66,10 @@ main = do
   ECS.runSystem (initSystems renderer) world
 
   -- start loop
-  let gameState = GameState { runningState   = RunningState'Running
-                            , eventQueue     = EventQueue []
-                            , currentTileMap = basicTilemap }
+  let gameState = GameState { gsRunState   = RunState'Running
+                            , gsEventQueue = EventQueue []
+                            , gsTileMap    = basicTilemap }
   runGame sdlConfig gameState (mainLoop world)
-  -- mainLoop window renderer world
 
   -- clean up on quit
   SDL.destroyWindow window
@@ -85,6 +85,9 @@ instance Renderer Game where
 instance Event Game where
   prependAndGetEvents = prependAndGetEvents'
   setEvents = setEvents'
+
+instance WithRunState Game where
+  getRunState = getRunState'
 
 instance SDLRenderer Game where
   presentRenderer = presentRenderer'

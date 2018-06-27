@@ -22,6 +22,7 @@ import           Game.Types
   ( SDLConfig(..)
   , GameState(..)
   , EventQueue(..)
+  , RunState(..)
   , QueueEvent(..) )
 import           Game.World (System', World, SystemFn)
 
@@ -32,6 +33,7 @@ import           Game.Effect.Event
   , byInputEvent
   , byAudioSystemEvent )
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
+import           Game.Effect.WithRunState (WithRunState, getRunState)
 
 import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import           Game.Wrapper.SDLTime (SDLTime, nextTick)
@@ -92,11 +94,12 @@ outerStep nextTime events renderer = do
 mainLoop ::
   ( MonadReader SDLConfig m
   , MonadState  GameState m
-  , SDLInput m
-  , SDLTime  m
-  , Renderer m
-  , Apecs    m
-  , Event    m
+  , SDLInput     m
+  , SDLTime      m
+  , Renderer     m
+  , Apecs        m
+  , Event        m
+  , WithRunState m
   ) => World -> m ()
 mainLoop world = do
   -- prep screen for next render
@@ -116,5 +119,8 @@ mainLoop world = do
   setEvents []
   -- garbage collect. yes, every frame
   runGC
-  -- loop
-  mainLoop world
+  -- loop if game still running
+  gameRunState <- getRunState
+  case gameRunState of
+    RunState'Quitting -> return ()
+    RunState'Running  -> mainLoop world

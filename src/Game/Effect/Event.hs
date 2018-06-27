@@ -14,13 +14,13 @@ prependAndGetEvents' :: (Event m, MonadState GameState m)
                      =>   [QueueEvent]
                      -> m [QueueEvent]
 prependAndGetEvents' inputs = do
-  EventQueue queueEvents <- eventQueue <$> get
+  EventQueue queueEvents <- gsEventQueue <$> get
   return $ inputs ++ queueEvents
 
 setEvents' :: (Event m, MonadState GameState m) => [QueueEvent] -> m ()
 setEvents' evts = do
   gs <- get
-  put $ gs { eventQueue = EventQueue evts }
+  put $ gs { gsEventQueue = EventQueue evts }
 
 byInputEvent :: QueueEvent -> Bool
 byInputEvent (InputEvent _) = True
