@@ -19,6 +19,8 @@ import           Game.Types
   , GameState(..) )
 import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
+import           Game.Util.TileMap (basicTilemap)
+
 import           Game.Loop (mainLoop)
 import           Game.Effect.Renderer     (Renderer(..), clearScreen', drawScreen')
 import           Game.Effect.Event        (Event(..), prependAndGetEvents', setEvents')
@@ -34,7 +36,7 @@ newtype Game a = Game
     , Applicative
     , Monad
     , MonadReader SDLConfig
-    , MonadState GameState
+    , MonadState  GameState
     , MonadIO )
 
 runGame :: SDLConfig -> GameState -> Game a -> IO a
@@ -63,8 +65,9 @@ main = do
   ECS.runSystem (initSystems renderer) world
 
   -- start loop
-  let gameState = GameState { runningState = RunningState'Running
-                            , eventQueue   = EventQueue [] }
+  let gameState = GameState { runningState   = RunningState'Running
+                            , eventQueue     = EventQueue []
+                            , currentTileMap = basicTilemap }
   runGame sdlConfig gameState (mainLoop world)
   -- mainLoop window renderer world
 

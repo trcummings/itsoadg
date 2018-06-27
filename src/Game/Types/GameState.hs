@@ -1,7 +1,7 @@
 module Game.Types.GameState where
 
 import           Game.Types.EventQueue (EventQueue)
-
+import           Game.Types.TileMap (TileMap)
 
 data RunningState =
     RunningState'Running
@@ -12,5 +12,6 @@ instance Show RunningState where
   show (RunningState'Running)  = "Running"
 
 data GameState = GameState
-  { runningState :: RunningState
-  , eventQueue   :: EventQueue }
+  { runningState   :: RunningState
+  , eventQueue     :: EventQueue
+  , currentTileMap :: TileMap }
