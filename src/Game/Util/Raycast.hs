@@ -18,6 +18,7 @@ import           Game.Types
   , Axis(..)
   , SensorDirection(..) )
 
+
 getRaycastDir :: Axis -> Velocity -> V2 Unit
 getRaycastDir X (Velocity v) = signum <$> v * V2 1 0
 getRaycastDir Y (Velocity v) = signum <$> v * V2 0 1

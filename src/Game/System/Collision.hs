@@ -164,6 +164,8 @@ getSweptCollidables tileMap allCollidableEntities (cm, bb, p, v, e) =
         filter (isLegalCollision e sweptBox (layer cm)) allCollidableEntities
    in sweptTiles ++ sweptEntities
 
+
+
 processCollidable :: TileMap
                   -> [Collidable]
                   -> DynamicCollidable
@@ -180,12 +182,17 @@ processCollidable tileMap
       boxX                 = AABB { center = p', dims = bb' }
       sweptBoxX            = broadPhaseAABB bb p (Velocity $ v * V2 1 0)
       xCollidables = filter ((aabbCheck sweptBoxX) . fst) sweptCollidables
-      -- partition collidable entities into solids, which force physics resolution
-      -- and produce effects, & nonsolids, which produce effects
+      -- partition collidable entities into solids & nonsolids
       (solidsX, nonsolidsX) =
         partition (isSolidInteraction cLayer) xCollidables
+      -- resolve solid collision
       (Velocity vX, cmX) = ( (processRay X Sensor'Top    boxX solidsX)
                            . (processRay X Sensor'Bottom boxX solidsX) ) (Velocity v, cm)
+      -- create new swept aabb with resolved velocity to collect nonsolids
+      sweptBoxX' = broadPhaseAABB bb p (Velocity $ vX * V2 1 0)
+      nonsolidsX' = filter ((aabbCheck sweptBoxX') . fst) nonsolidsX
+      (_, cmX') = ( (processRay X Sensor'Top    boxX nonsolidsX')
+                  . (processRay X Sensor'Bottom boxX nonsolidsX') ) (Velocity vX, cmX)
       pX = p' + ((vX * V2 1 0) ^* Unit frameDeltaSeconds)
       -- y axis
       boxY = AABB { center = pX, dims = bb' }
@@ -284,12 +291,27 @@ stepCollisionSystem :: [QueueEvent] -> System' [QueueEvent]
 stepCollisionSystem events = do
   -- clear collision layer map from collision modules
   cmap $ \(cm@(CollisionModule _ _)) -> cm { layerCollisions = [] }
+  -- -- move x first
+  -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
+  --   Position $ p + ((v * V2 1 0) ^* Unit frameDeltaSeconds)
+  -- -- detect x collisions
+  -- -- get all collidable objects
+  -- allCollidables1 <- getAll :: System' [Collidable]
+  -- -- resolve x collisions
+
+  -- -- move y second
+  -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
+  --   Position $ p + ((v * V2 0 1) ^* Unit frameDeltaSeconds)
+  -- -- resolve y
+
   -- get all entities with a collision module
-  allCollidables    <- getAll :: System' [Collidable]
+  allCollidables <- getAll :: System' [Collidable]
   -- -- compute collisions, insert in entity-key collision-value map
   cmap $ (processCollidable basicTilemap allCollidables)
-  cmapM_ $ \(Player _, cm@(CollisionModule _ _)) -> liftIO $ putStrLn $ "Player: " ++ show cm
-  cmapM_ $ \(HardFlow, cm@(CollisionModule _ _)) -> liftIO $ putStrLn $ "HF: " ++ show cm
+  cmapM_ $ \(Player _, cm@(CollisionModule _ _)) ->
+    when ((length $ layerCollisions cm) >= 2) $
+      liftIO $ putStrLn $ "Player: " ++ show cm
+  -- cmapM_ $ \(HardFlow, cm@(CollisionModule _ _)) -> liftIO $ putStrLn $ "HF: " ++ show cm
   -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
   --   Position $ p + (v ^* Unit frameDeltaSeconds)
   -- cmap $ \(HardFlow, cm@(CollisionModule _ _)) ->
