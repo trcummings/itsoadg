@@ -6,7 +6,8 @@ import           Control.Monad.Reader (MonadReader, ask)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Data.IORef (readIORef, modifyIORef)
 
-import           Game.Types (Env(..), GameState(..))
+import           Game.World (Env)
+import           Game.Types (GameEnv(..), GameState(..))
 
 class Monad m => HasGameState m where
   getGameState :: m GameState

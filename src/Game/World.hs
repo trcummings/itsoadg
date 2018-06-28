@@ -11,6 +11,7 @@ module Game.World
   ( World
   , System'
   , SystemFn
+  , Env
   , initWorld ) where
 
 import           Apecs
@@ -21,7 +22,8 @@ import           Linear (V2(..))
 import qualified KeyState (initKeyState)
 
 import Game.Types
-  ( Position
+  ( GameEnv
+  , Position
   , Velocity
   , Acceleration
   , BoundingBox
@@ -160,3 +162,4 @@ makeWorld "World" [
 
 type System' a = System World a
 type SystemFn = [QueueEvent] -> System World [QueueEvent]
+type Env = GameEnv World

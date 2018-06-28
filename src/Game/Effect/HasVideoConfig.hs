@@ -4,7 +4,8 @@ module Game.Effect.HasVideoConfig where
 
 import           Control.Monad.Reader (MonadReader, ask)
 
-import           Game.Types (Env(..), VideoConfig(..))
+import           Game.World (Env)
+import           Game.Types (GameEnv(..), VideoConfig(..))
 
 class Monad m => HasVideoConfig m where
   getVideoConfig :: m VideoConfig

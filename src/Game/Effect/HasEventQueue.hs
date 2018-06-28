@@ -2,9 +2,9 @@
 
 module Game.Effect.HasEventQueue where
 
+import           Game.World (Env)
 import           Game.Types
-  ( Env(..)
-  , GameState(..)
+  ( GameState(..)
   , EventQueue(..)
   , QueueEvent(..) )
 import           Game.Effect.HasGameState (HasGameState(..))

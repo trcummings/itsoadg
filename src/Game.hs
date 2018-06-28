@@ -6,14 +6,14 @@ module Game (main) where
 import qualified SDL
 import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
-import qualified Apecs as ECS            (System, runSystem)
-import           Control.Monad.IO.Class  (MonadIO(..))
+import qualified Apecs as ECS            (System(..), runSystem, unSystem)
+import           Control.Monad.IO.Class  (MonadIO(..), liftIO)
 import           Control.Monad.Reader    (MonadReader, ReaderT, runReaderT)
 import           Data.IORef
 
-import           Game.World (World, initWorld)
+import           Game.World (Env, World, initWorld)
 import           Game.Types
-  ( Env(..)
+  ( GameEnv(..)
   , VideoConfig(..)
   , DebugMode(..)
   , RuntimeConfig(..)
@@ -33,7 +33,7 @@ import           Game.Effect.HasGameState     ( HasGameState(..)
                                               , setGameState' )
 import           Game.Effect.HasVideoConfig   ( HasVideoConfig(..)
                                               , getVideoConfig' )
-import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig
+import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig(..)
                                               , getRuntimeConfig' )
 
 import           Game.Wrapper.SDLRenderer ( SDLRenderer(..)
@@ -44,7 +44,7 @@ import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
 import           Game.Wrapper.Apecs       (Apecs(..), runSystem', runGC')
 
 newtype Game a = Game
-  (ReaderT Env (ECS.System World) a)
+  (ReaderT Env IO a)
   deriving
     ( Functor
     , Applicative
@@ -52,8 +52,8 @@ newtype Game a = Game
     , MonadReader Env
     , MonadIO )
 
--- runGame :: Env -> Game a -> IO a
--- runGame env (Game m) = runReaderT m env
+runGame :: Env -> Game m -> IO m
+runGame env (Game m) = runReaderT m env
 
 main :: IO ()
 main = do
@@ -86,9 +86,10 @@ main = do
 
   let runtimeConfig = RuntimeConfig { rcDebugMode = debugMode }
 
-      env = Env { envVideoConfig   = videoConfig
-                , envRuntimeConfig = runtimeConfig
-                , envGameState     = gameState }
+      env = GameEnv { envVideoConfig   = videoConfig
+                    , envRuntimeConfig = runtimeConfig
+                    , envGameState     = gameState
+                    , envECSWorld      = world }
   -- start loop
   -- runGame mainLoop
 

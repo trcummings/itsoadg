@@ -18,13 +18,12 @@ import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Reader (MonadReader, ask)
 
 import           Game.Types
-  ( Env(..)
-  , VideoConfig(..)
+  ( VideoConfig(..)
   , GameState(..)
   , EventQueue(..)
   , RunState(..)
   , QueueEvent(..) )
-import           Game.World (System', World, SystemFn)
+import           Game.World (Env, System', World, SystemFn)
 
 import           Game.Effect.Event
   ( Event

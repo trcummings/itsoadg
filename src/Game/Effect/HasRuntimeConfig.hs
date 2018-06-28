@@ -4,9 +4,10 @@ module Game.Effect.HasRuntimeConfig where
 
 import           Control.Monad.Reader (MonadReader, ask)
 
-import           Game.Types (Env(..), RuntimeConfig(..))
+import           Game.World (Env)
+import           Game.Types (GameEnv(..), RuntimeConfig(..))
 
-class Monad m => HasVideoConfig m where
+class Monad m => HasRuntimeConfig m where
   getRuntimeConfig :: m RuntimeConfig
 
 getRuntimeConfig' :: (HasRuntimeConfig m, MonadReader Env m) => m RuntimeConfig

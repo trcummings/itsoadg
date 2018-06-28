@@ -9,10 +9,11 @@ import           Data.IORef
 import           Game.Types.EventQueue (EventQueue(..))
 import           Game.Types.GameState (RunState(..), GameState(..))
 
-data Env = Env
+data GameEnv w = GameEnv
   { envVideoConfig   :: VideoConfig
   , envRuntimeConfig :: RuntimeConfig
-  , envGameState     :: !(IORef GameState) }
+  , envGameState     :: !(IORef GameState)
+  , envECSWorld      :: w } -- game world
 
 data DebugMode =
     DebugMode'DrawDebug
