@@ -24,10 +24,11 @@ import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
 import           Game.Util.TileMap (basicTilemap)
 
--- import           Game.Loop (mainLoop)
+import           Game.Loop (mainLoop)
 
-import           Game.Effect.Renderer     (Renderer(..), clearScreen', drawScreen')
--- import           Game.Effect.Event        (Event(..), prependAndGetEvents', setEvents')
+import           Game.Effect.Renderer         ( Renderer(..)
+                                              , clearScreen'
+                                              , drawScreen' )
 import           Game.Effect.HasGameState     ( HasGameState(..)
                                               , getGameState'
                                               , setGameState' )
@@ -35,6 +36,14 @@ import           Game.Effect.HasVideoConfig   ( HasVideoConfig(..)
                                               , getVideoConfig' )
 import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig(..)
                                               , getRuntimeConfig' )
+import           Game.Effect.HasECSWorld      ( HasECSWorld(..)
+                                              , getECSWorld' )
+import           Game.Effect.HasRunState      ( HasRunState(..)
+                                              , getRunState' )
+import           Game.Effect.HasEventQueue    ( HasEventQueue(..)
+                                              , getEvents'
+                                              , prependAndGetEvents'
+                                              , setEvents' )
 
 import           Game.Wrapper.SDLRenderer ( SDLRenderer(..)
                                           , presentRenderer'
@@ -91,7 +100,7 @@ main = do
                     , envGameState     = gameState
                     , envECSWorld      = world }
   -- start loop
-  -- runGame mainLoop
+  runGame env mainLoop
 
   -- clean up on quit
   SDL.destroyWindow window
@@ -120,18 +129,22 @@ instance HasGameState Game where
   getGameState = getGameState'
   setGameState = setGameState'
 
+instance HasRunState Game where
+  getRunState = getRunState'
+
 instance HasRuntimeConfig Game where
   getRuntimeConfig = getRuntimeConfig'
 
 instance HasVideoConfig Game where
   getVideoConfig = getVideoConfig'
 
--- instance HasEventQueue Game where
---   prependAndGetEvents = prependAndGetEvents'
---   setEvents = setEvents'
+instance HasECSWorld Game where
+  getECSWorld = getECSWorld'
 
--- instance HasRunState Game where
---   getRunState = getRunState'
+instance HasEventQueue Game where
+  prependAndGetEvents = prependAndGetEvents'
+  getEvents = getEvents'
+  setEvents = setEvents'
 
 -- instance HasTilemap Game where
 --   getTilemap = undefined

@@ -25,14 +25,14 @@ import           Game.Types
   , QueueEvent(..) )
 import           Game.World (Env, System', World, SystemFn)
 
-import           Game.Effect.Event
-  ( Event
+import           Game.Effect.HasEventQueue
+  ( HasEventQueue
   , prependAndGetEvents
   , setEvents
   , byInputEvent
   , byAudioSystemEvent )
-import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 import           Game.Effect.HasRunState (HasRunState, getRunState)
+import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 
 import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import           Game.Wrapper.SDLTime (SDLTime, nextTick)
@@ -90,35 +90,35 @@ outerStep nextTime events renderer = do
   stepAudioQueue (filter byAudioSystemEvent effectEvents)
   return ()
 
--- mainLoop ::
---   ( MonadReader Env m
---   , SDLInput     m
---   , SDLTime      m
---   , Renderer     m
---   , Apecs        m
---   , Event        m
---   , HasRunState m
---   ) => World -> m ()
--- mainLoop world = do
---   -- prep screen for next render
---   clearScreen
---   -- get next time tick from SDL
---   nextTime   <- nextTick
---   -- collect events from SDL
---   sdlEvents  <- pollEvents
---   -- collect previous rounds' events + sdlEvents
---   -- prepend input events to queue events to handle input changes 1 frame earlier
---   events     <- prependAndGetEvents sdlEvents
---   renderer   <- sdlRenderer <$> ask
---   runSystem (outerStep nextTime events renderer) world
---   -- run current render
---   drawScreen
---   -- clear out queue for next round
---   setEvents []
---   -- garbage collect. yes, every frame
---   runGC
---   -- loop if game still running
---   gameRunState <- getRunState
---   case gameRunState of
---     RunState'Quitting -> return ()
---     RunState'Running  -> mainLoop world
+mainLoop ::
+  ( MonadReader Env m
+  , SDLInput        m
+  , SDLTime         m
+  , Renderer        m
+  , Apecs           m
+  , HasRunState     m
+  , HasEventQueue   m
+  ) => m ()
+mainLoop = do
+  -- prep screen for next render
+  clearScreen
+  -- get next time tick from SDL
+  nextTime   <- nextTick
+  -- collect events from SDL
+  sdlEvents  <- pollEvents
+  -- collect previous rounds' events + sdlEvents
+  -- prepend input events to queue events to handle input changes 1 frame earlier
+  events     <- prependAndGetEvents sdlEvents
+  -- renderer   <- getRenderer
+  -- runSystem (outerStep nextTime events renderer) world
+  -- run current render
+  drawScreen
+  -- clear out queue for next round
+  setEvents []
+  -- garbage collect. yes, every frame
+  runGC
+  -- loop if game still running
+  gameRunState <- getRunState
+  case gameRunState of
+    RunState'Quitting -> return ()
+    RunState'Running  -> mainLoop
