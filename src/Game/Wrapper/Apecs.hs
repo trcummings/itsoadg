@@ -7,21 +7,35 @@ module Game.Wrapper.Apecs where
 import qualified Apecs               as ECS
 import qualified Apecs.Core          as Core
 import qualified Data.Vector.Unboxed as U
-import           Control.Monad.IO.Class (MonadIO)
-import           System.Mem             (performMajorGC)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.Reader (runReaderT)
 
-import           Game.World (World)
+import           Game.World (World, Env)
 import           Game.Types (QueueEvent)
+import           Game.Effect.HasECSWorld (HasECSWorld(..))
 
 class Monad m => Apecs m where
-  runSystem :: ECS.System w a -> w -> m a
-  runGC     :: m ()
+  runSystem  :: ECS.System World a -> m a
+  runGC      :: m ()
+  cmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
+             => (cx -> cy) -> m ()
+  qmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
+             => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
 
-runSystem' :: MonadIO m => ECS.System w a -> w -> m a
-runSystem' f w = ECS.liftIO $ ECS.runSystem f w
+runSystem' :: (Apecs m, HasECSWorld m, MonadIO m)
+           => ECS.System World a -> m a
+runSystem' f = do
+  world <- getECSWorld
+  liftIO $ runReaderT (ECS.unSystem f) world
 
-runGC' :: MonadIO m => m ()
-runGC' = ECS.liftIO $ performMajorGC
+runGC' :: (Apecs m) => m ()
+runGC' = runSystem $ ECS.runGC
+
+cmap' :: ( Apecs m
+         , ECS.Has World cx
+         , ECS.Has World cy )
+      => (cx -> cy) -> m ()
+cmap' f = runSystem $ ECS.cmap f
 
 emap :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
      => (cx -> (cy, [QueueEvent]))
@@ -36,3 +50,7 @@ emap f = do
                                  Core.explSet sy e x'
                                  return $ qs ++ qs' ) [] sl
   return qs
+
+qmap' :: (Apecs m, ECS.Has World cx, ECS.Has World cy)
+      => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
+qmap' f = runSystem $ emap f

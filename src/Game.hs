@@ -50,7 +50,11 @@ import           Game.Wrapper.SDLRenderer ( SDLRenderer(..)
                                           , clearRenderer' )
 import           Game.Wrapper.SDLInput    (SDLInput(..), pollEvents')
 import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
-import           Game.Wrapper.Apecs       (Apecs(..), runSystem', runGC')
+import           Game.Wrapper.Apecs       ( Apecs(..)
+                                          , runSystem'
+                                          , runGC'
+                                          , cmap'
+                                          , qmap' )
 
 newtype Game a = Game
   (ReaderT Env IO a)
@@ -123,6 +127,8 @@ instance SDLTime Game where
 instance Apecs Game where
   runSystem = runSystem'
   runGC     = runGC'
+  cmap      = cmap'
+  qmap      = qmap'
 
 -- effects
 instance HasGameState Game where
@@ -148,11 +154,6 @@ instance HasEventQueue Game where
 
 -- instance HasTilemap Game where
 --   getTilemap = undefined
-
--- instance HasECS Game where
---   cmap   = undefined
---   cmapM  = undefined
---   cmapM_ = undefined
 
 -- modules
 instance Renderer Game where

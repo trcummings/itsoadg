@@ -25,13 +25,9 @@ import           Game.Types
   , QueueEvent(..) )
 import           Game.World (Env, System', World, SystemFn)
 
-import           Game.Effect.HasEventQueue
-  ( HasEventQueue
-  , prependAndGetEvents
-  , setEvents
-  , byInputEvent
-  , byAudioSystemEvent )
+import           Game.Effect.HasEventQueue (HasEventQueue(..), byAudioSystemEvent)
 import           Game.Effect.HasRunState (HasRunState, getRunState)
+import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 
 import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
@@ -42,7 +38,7 @@ import           Game.System.FixedTime (accumulateFixedTime, clearFixedTime, get
 import           Game.System.Player (stepPlayerState, stepPlayerAction)
 import           Game.System.Camera (stepCameraPhysics)
 import           Game.System.FlowMeter (stepFlowMeter)
-import           Game.System.Input (handleSDLInput, stepInputSystem)
+import           Game.System.Input (stepSDLInput, stepInputSystem)
 import           Game.System.Physics (stepPhysicsSystem)
 import           Game.System.Collision (stepCollisionSystem)
 import           Game.System.Audio (stepAudioQueue)
@@ -77,7 +73,7 @@ innerStep acc events = do
 outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' ()
 outerStep nextTime events renderer = do
   -- update player input button-key keystate-value map
-  mapM handleSDLInput (filter byInputEvent events)
+  -- mapM handleSDLInput (filter byInputEvent events)
   -- accumulate fixed time for updates
   accumulateFixedTime nextTime
   -- get fixed time for inner step
@@ -90,26 +86,30 @@ outerStep nextTime events renderer = do
   stepAudioQueue (filter byAudioSystemEvent effectEvents)
   return ()
 
-mainLoop ::
-  ( MonadReader Env m
-  , SDLInput        m
-  , SDLTime         m
-  , Renderer        m
-  , Apecs           m
-  , HasRunState     m
-  , HasEventQueue   m
-  ) => m ()
+mainLoop :: ( MonadReader Env m
+            , SDLInput        m
+            , SDLTime         m
+            , Renderer        m
+            , Apecs           m
+            , HasRunState     m
+            , HasEventQueue   m
+            , HasVideoConfig  m
+            ) => m ()
 mainLoop = do
   -- prep screen for next render
   clearScreen
   -- get next time tick from SDL
   nextTime   <- nextTick
   -- collect events from SDL
-  sdlEvents  <- pollEvents
+  -- sdlEvents  <- pollEvents
   -- collect previous rounds' events + sdlEvents
   -- prepend input events to queue events to handle input changes 1 frame earlier
-  events     <- prependAndGetEvents sdlEvents
-  -- renderer   <- getRenderer
+  -- events     <- prependAndGetEvents sdlEvents
+  events     <- getEvents
+  renderer   <- vcRenderer <$> getVideoConfig
+  -- update player input button-key keystate-value map
+  -- mapM handleSDLInput (filter byInputEvent events)
+  stepSDLInput
   -- runSystem (outerStep nextTime events renderer) world
   -- run current render
   drawScreen

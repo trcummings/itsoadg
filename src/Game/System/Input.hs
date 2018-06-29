@@ -1,7 +1,8 @@
 module Game.System.Input where
 
 import qualified SDL
-import           Apecs (Entity, cmap, global, get, set)
+import           Apecs (Entity, global, get, set)
+import qualified Apecs as A (cmap)
 import qualified Data.Map as Map (lookup, mapWithKey, empty)
 import           Data.Map (insert, (!), (!?))
 import           Data.Maybe (catMaybes)
@@ -16,7 +17,8 @@ import           KeyState
   , isReleased
   , isHeld )
 
-import           Game.Wrapper.Apecs (emap)
+import           Game.Wrapper.Apecs (Apecs(..), emap)
+import           Game.Wrapper.SDLInput (SDLInput(..))
 import           Game.World (System', SystemFn)
 import           Game.Types
   ( PlayerInput(..)
@@ -38,7 +40,13 @@ updateKey ks motion = updateKeyState frameDeltaSeconds ks touched
 maintainKey :: KeyState Double -> KeyState Double
 maintainKey ks = maintainKeyState frameDeltaSeconds ks
 
-handleSDLInput :: QueueEvent -> System' ()
+stepSDLInput :: (Apecs m, SDLInput m) => m ()
+stepSDLInput = do
+  sdlEvents  <- pollEvents
+  mapM handleSDLInput sdlEvents
+  return ()
+
+handleSDLInput :: (Apecs m) => QueueEvent -> m ()
 handleSDLInput (InputEvent event) = do
   case SDL.eventPayload event of
     SDL.KeyboardEvent keyboardEvent ->
@@ -117,7 +125,7 @@ stepPlayerCommands m (p, c, e) =
 
 stepInputSystem :: SystemFn
 stepInputSystem events = do
-  cmap maintainInputs
+  A.cmap maintainInputs
   inputM  <- get global :: System' PlayerInput
   events' <- emap $ stepPlayerCommands inputM
   -- clear away "justModified" key map
