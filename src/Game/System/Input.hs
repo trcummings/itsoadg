@@ -1,12 +1,10 @@
 module Game.System.Input where
 
 import qualified SDL
-import           Apecs (Entity, global, get, set)
-import qualified Apecs as A (cmap)
+import           Apecs (Entity, global)
 import qualified Data.Map as Map (lookup, mapWithKey, empty)
 import           Data.Map (insert, (!), (!?))
 import           Data.Maybe (catMaybes)
-import           Control.Monad.IO.Class (liftIO)
 import           KeyState
   ( KeyState(..)
   , updateKeyState
@@ -17,9 +15,8 @@ import           KeyState
   , isReleased
   , isHeld )
 
-import           Game.Wrapper.Apecs (Apecs(..), emap)
+import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.Wrapper.SDLInput (SDLInput(..))
-import           Game.World (System', SystemFn)
 import           Game.Types
   ( PlayerInput(..)
   , MousePosition(..)
@@ -123,11 +120,11 @@ stepPlayerCommands m (p, c, e) =
   ( (p, c)
   , catMaybes [addJumpCommand m e, addMoveCommand m e] )
 
-stepInputSystem :: SystemFn
+stepInputSystem :: (Apecs m) => [QueueEvent] -> m [QueueEvent]
 stepInputSystem events = do
-  A.cmap maintainInputs
-  inputM  <- get global :: System' PlayerInput
-  events' <- emap $ stepPlayerCommands inputM
+  cmap maintainInputs
+  inputM@(PlayerInput _ _)  <- get global
+  events' <- qmap $ stepPlayerCommands inputM
   -- clear away "justModified" key map
   set global (inputM { justModified = Map.empty })
   return $ events ++ events'

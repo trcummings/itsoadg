@@ -16,11 +16,20 @@ import           Game.Effect.HasECSWorld (HasECSWorld(..))
 
 class Monad m => Apecs m where
   runSystem  :: ECS.System World a -> m a
+
   runGC      :: m ()
+
   cmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
              => (cx -> cy) -> m ()
+
   qmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
              => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
+
+  get        :: forall c. ECS.Has World c
+             => Core.Entity -> m c
+
+  set        :: forall c. ECS.Has World c
+             => Core.Entity -> c -> m ()
 
 runSystem' :: (Apecs m, HasECSWorld m, MonadIO m)
            => ECS.System World a -> m a
@@ -31,9 +40,7 @@ runSystem' f = do
 runGC' :: (Apecs m) => m ()
 runGC' = runSystem $ ECS.runGC
 
-cmap' :: ( Apecs m
-         , ECS.Has World cx
-         , ECS.Has World cy )
+cmap' :: (Apecs m, ECS.Has World cx, ECS.Has World cy)
       => (cx -> cy) -> m ()
 cmap' f = runSystem $ ECS.cmap f
 
@@ -54,3 +61,11 @@ emap f = do
 qmap' :: (Apecs m, ECS.Has World cx, ECS.Has World cy)
       => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
 qmap' f = runSystem $ emap f
+
+get' :: (Apecs m, ECS.Has World c)
+     => Core.Entity -> m c
+get' e = runSystem $ ECS.get e
+
+set' :: (Apecs m, ECS.Has World c)
+     => Core.Entity -> c -> m ()
+set' e c = runSystem $ ECS.set e c
