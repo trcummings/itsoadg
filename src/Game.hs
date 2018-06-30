@@ -56,7 +56,9 @@ import           Game.Wrapper.Apecs       ( Apecs(..)
                                           , cmap'
                                           , qmap'
                                           , get'
-                                          , set' )
+                                          , set'
+                                          , cmapM_'
+                                          , getAll' )
 
 newtype Game a = Game
   (ReaderT Env IO a)
@@ -130,9 +132,11 @@ instance Apecs Game where
   runSystem = runSystem'
   runGC     = runGC'
   cmap      = cmap'
+  cmapM_    = cmapM_'
   qmap      = qmap'
   get       = get'
   set       = set'
+  getAll    = getAll'
 
 -- effects
 instance HasGameState Game where

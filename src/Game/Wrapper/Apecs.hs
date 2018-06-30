@@ -7,6 +7,7 @@ module Game.Wrapper.Apecs where
 import qualified Apecs               as ECS
 import qualified Apecs.Core          as Core
 import qualified Data.Vector.Unboxed as U
+import           Control.Monad (mapM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (runReaderT)
 
@@ -22,6 +23,8 @@ class Monad m => Apecs m where
   cmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
              => (cx -> cy) -> m ()
 
+  cmapM_     :: forall c a. ECS.Has World c => (c -> m a) -> m ()
+
   qmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
              => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
 
@@ -31,18 +34,26 @@ class Monad m => Apecs m where
   set        :: forall c. ECS.Has World c
              => Core.Entity -> c -> m ()
 
+  getAll     :: forall c. ECS.Has World c => m [c]
+
 runSystem' :: (Apecs m, HasECSWorld m, MonadIO m)
            => ECS.System World a -> m a
 runSystem' f = do
   world <- getECSWorld
   liftIO $ runReaderT (ECS.unSystem f) world
 
-runGC' :: (Apecs m) => m ()
+runGC' :: Apecs m => m ()
 runGC' = runSystem $ ECS.runGC
 
 cmap' :: (Apecs m, ECS.Has World cx, ECS.Has World cy)
       => (cx -> cy) -> m ()
 cmap' f = runSystem $ ECS.cmap f
+
+cmapM_' :: (Apecs m, ECS.Has World c) => (c -> m a) -> m ()
+cmapM_' f = do
+  all <- getAll
+  mapM_ f all
+  return ()
 
 emap :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
      => (cx -> (cy, [QueueEvent]))
@@ -69,3 +80,8 @@ get' e = runSystem $ ECS.get e
 set' :: (Apecs m, ECS.Has World c)
      => Core.Entity -> c -> m ()
 set' e c = runSystem $ ECS.set e c
+
+getAll' :: (Apecs m, ECS.Has World c) => m [c]
+getAll' = do
+  all <- runSystem $ ECS.getAll
+  return all

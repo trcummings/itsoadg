@@ -14,7 +14,7 @@ import           SDL.Time (ticks)
 import qualified SDL.Font as TTF (initialize)
 import qualified SDL.Mixer as Mixer (openAudio, defaultAudio)
 import           Control.Monad (when, (>=>))
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ask)
 
 import           Game.Types
@@ -70,18 +70,14 @@ innerStep acc events = do
     -- recurse if we need to run another fixed step update
     innerStep acc' events'
 
-outerStep :: Double -> [QueueEvent] -> SDL.Renderer -> System' ()
-outerStep nextTime events renderer = do
-  -- update player input button-key keystate-value map
-  -- mapM handleSDLInput (filter byInputEvent events)
-  -- accumulate fixed time for updates
-  accumulateFixedTime nextTime
+outerStep :: [QueueEvent] -> SDL.Renderer -> System' ()
+outerStep events renderer = do
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
   -- run updates
   effectEvents <- innerStep acc []
-  -- render
-  stepRender renderer
+  -- -- render
+  -- stepRender
   -- play audio
   stepAudioQueue (filter byAudioSystemEvent effectEvents)
   return ()
@@ -94,23 +90,26 @@ mainLoop :: ( MonadReader Env m
             , HasRunState     m
             , HasEventQueue   m
             , HasVideoConfig  m
+            , MonadIO         m
             ) => m ()
 mainLoop = do
   -- prep screen for next render
   clearScreen
   -- get next time tick from SDL
   nextTime   <- nextTick
-  -- collect events from SDL
-  -- sdlEvents  <- pollEvents
-  -- collect previous rounds' events + sdlEvents
-  -- prepend input events to queue events to handle input changes 1 frame earlier
-  -- events     <- prependAndGetEvents sdlEvents
-  events     <- getEvents
-  renderer   <- vcRenderer <$> getVideoConfig
+  -- collect previous rounds' events
+  -- events     <- getEvents
+  -- renderer   <- vcRenderer <$> getVideoConfig
   -- update player input button-key keystate-value map
-  -- mapM handleSDLInput (filter byInputEvent events)
   stepSDLInput
+  -- accumulate fixed time for updates
+  accumulateFixedTime nextTime
+  -- get fixed time for inner step
+  (_, acc) <- getFixedTime
+
   -- runSystem (outerStep nextTime events renderer) world
+  -- add all entities to render
+  stepRender
   -- run current render
   drawScreen
   -- clear out queue for next round
