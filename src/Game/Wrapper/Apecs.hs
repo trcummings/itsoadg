@@ -38,6 +38,12 @@ class Monad m => Apecs m where
 
   getAll     :: forall c. ECS.Has World c => m [c]
 
+  destroy    :: forall c. ECS.Has World c
+             => Core.Entity -> c -> m ()
+
+  modify     :: forall c. ECS.Has World c
+             => Core.Entity -> (c -> c) -> m ()
+
 runSystem' :: (Apecs m, HasECSWorld m, MonadIO m)
            => ECS.System World a -> m a
 runSystem' f = do
@@ -92,3 +98,9 @@ getAll' :: (Apecs m, ECS.Has World c) => m [c]
 getAll' = do
   all <- runSystem $ ECS.getAll
   return all
+
+destroy' :: (Apecs m, ECS.Has World c) => Core.Entity -> c -> m ()
+destroy' e c = runSystem $ ECS.destroy e c
+
+modify' :: (Apecs m, ECS.Has World c) => Core.Entity -> (c -> c) -> m ()
+modify' e f = runSystem $ ECS.modify e f
