@@ -57,6 +57,7 @@ import           Game.Wrapper.Apecs       ( Apecs(..)
                                           , qmap'
                                           , get'
                                           , set'
+                                          , cmapM'
                                           , cmapM_'
                                           , getAll' )
 
@@ -132,6 +133,7 @@ instance Apecs Game where
   runSystem = runSystem'
   runGC     = runGC'
   cmap      = cmap'
+  cmapM     = cmapM'
   cmapM_    = cmapM_'
   qmap      = qmap'
   get       = get'

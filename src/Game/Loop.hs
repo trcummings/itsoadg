@@ -25,7 +25,7 @@ import           Game.Types
   , QueueEvent(..) )
 import           Game.World (Env, System', World, SystemFn)
 
-import           Game.Effect.HasEventQueue (HasEventQueue(..), byAudioSystemEvent)
+import           Game.Effect.HasEventQueue (HasEventQueue(..))
 import           Game.Effect.HasRunState (HasRunState, getRunState)
 import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
@@ -78,8 +78,8 @@ outerStep events renderer = do
   effectEvents <- innerStep acc []
   -- -- render
   -- stepRender
-  -- play audio
-  stepAudioQueue (filter byAudioSystemEvent effectEvents)
+  -- -- play audio
+  -- stepAudioQueue (filter byAudioSystemEvent effectEvents)
   return ()
 
 mainLoop :: ( MonadReader Env m
@@ -110,6 +110,8 @@ mainLoop = do
   -- runSystem (outerStep nextTime events renderer) world
   -- add all entities to render
   stepRender
+  -- play audio
+  stepAudioQueue
   -- run current render
   drawScreen
   -- clear out queue for next round

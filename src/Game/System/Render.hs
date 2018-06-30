@@ -17,7 +17,6 @@ import           Data.Maybe (catMaybes)
 import           Data.Coerce (coerce)
 import           Paths_itsoadg (getDataFileName)
 
-import           Game.World (System')
 import           Game.Sprite (rectFromClip)
 import           Game.Util.Constants
   ( toPixels

@@ -23,6 +23,8 @@ class Monad m => Apecs m where
   cmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
              => (cx -> cy) -> m ()
 
+  cmapM      :: forall c a. ECS.Has World c => (c -> m a) -> m [a]
+
   cmapM_     :: forall c a. ECS.Has World c => (c -> m a) -> m ()
 
   qmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
@@ -48,6 +50,11 @@ runGC' = runSystem $ ECS.runGC
 cmap' :: (Apecs m, ECS.Has World cx, ECS.Has World cy)
       => (cx -> cy) -> m ()
 cmap' f = runSystem $ ECS.cmap f
+
+cmapM' :: (Apecs m, ECS.Has World c) => (c -> m a) -> m [a]
+cmapM' f = do
+   all <- getAll
+   mapM f all
 
 cmapM_' :: (Apecs m, ECS.Has World c) => (c -> m a) -> m ()
 cmapM_' f = do
