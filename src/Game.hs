@@ -61,7 +61,8 @@ import           Game.Wrapper.Apecs       ( Apecs(..)
                                           , cmapM_'
                                           , getAll'
                                           , destroy'
-                                          , modify' )
+                                          , modify'
+                                          , exists' )
 
 newtype Game a = Game
   (ReaderT Env IO a)
@@ -143,6 +144,7 @@ instance Apecs Game where
   getAll    = getAll'
   destroy   = destroy'
   modify    = modify'
+  exists    = exists'
 
 -- effects
 instance HasGameState Game where

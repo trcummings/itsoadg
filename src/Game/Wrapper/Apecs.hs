@@ -44,6 +44,9 @@ class Monad m => Apecs m where
   modify     :: forall c. ECS.Has World c
              => Core.Entity -> (c -> c) -> m ()
 
+  exists     :: forall c. ECS.Has World c
+             => Core.Entity -> c -> m Bool
+
 runSystem' :: (Apecs m, HasECSWorld m, MonadIO m)
            => ECS.System World a -> m a
 runSystem' f = do
@@ -104,3 +107,6 @@ destroy' e c = runSystem $ ECS.destroy e c
 
 modify' :: (Apecs m, ECS.Has World c) => Core.Entity -> (c -> c) -> m ()
 modify' e f = runSystem $ ECS.modify e f
+
+exists' :: (Apecs m, ECS.Has World c) => Core.Entity -> c -> m Bool
+exists' e c = runSystem $ ECS.exists e c
