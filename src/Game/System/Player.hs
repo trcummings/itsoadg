@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Game.System.Player where
 
@@ -10,10 +11,10 @@ import           Control.Arrow ((>>>))
 import           Data.Map ((!))
 import           Control.Monad (when, foldM)
 import           Control.Monad.IO.Class (liftIO)
-import           Apecs (Entity, cmap, cmapM, cmapM_, get, getAll, global, proxy, set)
+import           Apecs (Entity, global, proxy)
 import           Linear (V2(..))
 
-import           Game.Wrapper.Apecs (emap)
+import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.Types
   ( Velocity(..)
   , PlayerInput(..), PlayerInputMap
@@ -306,9 +307,9 @@ processCommandEvent e (CommandSystemEvent (To to, From from, cmd)) psg =
                    Command'Move dir    -> stepPlayerXSpeed dir psg
 processCommandEvent _ _ psg = psg
 
-stepPlayerState :: SystemFn
+stepPlayerState :: Apecs m => [QueueEvent] -> m [QueueEvent]
 stepPlayerState evts = do
-  ps <- getAll :: System' [(PlayerStateGroup, Entity)]
+  ps :: [(PlayerStateGroup, Entity)] <- getAll
   mapM (\(psg, e) -> set e $ foldr (processCommandEvent e) psg evts) ps
   PlayerInput m _ <- get global
   cmap $ (
@@ -321,7 +322,7 @@ stepPlayerState evts = do
     -- >>> (stepPlayerSpeed m) )
   return evts
 
-stepPlayerAction :: System' ()
+stepPlayerAction :: Apecs m => m ()
 stepPlayerAction = do
   cmapM_ $ \( Player pastActionStep
             , jump@(Jump _ _)
