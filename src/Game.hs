@@ -6,35 +6,75 @@ module Game (main) where
 import qualified SDL
 import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
-import qualified Apecs as ECS            (System, runSystem)
-import           Control.Monad.IO.Class  (MonadIO(..))
+import qualified Apecs as ECS            (System(..), runSystem, unSystem)
+import           Control.Monad.IO.Class  (MonadIO(..), liftIO)
 import           Control.Monad.Reader    (MonadReader, ReaderT, runReaderT)
-import           Control.Monad.State     (MonadState , StateT , evalStateT)
+import           Data.IORef
 
-import           Game.World (World, initWorld)
-import           Game.Types (SDLConfig(..), EventQueue(..))
+import           Game.World (Env, World, initWorld)
+import           Game.Types
+  ( GameEnv(..)
+  , VideoConfig(..)
+  , DebugMode(..)
+  , RuntimeConfig(..)
+  , EventQueue(..)
+  , RunState(..)
+  , GameState(..) )
 import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
+import           Game.Util.TileMap (basicTilemap)
+
 import           Game.Loop (mainLoop)
-import           Game.Effect.Renderer     (Renderer(..), clearScreen', drawScreen')
-import           Game.Effect.Event        (Event(..), prependAndGetEvents', setEvents')
-import           Game.Wrapper.SDLRenderer (SDLRenderer(..), presentRenderer', clearRenderer')
+
+import           Game.Effect.Renderer         ( Renderer(..)
+                                              , clearScreen'
+                                              , drawScreen' )
+import           Game.Effect.HasGameState     ( HasGameState(..)
+                                              , getGameState'
+                                              , setGameState' )
+import           Game.Effect.HasVideoConfig   ( HasVideoConfig(..)
+                                              , getVideoConfig' )
+import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig(..)
+                                              , getRuntimeConfig' )
+import           Game.Effect.HasECSWorld      ( HasECSWorld(..)
+                                              , getECSWorld' )
+import           Game.Effect.HasRunState      ( HasRunState(..)
+                                              , getRunState' )
+import           Game.Effect.HasEventQueue    ( HasEventQueue(..)
+                                              , getEvents'
+                                              , prependAndGetEvents'
+                                              , setEvents' )
+
+import           Game.Wrapper.SDLRenderer ( SDLRenderer(..)
+                                          , presentRenderer'
+                                          , clearRenderer' )
 import           Game.Wrapper.SDLInput    (SDLInput(..), pollEvents')
 import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
-import           Game.Wrapper.Apecs       (Apecs(..), runSystem', runGC')
+import           Game.Wrapper.Apecs       ( Apecs(..)
+                                          , runSystem'
+                                          , runGC'
+                                          , cmap'
+                                          , qmap'
+                                          , get'
+                                          , set'
+                                          , cmapM'
+                                          , cmapM_'
+                                          , getAll'
+                                          , destroy'
+                                          , modify'
+                                          , exists' )
 
 newtype Game a = Game
-  (ReaderT SDLConfig (StateT EventQueue IO) a)
+  (ReaderT Env IO a)
   deriving
     ( Functor
     , Applicative
     , Monad
-    , MonadReader SDLConfig
-    , MonadState EventQueue
+    , MonadReader Env
     , MonadIO )
 
-runGame :: SDLConfig -> EventQueue -> Game a -> IO a
-runGame sdlConfig eq (Game m) = evalStateT (runReaderT m sdlConfig) eq
+runGame :: Env -> Game m -> IO m
+runGame env (Game m) = runReaderT m env
 
 main :: IO ()
 main = do
@@ -47,19 +87,32 @@ main = do
     "ITSOADG"
     SDL.defaultWindow { SDL.windowInitialSize = initialSize }
   renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
-  let sdlConfig = SDLConfig { sdlWindow = window, sdlRenderer = renderer }
+  let videoConfig = VideoConfig { vcWindow   = window
+                                , vcRenderer = renderer }
 
   -- register joystick to receive events from it
-  joysticks <- SDL.availableJoysticks
-  mapM_ SDL.openJoystick joysticks
+  -- joysticks <- SDL.availableJoysticks
+  -- mapM_ SDL.openJoystick joysticks
 
-  -- initialize Apecs world & add entities
+  -- initialize game
   world <- initWorld
   ECS.runSystem (initSystems renderer) world
+  -- tileMap <- initTilemap basicTilemap world
 
   -- start loop
-  runGame sdlConfig (EventQueue []) (mainLoop world)
-  -- mainLoop window renderer world
+  debugMode <- newIORef DebugMode'DrawDebug
+  gameState <- newIORef $ GameState { gsRunState   = RunState'Running
+                                    , gsEventQueue = EventQueue []
+                                    , gsTileMap    = basicTilemap }
+
+  let runtimeConfig = RuntimeConfig { rcDebugMode = debugMode }
+
+      env = GameEnv { envVideoConfig   = videoConfig
+                    , envRuntimeConfig = runtimeConfig
+                    , envGameState     = gameState
+                    , envECSWorld      = world }
+  -- start loop
+  runGame env mainLoop
 
   -- clean up on quit
   SDL.destroyWindow window
@@ -68,14 +121,7 @@ main = do
   TTF.quit
   SDL.quit
 
-instance Renderer Game where
-  clearScreen = clearScreen'
-  drawScreen  = drawScreen'
-
-instance Event Game where
-  prependAndGetEvents = prependAndGetEvents'
-  setEvents = setEvents'
-
+-- wrappers
 instance SDLRenderer Game where
   presentRenderer = presentRenderer'
   clearRenderer   = clearRenderer'
@@ -89,3 +135,43 @@ instance SDLTime Game where
 instance Apecs Game where
   runSystem = runSystem'
   runGC     = runGC'
+  cmap      = cmap'
+  cmapM     = cmapM'
+  cmapM_    = cmapM_'
+  qmap      = qmap'
+  get       = get'
+  set       = set'
+  getAll    = getAll'
+  destroy   = destroy'
+  modify    = modify'
+  exists    = exists'
+
+-- effects
+instance HasGameState Game where
+  getGameState = getGameState'
+  setGameState = setGameState'
+
+instance HasRunState Game where
+  getRunState = getRunState'
+
+instance HasRuntimeConfig Game where
+  getRuntimeConfig = getRuntimeConfig'
+
+instance HasVideoConfig Game where
+  getVideoConfig = getVideoConfig'
+
+instance HasECSWorld Game where
+  getECSWorld = getECSWorld'
+
+instance HasEventQueue Game where
+  prependAndGetEvents = prependAndGetEvents'
+  getEvents = getEvents'
+  setEvents = setEvents'
+
+-- instance HasTilemap Game where
+--   getTilemap = undefined
+
+-- modules
+instance Renderer Game where
+  clearScreen = clearScreen'
+  drawScreen  = drawScreen'

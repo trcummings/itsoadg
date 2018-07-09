@@ -11,13 +11,12 @@ import qualified SDL.Internal.Numbered as Numbered
 import           Foreign.C.Types (CInt)
 import           GHC.Int (Int32)
 import           Linear (V4(..), V2(..), (^/))
-import           Apecs (cmapM_, cmap, set)
-import           Control.Monad.IO.Class (liftIO)
+-- import           Apecs (cmapM_, cmap, set)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Data.Maybe (catMaybes)
 import           Data.Coerce (coerce)
 import           Paths_itsoadg (getDataFileName)
 
-import           Game.World (System')
 import           Game.Sprite (rectFromClip)
 import           Game.Util.Constants
   ( toPixels
@@ -27,6 +26,8 @@ import           Game.Util.Constants
 import           Game.Util.AABB (broadPhaseAABB)
 import           Game.Util.TileMap (basicTilemap')
 import           Game.System.Player (stepPlayerAnimation)
+import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
+import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.Types
   ( Unit(..)
   , Camera(..)
@@ -43,7 +44,8 @@ import           Game.Types
   , Animations(..)
   , FlowMeter(..)
   , AABB(..), dims, center
-  , TileType(..) )
+  , TileType(..)
+  , VideoConfig(..) )
 
 
 toTexture :: SDL.Renderer -> SDL.Surface -> IO Texture
@@ -75,7 +77,7 @@ makeRect pos dims = Just $ SDL.Rectangle (SDL.P pos) dims
 
 vZero = V2 0 0
 
-renderText :: SDL.Renderer -> [(Char, Texture)] -> V2 Unit -> String -> System' ()
+renderText :: SDL.Renderer -> [(Char, Texture)] -> V2 Unit -> String -> IO ()
 renderText renderer f p txt = do
    let textures = catMaybes (map (\c -> lookup c f) txt)
        spacingMap = [xy | xy <- [1..700], xy `mod` 14 == 0]
@@ -101,7 +103,7 @@ renderSprite renderer ss clip pos = do
     (SDL.P $ toPixels <$> pos)
     (makeRect clipPos dims)
 
-renderFlowMeter :: SDL.Renderer -> Position -> FlowMeter -> System' ()
+renderFlowMeter :: SDL.Renderer -> Position -> FlowMeter -> IO ()
 renderFlowMeter renderer (Position p) flow = do
   let boxHeight     = 5
       baseHeight    = boxHeight - (boxHeight * Unit (baseFlow flow / flowLimit flow))
@@ -124,32 +126,32 @@ renderFlowMeter renderer (Position p) flow = do
       (toPixels <$> V2 0.5 1)
       (toPixels <$> V2 1 boxHeight) )
 
-stepRender :: SDL.Renderer -> System' ()
-stepRender renderer = do
-  -- get camera position
-  cmapM_ $ \(Camera _ _, Position cameraPos) -> do
-    -- render "player"
-    cmapM_ $ \(Player spa, Position p, Velocity v, SpriteSheet ss ap) -> do
-      let animations = Animate.ssAnimations ss :: Animations PlayerKey
-          location   = Animate.currentLocation animations ap
-      liftIO $ renderSprite renderer ss location (p - cameraPos)
+renderFromCamera :: (Apecs m, HasVideoConfig m, MonadIO m)
+                 => (Camera, Position) -> m ()
+renderFromCamera (Camera _ _, Position cameraPos) = do
+  renderer   <- vcRenderer <$> getVideoConfig
+  -- render "player"
+  cmapM_ $ \(Player spa, Position p, Velocity v, SpriteSheet ss ap) -> do
+    let animations = Animate.ssAnimations ss :: Animations PlayerKey
+        location   = Animate.currentLocation animations ap
+    liftIO $ renderSprite renderer ss location (p - cameraPos)
 
-    -- render bounding boxes
-    cmapM_ $ \(BoundingBox bb, Position p) -> do
-      liftIO $ SDL.rendererDrawColor renderer $= V4 255 0 maxBound maxBound
-      liftIO $ SDL.drawRect
-        renderer
-        (makeRect (toPixels <$> (p - cameraPos)) (toPixels <$> bb))
+  -- render bounding boxes
+  cmapM_ $ \(BoundingBox bb, Position p) -> do
+    liftIO $ SDL.rendererDrawColor renderer $= V4 255 0 maxBound maxBound
+    liftIO $ SDL.drawRect
+      renderer
+      (makeRect (toPixels <$> (p - cameraPos)) (toPixels <$> bb))
 
-    -- render broad phase bounding box
-    cmapM_ $ \(bb@(BoundingBox _), p@(Position _), v@(Velocity _)) -> do
-      let aabb = broadPhaseAABB bb p v
-      liftIO $ SDL.rendererDrawColor renderer $= V4 maxBound maxBound 0 255
-      liftIO $ SDL.drawRect
-        renderer
-        (makeRect (toPixels <$> ((center aabb) - cameraPos)) (toPixels <$> (dims aabb)))
+  -- render broad phase bounding box
+  cmapM_ $ \(bb@(BoundingBox _), p@(Position _), v@(Velocity _)) -> do
+    let aabb = broadPhaseAABB bb p v
+    liftIO $ SDL.rendererDrawColor renderer $= V4 maxBound maxBound 0 255
+    liftIO $ SDL.drawRect
+      renderer
+      (makeRect (toPixels <$> ((center aabb) - cameraPos)) (toPixels <$> (dims aabb)))
 
-    liftIO $ mapM_ (\(ttype, pos) -> do
+  liftIO $ mapM_ (\(ttype, pos) -> do
                      let pos' = (Unit <$> fromIntegral <$> pos) :: V2 Unit
                      case ttype of
                        E -> return ()
@@ -162,18 +164,26 @@ stepRender renderer = do
                            (makeRect (toPixels <$> (pos' - cameraPos)) (V2 32 32))
                  ) basicTilemap'
 
+renderAllFlowMeter :: (Apecs m, HasVideoConfig m, MonadIO m)
+                   => (Font, Position)
+                   -> (Player, FlowMeter)
+                   -> m ()
+renderAllFlowMeter (Font f, Position p)
+                   (Player _, flow@(FlowMeter _ _ _ _)) = do
+   renderer   <- vcRenderer <$> getVideoConfig
+   -- render meter text
+   liftIO $ renderText renderer f p "Flow"
+   -- render meter
+   liftIO $ renderFlowMeter renderer (Position p) flow
 
-  -- render flow meter
-  cmapM_ $ \(Font f, Position p) -> do
-    cmapM_ $ \(Player _, flow@(FlowMeter _ _ _ _)) -> do
-      -- render meter text
-      renderText renderer f p "Flow"
-      -- render meter
-      renderFlowMeter renderer (Position p) flow
+renderFlow :: (Apecs m, HasVideoConfig m, MonadIO m) => (Font, Position) -> m ()
+renderFlow fp = cmapM_ $ renderAllFlowMeter fp
 
-  -- render constrained mouse position in radius
-  cmapM_ $ \(MousePosition (V2 x y)) -> do
-        -- get positions relative to middle of screen
+renderReticule :: (Apecs m, HasVideoConfig m, MonadIO m)
+               => MousePosition -> m ()
+renderReticule (MousePosition (V2 x y)) = do
+    renderer   <- vcRenderer <$> getVideoConfig
+    -- get positions relative to middle of screen
     let w = coerce (32 * screenWidth  / 2) :: Double
         h = coerce (32 * screenHeight / 2) :: Double
         -- coerce mouse position
@@ -194,6 +204,12 @@ stepRender renderer = do
         bb = toPixels <$> (V2 (Unit 0.25) (Unit 0.25))
     liftIO $ SDL.rendererDrawColor renderer $= V4 161 62 180 maxBound
     liftIO $ SDL.drawRect renderer (Just $ SDL.Rectangle (P $ V2 px py) bb)
+
+stepRender :: (Apecs m, HasVideoConfig m, MonadIO m) => m ()
+stepRender = do
+  cmapM_ renderFromCamera
+  cmapM_ renderFlow
+  cmapM_ renderReticule
 
 
 prepNextRender :: SDL.Renderer -> IO ()

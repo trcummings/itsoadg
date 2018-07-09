@@ -9,29 +9,28 @@ import qualified SDL.Mixer as Mixer
 import           Data.Map ((!), (!?))
 import qualified Data.Map as Map (filter, elems, insert)
 import           Data.Maybe (catMaybes)
-import           Apecs (Entity, cmap, cmapM_, set)
+import           Apecs (Entity)
 import           Control.Monad (filterM, foldM)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
+import           Game.Wrapper.Apecs (Apecs(..))
+import           Game.Effect.HasEventQueue (HasEventQueue(..))
 import           Game.Types
   ( SoundBank(..)
   , AudioEvent
   , SFX'Key
   , Audio'Command(..)
   , QueueEvent(..) )
-import           Game.World (System')
 
--- dispatchToAudioInbox :: AudioEvent -> System' ()
--- dispatchToAudioInbox cmd = cmap $ \(SoundBank sb cm ibx) -> SoundBank sb cm (ibx ++ [cmd])
-
-cullNonPlayingEntities :: System' ()
-cullNonPlayingEntities = cmapM_ $ \(sBank@(SoundBank _ _), e) -> do
+cullNonPlayingEntities :: (Apecs m, MonadIO m) => (SoundBank, Entity) -> m ()
+cullNonPlayingEntities (sBank@(SoundBank _ _), e) = do
   -- get list of currently playing channels
   let channels = map snd (Map.elems (channelMap sBank))
   playingChannels <- filterM (liftIO . Mixer.playing) channels
   -- set new channel map to entity keys with only still-playing chunks
   let isPlaying = flip elem playingChannels . snd
   set e (sBank { channelMap = Map.filter isPlaying (channelMap sBank) } )
+  return ()
 
 runCommand :: SoundBank -> AudioEvent -> IO SoundBank
 runCommand sb (e, key, command) = do
@@ -65,8 +64,9 @@ runCommand sb (e, key, command) = do
           channel' <- liftIO $ Mixer.playOn (-1) 1 chunk
           return $ sb { channelMap =  Map.insert e (key, channel') cm }
 
-registerAndPlayCommands :: [AudioEvent] -> System' ()
-registerAndPlayCommands events = cmapM_ $ \(sBank@(SoundBank _ _), sE) -> do
+registerAndPlayCommands :: (Apecs m, MonadIO m)
+                        => [AudioEvent] -> (SoundBank, Entity) -> m ()
+registerAndPlayCommands events (sBank@(SoundBank _ _), sE) = do
   sBank' <- liftIO $ foldM runCommand sBank events
   set sE sBank'
 
@@ -75,9 +75,10 @@ unwrapAudioEvent qe as = case qe of
   AudioSystemEvent e -> as ++ [e]
   _                  -> as
 
-stepAudioQueue :: [QueueEvent] -> System' [QueueEvent]
-stepAudioQueue events = do
+stepAudioQueue :: (HasEventQueue m, Apecs m, MonadIO m) => m ()
+stepAudioQueue = do
+  events <- getEvents
   let aEvents = foldr unwrapAudioEvent [] events
-  cullNonPlayingEntities
-  registerAndPlayCommands aEvents
-  return []
+  cmapM_ cullNonPlayingEntities
+  cmapM $ registerAndPlayCommands aEvents
+  return ()

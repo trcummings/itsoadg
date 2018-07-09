@@ -3,24 +3,24 @@
 module Game.Effect.Renderer where
 
 import qualified SDL
-import           Control.Monad.Reader (MonadReader(..), ask)
 
-import           Game.Types (SDLConfig(..))
+import           Game.Types (VideoConfig(..))
 import           Game.Wrapper.SDLRenderer
   ( SDLRenderer
   , clearRenderer
   , presentRenderer )
+import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 
 class Monad m => Renderer m where
   clearScreen :: m ()
   drawScreen  :: m ()
 
-clearScreen' :: (SDLRenderer m, MonadReader SDLConfig m) => m ()
+clearScreen' :: (SDLRenderer m, HasVideoConfig m) => m ()
 clearScreen' = do
-  renderer <- sdlRenderer <$> ask
+  renderer <- vcRenderer <$> getVideoConfig
   clearRenderer renderer
 
-drawScreen' :: (SDLRenderer m, MonadReader SDLConfig m) => m ()
+drawScreen' :: (SDLRenderer m, HasVideoConfig m) => m ()
 drawScreen' = do
-  renderer <- sdlRenderer <$> ask
+  renderer <- vcRenderer <$> getVideoConfig
   presentRenderer renderer
