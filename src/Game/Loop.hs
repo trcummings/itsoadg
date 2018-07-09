@@ -48,7 +48,16 @@ import           Game.System.Init (initSystems)
 import           Game.Util.Constants (dT, initialSize)
 
 -- update physics multiple times if time step is less than frame update time
-innerStep :: Double -> SystemFn
+innerStep :: ( MonadReader Env m
+             , SDLInput        m
+             , SDLTime         m
+             , Renderer        m
+             , Apecs           m
+             , HasRunState     m
+             , HasEventQueue   m
+             , HasVideoConfig  m
+             , MonadIO         m )
+          => Double -> [QueueEvent] -> m [QueueEvent]
 innerStep acc events = do
   if (acc < dT)
   then return events
@@ -70,18 +79,6 @@ innerStep acc events = do
     -- recurse if we need to run another fixed step update
     innerStep acc' events'
 
-outerStep :: [QueueEvent] -> SDL.Renderer -> System' ()
-outerStep events renderer = do
-  -- get fixed time for inner step
-  (_, acc) <- getFixedTime
-  -- run updates
-  effectEvents <- innerStep acc []
-  -- -- render
-  -- stepRender
-  -- -- play audio
-  -- stepAudioQueue (filter byAudioSystemEvent effectEvents)
-  return ()
-
 mainLoop :: ( MonadReader Env m
             , SDLInput        m
             , SDLTime         m
@@ -97,17 +94,15 @@ mainLoop = do
   clearScreen
   -- get next time tick from SDL
   nextTime   <- nextTick
-  -- collect previous rounds' events
-  -- events     <- getEvents
-  -- renderer   <- vcRenderer <$> getVideoConfig
   -- update player input button-key keystate-value map
   stepSDLInput
   -- accumulate fixed time for updates
   accumulateFixedTime nextTime
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
-
-  -- runSystem (outerStep nextTime events renderer) world
+  -- run inner step
+  effectEvents <- innerStep acc []
+  setEvents effectEvents
   -- add all entities to render
   stepRender
   -- play audio

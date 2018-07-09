@@ -1,10 +1,8 @@
 module Game.System.FlowMeter where
 
-import           Apecs (cmap)
-
 import           Game.Util.Constants (frameDeltaSeconds)
 import           Game.Types (FlowMeter(..))
-import           Game.World (System')
+import           Game.Wrapper.Apecs (Apecs(..))
 
 recoveryPerSecond :: Double
 recoveryPerSecond = 2.5
@@ -29,5 +27,5 @@ updateFlowMeter flow =
           -- bump current flow to a max of baseFlow
           else flow { currentFlow = min bf (cf + tickUp) }
 
-stepFlowMeter :: System' ()
+stepFlowMeter :: Apecs m => m ()
 stepFlowMeter = cmap $ \(flow@(FlowMeter _ _ _ _)) -> updateFlowMeter flow

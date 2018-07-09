@@ -1,16 +1,16 @@
 module Game.System.Camera where
 
 import Linear (V2(..), (*^))
-import Apecs (get, set, cmapM_)
 
-import Game.World (System', SystemFn)
+import Game.Wrapper.Apecs (Apecs(..))
 import Game.Types
   ( Camera(..), size, ppos
   , CameraTarget(..)
   , Acceleration(..)
-  , Position(..) )
+  , Position(..)
+  , QueueEvent(..) )
 
-stepCameraPhysics :: SystemFn
+stepCameraPhysics :: Apecs m => [QueueEvent] -> m [QueueEvent]
 stepCameraPhysics events = do
   -- update camera position based on target
   cmapM_ $ \(
@@ -20,7 +20,7 @@ stepCameraPhysics events = do
     , Position cpos
     , camera ) -> do
 
-    (Position targetP) <- get e :: System' (Position)
+    (Position targetP) <- get e
         -- target x y based on camera size
     let txy = targetP - V2 (0.5 * cw) (0.5 * ch)
         -- camera acceleration towards target

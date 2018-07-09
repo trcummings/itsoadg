@@ -10,20 +10,8 @@ import           Data.Map ((!))
 import           Data.Coerce (coerce)
 import           Data.List (partition)
 import           Linear (V2(..), V4(..), (^*), (*^), (^/))
-import           Apecs
-  ( Entity
-  , Not
-  , cmap
-  , cmapM_
-  , set
-  , get
-  , getAll
-  , proxy
-  , exists
-  , global
-  , modify )
+import           Apecs (Entity, Not, proxy)
 
-import           Game.World (System')
 import           Game.Util.Constants
   ( dT
   , frameDeltaSeconds
@@ -35,7 +23,7 @@ import           Game.Util.Constants
   , stoppingAccel
   , initialJumpVy
   , initialJumpG )
-import           Game.Wrapper.Apecs (emap)
+import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.Types
   ( Unit(..)
   , Jump(..)
@@ -82,12 +70,12 @@ stepJump (jumpState@(Jump _ _), v@(Velocity (V2 vx _)), e) =
 updateNonCollidablePositions :: (Velocity, Position, Not CollisionModule) -> Position
 updateNonCollidablePositions (v, p, _) = stepPosition (v, p)
 
-stepPhysicsSystem :: [QueueEvent] -> System' [QueueEvent]
+stepPhysicsSystem :: Apecs m => [QueueEvent] -> m [QueueEvent]
 stepPhysicsSystem evts = do
   -- update acceleration based on gravity
   cmap handleGravity
   -- jump!
-  evts' <- emap stepJump
+  evts' <- qmap stepJump
   -- clamp velocity
   cmap handleVelocityClamp
   -- update positions of all non-colliding entities

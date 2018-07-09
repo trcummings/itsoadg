@@ -1,7 +1,9 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Game.System.Collision where
 
 import           Linear (V2(..), (^*), (*^), (^/), dot, _x, _y)
-import           Apecs (Entity, cmap, cmapM_, set, proxy, getAll, get, exists)
+import           Apecs (Entity, proxy)
 import           Data.Coerce (coerce)
 import           Data.Map ((!?))
 import           Data.Maybe (catMaybes)
@@ -13,7 +15,6 @@ import           Control.Monad.Extra (partitionM)
 import           Control.Monad.IO.Class (liftIO)
 
 
-import           Game.World (System')
 import           Game.Types
   ( Unit(..)
   , Position(..)
@@ -41,7 +42,7 @@ import           Game.Types
   , Axis(..)
   , SensorDirection(..)
   , CollisionLayerType(..) )
-import           Game.Wrapper.Apecs (emap)
+import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.Util.Constants (frameDeltaSeconds, onePixel)
 import           Game.Util.TileMap
   ( basicTilemap
@@ -287,7 +288,7 @@ stepJump' (cm, jumpState, e) =
 -- stepHardFlow :: (HardFlow, CollisionModule) -> 
 
 -- whole system
-stepCollisionSystem :: [QueueEvent] -> System' [QueueEvent]
+stepCollisionSystem :: Apecs m => [QueueEvent] -> m [QueueEvent]
 stepCollisionSystem events = do
   -- clear collision layer map from collision modules
   cmap $ \(cm@(CollisionModule _ _)) -> cm { layerCollisions = [] }
@@ -305,15 +306,15 @@ stepCollisionSystem events = do
   -- -- resolve y
 
   -- get all entities with a collision module
-  allCollidables <- getAll :: System' [Collidable]
+  allCollidables :: [Collidable] <- getAll
   -- -- compute collisions, insert in entity-key collision-value map
   cmap $ (processCollidable basicTilemap allCollidables)
-  cmapM_ $ \(Player _, cm@(CollisionModule _ _)) ->
-    when ((length $ layerCollisions cm) >= 2) $
-      liftIO $ putStrLn $ "Player: " ++ show cm
+  -- cmapM_ $ \(Player _, cm@(CollisionModule _ _)) ->
+  --   when ((length $ layerCollisions cm) >= 2) $
+  --     liftIO $ putStrLn $ "Player: " ++ show cm
   -- cmapM_ $ \(HardFlow, cm@(CollisionModule _ _)) -> liftIO $ putStrLn $ "HF: " ++ show cm
   -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
   --   Position $ p + (v ^* Unit frameDeltaSeconds)
   -- cmap $ \(HardFlow, cm@(CollisionModule _ _)) ->
-  jEvents <- emap $ stepJump'
+  jEvents <- qmap $ stepJump'
   return $ events ++ jEvents
