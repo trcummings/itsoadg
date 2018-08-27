@@ -6,7 +6,7 @@ module Game (main) where
 import qualified SDL
 import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
-import qualified Apecs as ECS            (System(..), runSystem, unSystem)
+-- import qualified Apecs as ECS            (System(..), runSystem, unSystem)
 import           Control.Monad.IO.Class  (MonadIO(..), liftIO)
 import           Control.Monad.Reader    (MonadReader, ReaderT, runReaderT)
 import           Data.IORef
@@ -38,9 +38,11 @@ import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig(..)
                                               , getRuntimeConfig' )
 import           Game.Effect.HasECSWorld      ( HasECSWorld(..)
                                               , getECSWorld' )
-import           Game.Effect.HasScene         ( HasScene(..)
+import           Game.Effect.SceneManager     ( SceneManager(..)
                                               , getScene'
-                                              , getNextScene' )
+                                              , setScene'
+                                              , getNextScene'
+                                              , setNextScene' )
 import           Game.Effect.HasEventQueue    ( HasEventQueue(..)
                                               , getEvents'
                                               , prependAndGetEvents'
@@ -54,6 +56,7 @@ import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
 import           Game.Wrapper.Apecs       ( Apecs(..)
                                           , runSystem'
                                           , runGC'
+                                          , newEntity'
                                           , cmap'
                                           , qmap'
                                           , get'
@@ -85,7 +88,7 @@ main = do
 
   -- create window and renderer
   window <- SDL.createWindow
-    "ITSOADG"
+    "Let Sleeping Gods Lie"
     SDL.defaultWindow { SDL.windowInitialSize = initialSize }
   renderer <- SDL.createRenderer window (-1) SDL.defaultRenderer
   let videoConfig = VideoConfig { vcWindow   = window
@@ -97,18 +100,16 @@ main = do
 
   -- initialize game
   world <- initWorld
-  ECS.runSystem (initSystems renderer) world
+  -- ECS.runSystem (initSystems renderer) world
   -- tileMap <- initTilemap basicTilemap world
 
-  -- start loop
   debugMode <- newIORef DebugMode'DrawDebug
-  gameState <- newIORef $ GameState { gsScene      = Scene'Title
+  gameState <- newIORef $ GameState { gsScene      = Scene'Init
                                     , gsNextScene  = Scene'Title
                                     , gsEventQueue = EventQueue []
                                     , gsTileMap    = basicTilemap }
 
   let runtimeConfig = RuntimeConfig { rcDebugMode = debugMode }
-
       env = GameEnv { envVideoConfig   = videoConfig
                     , envRuntimeConfig = runtimeConfig
                     , envGameState     = gameState
@@ -137,6 +138,7 @@ instance SDLTime Game where
 instance Apecs Game where
   runSystem = runSystem'
   runGC     = runGC'
+  newEntity = newEntity'
   cmap      = cmap'
   cmapM     = cmapM'
   cmapM_    = cmapM_'
@@ -153,9 +155,11 @@ instance HasGameState Game where
   getGameState = getGameState'
   setGameState = setGameState'
 
-instance HasScene Game where
+instance SceneManager Game where
   getScene     = getScene'
+  setScene     = setScene'
   getNextScene = getNextScene'
+  setNextScene = setNextScene'
 
 instance HasRuntimeConfig Game where
   getRuntimeConfig = getRuntimeConfig'
@@ -170,9 +174,6 @@ instance HasEventQueue Game where
   prependAndGetEvents = prependAndGetEvents'
   getEvents = getEvents'
   setEvents = setEvents'
-
--- instance HasTilemap Game where
---   getTilemap = undefined
 
 -- modules
 instance Renderer Game where

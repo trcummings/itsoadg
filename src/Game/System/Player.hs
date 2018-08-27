@@ -47,7 +47,7 @@ import           Game.Util.Constants
   , frameDeltaSeconds
   , playerTopSpeed )
 import           Game.Util.Step (smash, peel)
-import           Game.World (System', SystemFn)
+import           Game.World (System')
 
 -- movement
 bumpVelocityX :: Velocity -> Unit -> Velocity
@@ -358,4 +358,3 @@ stepPlayerAnimation (Step'Change _ pa) _ _ = case pa of
   PlayerAction'MoveLeft  -> Animate.initPositionWithLoop PlayerKey'LWalk Animate.Loop'Always
   PlayerAction'JumpLeft  -> Animate.initPosition PlayerKey'LJump
   PlayerAction'IdleLeft  -> Animate.initPosition PlayerKey'LIdle
-

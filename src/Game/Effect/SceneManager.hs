@@ -1,17 +1,26 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Game.Effect.SceneManager where
 
 import Control.Monad (when)
 
-data Scene =
-    Scene'Title
-  | Scene'FileSelect
-  | Scene'Quit
-  deriving (Eq, Show)
+import Game.Types (GameState(..), Scene(..))
+import Game.Effect.HasGameState (HasGameState(..))
 
-class SceneManager m where
-  toScene :: Scene -> m ()
+class Monad m => SceneManager m where
+  getScene     :: m Scene
+  setScene     :: Scene -> m ()
+  getNextScene :: m Scene
+  setNextScene :: Scene -> m ()
 
-stepScene :: Scene -> Scene -> IO ()
-stepScene scene nextScene = do
-  when (nextScene /= scene) $ do
-    return ()
+getScene' :: HasGameState m => m Scene
+getScene' = gsScene <$> getGameState
+
+setScene' :: HasGameState m => Scene -> m ()
+setScene' scene = setGameState $ \gs -> gs { gsScene = scene }
+
+getNextScene' :: HasGameState m => m Scene
+getNextScene' = gsNextScene <$> getGameState
+
+setNextScene' :: HasGameState m => Scene -> m ()
+setNextScene' scene = setGameState $ \gs -> gs { gsNextScene = scene }

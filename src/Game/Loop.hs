@@ -9,50 +9,52 @@
 
 module Game.Loop where
 
-import           Control.Monad.IO.Class (MonadIO)
-import           Control.Monad.Reader (MonadReader)
+import Control.Monad (when)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Reader (MonadReader)
 
-import           Game.Types
+import Game.Types
   ( VideoConfig(..)
   , GameState(..)
   , EventQueue(..)
   , Scene(..)
   , QueueEvent(..) )
-import           Game.World (Env)
+import Game.World (Env)
 
-import           Game.Effect.HasEventQueue (HasEventQueue(..))
--- import           Game.Effect.HasRunState (HasRunState, getRunState)
-import           Game.Effect.HasScene (HasScene(..))
-import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
-import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
+import Game.Effect.HasEventQueue (HasEventQueue(..))
+import Game.Effect.SceneManager (SceneManager(..))
+import Game.Effect.HasVideoConfig (HasVideoConfig(..))
+import Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 
-import           Game.Wrapper.SDLInput (SDLInput, pollEvents)
-import           Game.Wrapper.SDLTime (SDLTime, nextTick)
-import           Game.Wrapper.Apecs (Apecs, runGC, runSystem)
+import Game.Wrapper.SDLInput (SDLInput, pollEvents)
+import Game.Wrapper.SDLTime (SDLTime, nextTick)
+import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
-import           Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
-import           Game.System.Input (stepSDLInput, stepInputSystem)
-import           Game.System.Audio (stepAudioQueue)
-import           Game.System.Render (stepRender)
+import Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
+import Game.System.Input (stepSDLInput, stepInputSystem)
+import Game.System.Audio (stepAudioQueue)
+import Game.System.Render (stepRender)
 
-import           Game.Util.Constants (dT)
+import Game.Scene.Title (titleStep, titleTransition)
+
+import Game.Util.Constants (dT)
 
 -- update physics multiple times if time step is less than frame update time
 innerStep :: ( MonadReader Env m
              , SDLInput        m
              , SDLTime         m
              , Renderer        m
-             , Apecs           m )
-             -- , HasScene        m
-             -- , HasEventQueue   m
-             -- , HasVideoConfig  m
-             -- , MonadIO         m )
-          => Double -> [QueueEvent] -> m [QueueEvent]
-innerStep acc events = do
+             , Apecs           m
+             , HasVideoConfig  m
+             , SceneManager    m
+             , MonadIO         m )
+          => Double -> [QueueEvent] -> Scene -> m [QueueEvent]
+innerStep acc events scene = do
   if (acc < dT)
   then return events
   -- when we've accumulated a fixed step update
   else do
+    step scene
     -- events' <- stepInputSystem events -- maintain key held or released updates
       -- >>= stepPlayerState  -- run updates based on input map
       -- >>= stepPhysicsSystem -- physics update
@@ -67,14 +69,21 @@ innerStep acc events = do
     -- get next fixed time for update
     (_, acc') <- getFixedTime
     -- recurse if we need to run another fixed step update
-    innerStep acc' events
+    innerStep acc' events scene
+  where
+    step scene = do
+      case scene of
+        Scene'Title -> titleStep
+        _           -> do
+          liftIO $ putStrLn $ show scene
+          return ()
 
 mainLoop :: ( MonadReader Env m
             , SDLInput        m
             , SDLTime         m
             , Renderer        m
             , Apecs           m
-            , HasScene        m
+            , SceneManager    m
             , HasEventQueue   m
             , HasVideoConfig  m
             , MonadIO         m
@@ -83,21 +92,22 @@ mainLoop = do
   -- prep screen for next render
   clearScreen
   -- get next time tick from SDL
-  nextTime   <- nextTick
+  nextTime <- nextTick
   -- update player input button-key keystate-value map
   stepSDLInput
   -- accumulate fixed time for updates
-  -- accumulateFixedTime nextTime
+  accumulateFixedTime nextTime
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
   -- run inner step
-  innerStep acc []
+  scene <- getScene
+  innerStep acc [] scene
   -- effectEvents <- innerStep acc []
   -- setEvents effectEvents
   -- add all entities to render
-  stepRender
+  -- stepRender
   -- play audio
-  stepAudioQueue
+  -- stepAudioQueue
   -- run current render
   drawScreen
   -- clear out queue for next round
@@ -105,7 +115,15 @@ mainLoop = do
   -- garbage collect. yes, every frame
   runGC
   -- loop if game still running
-  scene <- getScene
+  nextScene <- getNextScene
+  stepScene scene nextScene
   case scene of
     Scene'Quit  -> return ()
     _           -> mainLoop
+  where
+    stepScene scene nextScene = do
+      when (nextScene /= scene) $ do
+        case nextScene of
+          Scene'Title -> titleTransition
+          _           -> return ()
+        setScene nextScene

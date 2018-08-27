@@ -10,7 +10,6 @@
 module Game.World
   ( World
   , System'
-  , SystemFn
   , Env
   , initWorld ) where
 
@@ -161,5 +160,4 @@ makeWorld "World" [
   ]
 
 type System' a = System World a
-type SystemFn = [QueueEvent] -> System World [QueueEvent]
 type Env = GameEnv World
