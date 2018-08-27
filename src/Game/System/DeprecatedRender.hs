@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Game.System.Render where
+module Game.System.DeprecatedRender where
 
 import qualified SDL
 import           SDL (($=), Point(..))

@@ -33,7 +33,7 @@ import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 import Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
 import Game.System.Input (stepSDLInput, stepInputSystem)
 import Game.System.Audio (stepAudioQueue)
-import Game.System.Render (stepRender)
+-- import Game.Util.Render (stepRender)
 
 import Game.Scene.Title (titleStep, titleTransition)
 
@@ -50,11 +50,11 @@ innerStep :: ( MonadReader Env m
              , MonadIO         m )
           => Double -> [QueueEvent] -> Scene -> m [QueueEvent]
 innerStep acc events scene = do
+  step scene
   if (acc < dT)
   then return events
   -- when we've accumulated a fixed step update
   else do
-    step scene
     -- events' <- stepInputSystem events -- maintain key held or released updates
       -- >>= stepPlayerState  -- run updates based on input map
       -- >>= stepPhysicsSystem -- physics update
@@ -72,11 +72,10 @@ innerStep acc events scene = do
     innerStep acc' events scene
   where
     step scene = do
+      liftIO $ putStrLn $ show scene
       case scene of
         Scene'Title -> titleStep
-        _           -> do
-          liftIO $ putStrLn $ show scene
-          return ()
+        _           -> return ()
 
 mainLoop :: ( MonadReader Env m
             , SDLInput        m

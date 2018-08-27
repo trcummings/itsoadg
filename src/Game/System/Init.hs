@@ -21,7 +21,7 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class (liftIO)
 import           Apecs (newEntity)
 
-import           Game.System.Render (loadTexture, toTexture)
+import           Game.Util.Render (loadTexture, toTexture)
 import           Game.World (System')
 -- import           Game.Util.Constants
 --   ( spriteSize

@@ -19,7 +19,7 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Wrapper.Apecs (Apecs(..))
 
-import           Game.System.Render (loadTexture, toTexture)
+import           Game.Util.Render (loadTexture, toTexture, renderText)
 import           Game.Types (Position(..), Font(..), VideoConfig(..))
 
 characters =
@@ -33,6 +33,7 @@ titleTransition :: ( Apecs m
                    , MonadIO m
                    ) => m ()
 titleTransition = do
+  liftIO $ putStrLn "Title Transition"
   renderer  <- vcRenderer <$> getVideoConfig
   -- load in assets, convert to textures
   smallFont <- liftIO $ TTF.load "assets/fonts/04B_19__.TTF" 24
@@ -51,6 +52,9 @@ titleTransition = do
     , Font fontMap )
   return ()
 
-titleStep :: (Apecs m, MonadIO m) => m ()
+titleStep :: (Apecs m, HasVideoConfig m, MonadIO m) => m ()
 titleStep = do
+  renderer  <- vcRenderer <$> getVideoConfig
+  cmapM_ $ \(Font font) -> do
+    liftIO $ renderText renderer font (V2 2 3) "Let Sleeping Gods Lie"
   return ()
