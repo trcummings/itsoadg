@@ -22,7 +22,7 @@ import           Game.World (Env)
 
 import           Game.Effect.HasEventQueue (HasEventQueue(..))
 -- import           Game.Effect.HasRunState (HasRunState, getRunState)
-import           Game.Effect.HasScene (HasScene, getScene)
+import           Game.Effect.HasScene (HasScene(..))
 import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 
@@ -107,5 +107,5 @@ mainLoop = do
   -- loop if game still running
   scene <- getScene
   case scene of
-    Scene'Title -> mainLoop
     Scene'Quit  -> return ()
+    _           -> mainLoop

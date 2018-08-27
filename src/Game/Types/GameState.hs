@@ -4,7 +4,8 @@ import           Game.Types.EventQueue (EventQueue)
 import           Game.Types.TileMap (TileMap)
 
 data Scene =
-    Scene'Title
+    Scene'Init
+  | Scene'Title
   | Scene'FileSelect
   | Scene'Quit
   deriving (Eq, Show)
