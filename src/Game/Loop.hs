@@ -9,24 +9,20 @@
 
 module Game.Loop where
 
-import qualified SDL
-import           SDL.Time (ticks)
-import qualified SDL.Font as TTF (initialize)
-import qualified SDL.Mixer as Mixer (openAudio, defaultAudio)
-import           Control.Monad (when, (>=>))
-import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Control.Monad.Reader (MonadReader, ask)
+import           Control.Monad.IO.Class (MonadIO)
+import           Control.Monad.Reader (MonadReader)
 
 import           Game.Types
   ( VideoConfig(..)
   , GameState(..)
   , EventQueue(..)
-  , RunState(..)
+  , Scene(..)
   , QueueEvent(..) )
-import           Game.World (Env, System', World, SystemFn)
+import           Game.World (Env)
 
 import           Game.Effect.HasEventQueue (HasEventQueue(..))
-import           Game.Effect.HasRunState (HasRunState, getRunState)
+-- import           Game.Effect.HasRunState (HasRunState, getRunState)
+import           Game.Effect.HasScene (HasScene, getScene)
 import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 
@@ -35,56 +31,50 @@ import           Game.Wrapper.SDLTime (SDLTime, nextTick)
 import           Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
 import           Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
-import           Game.System.Player (stepPlayerState, stepPlayerAction)
-import           Game.System.Camera (stepCameraPhysics)
-import           Game.System.FlowMeter (stepFlowMeter)
 import           Game.System.Input (stepSDLInput, stepInputSystem)
-import           Game.System.Physics (stepPhysicsSystem)
-import           Game.System.Collision (stepCollisionSystem)
 import           Game.System.Audio (stepAudioQueue)
 import           Game.System.Render (stepRender)
-import           Game.System.Init (initSystems)
 
-import           Game.Util.Constants (dT, initialSize)
+import           Game.Util.Constants (dT)
 
 -- update physics multiple times if time step is less than frame update time
 innerStep :: ( MonadReader Env m
              , SDLInput        m
              , SDLTime         m
              , Renderer        m
-             , Apecs           m
-             , HasRunState     m
-             , HasEventQueue   m
-             , HasVideoConfig  m
-             , MonadIO         m )
+             , Apecs           m )
+             -- , HasScene        m
+             -- , HasEventQueue   m
+             -- , HasVideoConfig  m
+             -- , MonadIO         m )
           => Double -> [QueueEvent] -> m [QueueEvent]
 innerStep acc events = do
   if (acc < dT)
   then return events
   -- when we've accumulated a fixed step update
   else do
-    events' <- stepInputSystem events -- maintain key held or released updates
-      >>= stepPlayerState  -- run updates based on input map
-      >>= stepPhysicsSystem -- physics update
-      >>= stepCollisionSystem
-      >>= stepCameraPhysics
-    -- update flow meter
-    stepFlowMeter
-    -- update player "action"
-    stepPlayerAction
+    -- events' <- stepInputSystem events -- maintain key held or released updates
+      -- >>= stepPlayerState  -- run updates based on input map
+      -- >>= stepPhysicsSystem -- physics update
+      -- >>= stepCollisionSystem
+      -- >>= stepCameraPhysics
+    -- -- update flow meter
+    -- stepFlowMeter
+    -- -- update player "action"
+    -- stepPlayerAction
     -- clear away the fixed time we've accumulated
     clearFixedTime
     -- get next fixed time for update
     (_, acc') <- getFixedTime
     -- recurse if we need to run another fixed step update
-    innerStep acc' events'
+    innerStep acc' events
 
 mainLoop :: ( MonadReader Env m
             , SDLInput        m
             , SDLTime         m
             , Renderer        m
             , Apecs           m
-            , HasRunState     m
+            , HasScene        m
             , HasEventQueue   m
             , HasVideoConfig  m
             , MonadIO         m
@@ -97,12 +87,13 @@ mainLoop = do
   -- update player input button-key keystate-value map
   stepSDLInput
   -- accumulate fixed time for updates
-  accumulateFixedTime nextTime
+  -- accumulateFixedTime nextTime
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
   -- run inner step
-  effectEvents <- innerStep acc []
-  setEvents effectEvents
+  innerStep acc []
+  -- effectEvents <- innerStep acc []
+  -- setEvents effectEvents
   -- add all entities to render
   stepRender
   -- play audio
@@ -110,11 +101,11 @@ mainLoop = do
   -- run current render
   drawScreen
   -- clear out queue for next round
-  setEvents []
+  -- setEvents []
   -- garbage collect. yes, every frame
   runGC
   -- loop if game still running
-  gameRunState <- getRunState
-  case gameRunState of
-    RunState'Quitting -> return ()
-    RunState'Running  -> mainLoop
+  scene <- getScene
+  case scene of
+    Scene'Title -> mainLoop
+    Scene'Quit  -> return ()

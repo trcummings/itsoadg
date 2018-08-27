@@ -3,15 +3,14 @@ module Game.Types.GameState where
 import           Game.Types.EventQueue (EventQueue)
 import           Game.Types.TileMap (TileMap)
 
-data RunState =
-    RunState'Running
-  | RunState'Quitting
-
-instance Show RunState where
-  show (RunState'Quitting) = "Quitting"
-  show (RunState'Running)  = "Running"
+data Scene =
+    Scene'Title
+  | Scene'FileSelect
+  | Scene'Quit
+  deriving (Eq, Show)
 
 data GameState = GameState
-  { gsRunState   :: RunState
+  { gsScene      :: Scene
+  , gsNextScene  :: Scene
   , gsEventQueue :: EventQueue
   , gsTileMap    :: TileMap }

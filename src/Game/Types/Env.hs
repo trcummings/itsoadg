@@ -7,7 +7,7 @@ import qualified SDL
 import           Data.IORef
 
 import           Game.Types.EventQueue (EventQueue(..))
-import           Game.Types.GameState (RunState(..), GameState(..))
+import           Game.Types.GameState (GameState(..))
 
 data GameEnv w = GameEnv
   { envVideoConfig   :: VideoConfig

@@ -18,7 +18,7 @@ import           Game.Types
   , DebugMode(..)
   , RuntimeConfig(..)
   , EventQueue(..)
-  , RunState(..)
+  , Scene(..)
   , GameState(..) )
 import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
@@ -38,8 +38,9 @@ import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig(..)
                                               , getRuntimeConfig' )
 import           Game.Effect.HasECSWorld      ( HasECSWorld(..)
                                               , getECSWorld' )
-import           Game.Effect.HasRunState      ( HasRunState(..)
-                                              , getRunState' )
+import           Game.Effect.HasScene         ( HasScene(..)
+                                              , getScene'
+                                              , getNextScene' )
 import           Game.Effect.HasEventQueue    ( HasEventQueue(..)
                                               , getEvents'
                                               , prependAndGetEvents'
@@ -101,7 +102,8 @@ main = do
 
   -- start loop
   debugMode <- newIORef DebugMode'DrawDebug
-  gameState <- newIORef $ GameState { gsRunState   = RunState'Running
+  gameState <- newIORef $ GameState { gsScene      = Scene'Title
+                                    , gsNextScene  = Scene'Title
                                     , gsEventQueue = EventQueue []
                                     , gsTileMap    = basicTilemap }
 
@@ -151,8 +153,9 @@ instance HasGameState Game where
   getGameState = getGameState'
   setGameState = setGameState'
 
-instance HasRunState Game where
-  getRunState = getRunState'
+instance HasScene Game where
+  getScene     = getScene'
+  getNextScene = getNextScene'
 
 instance HasRuntimeConfig Game where
   getRuntimeConfig = getRuntimeConfig'
