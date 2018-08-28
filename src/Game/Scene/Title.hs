@@ -22,7 +22,8 @@ import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           KeyState (isPressed)
 
-import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
+import           Game.Effect.HasVideoConfig (HasVideoConfig, getVideoConfig)
+import           Game.Effect.SceneManager (SceneManager, setNextScene)
 import           Game.Wrapper.Apecs (Apecs(..))
 
 import           Game.System.Input (maintainInputs)
@@ -34,7 +35,8 @@ import           Game.Types
   , OptionList(..)
   , Option(..)
   , Unit(..)
-  , PlayerInput(..) )
+  , PlayerInput(..)
+  , Scene(..) )
 
 -- class Monad m => Scene m where
 --   step       :: m ()
@@ -50,14 +52,14 @@ characters =
 
 type OptionMenu = (OptionList, Position)
 
-oIdAction :: (MonadIO m) => String -> m ()
+oIdAction :: (SceneManager m, MonadIO m) => String -> m ()
 oIdAction oId = do
   liftIO $ putStrLn $ "Running " ++ oId ++ "!"
   case oId of
     "ToScene_Play"       -> return ()
     "ToScene_SelectFile" -> return ()
     "ToScene_Options"    -> return ()
-    "ToScene_Quit"       -> return ()
+    "ToScene_Quit"       -> setNextScene Scene'Quit
     _                    -> return ()
 
 titleOptions :: [Option]
@@ -111,7 +113,7 @@ titleCleanUp = do
 toggleOptionSelected :: Option -> Option
 toggleOptionSelected op = op { selected = not $ selected op }
 
-titleStep :: (Apecs m, MonadIO m) => m ()
+titleStep :: (Apecs m, SceneManager m, MonadIO m) => m ()
 titleStep = do
   -- ensure inputs are continually updated
   cmap maintainInputs
