@@ -30,7 +30,7 @@ rectFromClip Animate.SpriteClip{ scX, scY, scW, scH }
       point = SDL.P $ fromIntegral <$> (V2 scX scY)
       dims  = fromIntegral <$> (V2 scW scH)
 
--- | Produce a new 'SDL.Surface' based on an existing one, but
+-- Produce a new 'SDL.Surface' based on an existing one, but
 -- optimized for blitting to the specified 'SDL.PixelFormat'.
 convertSurface :: SDL.Surface -> SDL.PixelFormat -> IO SDL.Surface
 convertSurface (SDL.Surface s _) pixFmt = do

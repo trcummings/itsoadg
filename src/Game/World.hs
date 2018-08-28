@@ -46,7 +46,8 @@ import Game.Types
   , SoundBank(..)
   , CollisionModule
   , Commandable
-  , QueueEvent )
+  , QueueEvent
+  , OptionList )
 
 instance Component Position where
   type Storage Position = Map Position
@@ -100,8 +101,10 @@ instance Monoid PlayerInput where
           (SDL.KeycodeA, KeyState.initKeyState)
         , (SDL.KeycodeD, KeyState.initKeyState)
         , (SDL.KeycodeW, KeyState.initKeyState)
+        , (SDL.KeycodeS, KeyState.initKeyState)
         , (SDL.KeycodeN, KeyState.initKeyState)
         , (SDL.KeycodeM, KeyState.initKeyState)
+        , (SDL.KeycodeReturn, KeyState.initKeyState)
         ]
     , justModified = Map.empty }
 instance Component PlayerInput where
@@ -133,6 +136,9 @@ instance Component CollisionModule where
 instance Component Commandable where
   type Storage Commandable = Map Commandable
 
+instance Component OptionList where
+  type Storage OptionList = Map OptionList
+
 makeWorld "World" [
     ''Position
   , ''Velocity
@@ -157,6 +163,7 @@ makeWorld "World" [
   , ''SoundBank
   , ''CollisionModule
   , ''Commandable
+  , ''OptionList
   ]
 
 type System' a = System World a

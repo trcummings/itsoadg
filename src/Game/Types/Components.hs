@@ -146,3 +146,12 @@ data CollisionModule = CollisionModule
  deriving Show
 
 data Commandable = Commandable
+
+
+
+data Option =
+  Option { oId      :: String
+         , text     :: String
+         , selected :: Bool   }
+
+data OptionList = OptionList [Option]

@@ -6,7 +6,7 @@ import           Game.Types.TileMap (TileMap)
 data Scene =
     Scene'Init
   | Scene'Title
-  | Scene'FileSelect
+  | Scene'Play
   | Scene'Quit
   deriving (Eq, Show)
 
