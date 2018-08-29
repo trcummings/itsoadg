@@ -5,7 +5,8 @@ module Game.Effect.Renderer where
 import           SDL (($=))
 import qualified SDL
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified Data.Vector.Storable as V
+import           Data.Int (Int32)
+import           Linear (V2(..))
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
 import           Game.Types (VideoConfig(..))
@@ -17,6 +18,7 @@ class Monad m => Renderer m where
 
 clearScreen' :: (HasVideoConfig m, MonadIO m) => m ()
 clearScreen' = do
+  window <- vcWindow <$> getVideoConfig
   -- clear background color to black
   liftIO $ GL.clearColor $= GL.Color4 0 0 0 0
   -- set depth function to Less
@@ -24,15 +26,14 @@ clearScreen' = do
   -- clear buffers
   liftIO $ GL.clear [GL.ColorBuffer, GL.DepthBuffer]
   -- set viewport
+  (V2 width height) <- SDL.get $ SDL.windowSize window
   liftIO $ GL.viewport $= ( GL.Position 0 0
-                          , GL.Size
-                              (fromIntegral 640)
-                              (fromIntegral 480) )
+                          , GL.Size (fromIntegral width  :: Int32)
+                                    (fromIntegral height :: Int32) )
 
 drawScreen' :: (HasVideoConfig m, MonadIO m) => m ()
 drawScreen' = do
-  cfg <- getVideoConfig
-  let window = vcWindow cfg
+  window <- vcWindow <$> getVideoConfig
   --     (program, attrib) = vcGLResources cfg
   --
   -- -- set current program
