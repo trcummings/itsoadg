@@ -24,7 +24,7 @@ import Game.World (Env)
 import Game.Effect.HasEventQueue (HasEventQueue(..))
 import Game.Effect.SceneManager (SceneManager(..))
 import Game.Effect.HasVideoConfig (HasVideoConfig(..))
--- import Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
+import Game.Effect.Renderer (Renderer(..), clearScreen, drawScreen)
 
 import Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import Game.Wrapper.SDLTime (SDLTime, nextTick)
@@ -33,7 +33,6 @@ import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 import Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
 import Game.System.Input (stepSDLInput)
 import Game.System.Audio (stepAudioQueue)
--- import Game.Util.Render (stepRender)
 
 import Game.Scene.Title (titleStep, titleTransition, titleRender)
 
@@ -43,7 +42,6 @@ import Game.Util.Constants (dT)
 innerStep :: ( MonadReader Env m
              , SDLInput        m
              , SDLTime         m
-             -- , Renderer        m
              , Apecs           m
              , HasVideoConfig  m
              , SceneManager    m
@@ -55,15 +53,6 @@ innerStep acc events scene = do
   -- when we've accumulated a fixed step update
   else do
     step scene
-    -- events' <- stepInputSystem events -- maintain key held or released updates
-      -- >>= stepPlayerState  -- run updates based on input map
-      -- >>= stepPhysicsSystem -- physics update
-      -- >>= stepCollisionSystem
-      -- >>= stepCameraPhysics
-    -- -- update flow meter
-    -- stepFlowMeter
-    -- -- update player "action"
-    -- stepPlayerAction
     -- clear away the fixed time we've accumulated
     clearFixedTime
     -- get next fixed time for update
@@ -80,7 +69,7 @@ innerStep acc events scene = do
 mainLoop :: ( MonadReader Env m
             , SDLInput        m
             , SDLTime         m
-            -- , Renderer        m
+            , Renderer        m
             , Apecs           m
             , SceneManager    m
             , HasEventQueue   m
@@ -89,7 +78,7 @@ mainLoop :: ( MonadReader Env m
             ) => m ()
 mainLoop = do
   -- prep screen for next render
-  -- clearScreen
+  clearScreen
   -- get next time tick from SDL
   nextTime <- nextTick
   -- update player input button-key keystate-value map
@@ -103,15 +92,13 @@ mainLoop = do
   innerStep acc [] scene
   -- effectEvents <- innerStep acc []
   -- setEvents effectEvents
-  -- case scene of
-  --   Scene'Title -> titleRender
-  --   _           -> return ()
-  -- add all entities to render
-  -- stepRender
+  case scene of
+    Scene'Title -> titleRender
+    _           -> return ()
   -- play audio
   -- stepAudioQueue
-  -- run current render
-  -- drawScreen
+  -- run current render, swap background buffer
+  drawScreen
   -- clear out queue for next round
   -- setEvents []
   -- garbage collect. yes, every frame

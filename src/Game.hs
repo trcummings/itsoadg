@@ -32,6 +32,9 @@ import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
 import           Game.Util.TileMap (basicTilemap)
 import           Game.Loop (mainLoop)
+import           Game.Effect.Renderer         ( Renderer(..)
+                                              , drawScreen'
+                                              , clearScreen' )
 import           Game.Effect.HasGameState     ( HasGameState(..)
                                               , getGameState'
                                               , setGameState' )
@@ -194,17 +197,7 @@ fsSource = BS.intercalate "\n"
            , "}"
            ]
 
-vertices :: V.Vector Float
-vertices = V.fromList [  0.0,  0.8
-                      , -0.8, -0.8
-                      ,  0.8, -0.8
-                      ]
-
 -- wrappers
--- instance SDLRenderer Game where
---   presentRenderer = presentRenderer'
---   clearRenderer   = clearRenderer'
-
 instance SDLInput Game where
   pollEvents = pollEvents'
 
@@ -252,6 +245,6 @@ instance HasEventQueue Game where
   setEvents = setEvents'
 
 -- -- modules
--- instance Renderer Game where
---   clearScreen = clearScreen'
---   drawScreen  = drawScreen'
+instance Renderer Game where
+  clearScreen = clearScreen'
+  drawScreen  = drawScreen'
