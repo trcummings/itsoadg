@@ -27,7 +27,6 @@ import           Game.Types
   , EventQueue(..)
   , Scene(..)
   , GameState(..) )
--- import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
 import           Game.Util.TileMap (basicTilemap)
 import           Game.Util.Shaders (makeShader, makeProgram)
@@ -116,9 +115,8 @@ main = do
 
   -- initialize ECS game world
   world <- initWorld
-  -- ECS.runSystem (initSystems renderer) world
-  -- tileMap <- initTilemap basicTilemap world
 
+  -- initialize various env variables
   debugMode <- newIORef DebugMode'DrawDebug
   gameState <- newIORef $ GameState { gsScene      = Scene'Init
                                     , gsNextScene  = Scene'Title
