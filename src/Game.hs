@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+-- {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
@@ -8,28 +8,28 @@ import qualified SDL
 import           SDL (($=))
 import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
-import qualified Graphics.Rendering.OpenGL as GL
-import qualified Data.ByteString as BS
-import           Foreign.C.Types
+-- import qualified Graphics.Rendering.OpenGL as GL
+-- import qualified Data.ByteString as BS
+-- import           Foreign.C.Types
 import           Control.Monad (when, unless)
 import           Control.Monad.IO.Class  (MonadIO(..), liftIO)
 import           Control.Monad.Reader    (MonadReader, ReaderT, runReaderT)
 import           Data.IORef
-import           System.Exit (exitFailure)
-import           System.IO
+-- import           System.Exit (exitFailure)
+-- import           System.IO
 
 import           Game.World (Env, World, initWorld)
 import           Game.Types
   ( GameEnv(..)
   , VideoConfig(..)
-  , DebugMode(..)
-  , RuntimeConfig(..)
-  , EventQueue(..)
+  -- , DebugMode(..)
+  -- , RuntimeConfig(..)
+  -- , EventQueue(..)
   , Scene(..)
   , GameState(..) )
 import           Game.Util.Constants (initialSize)
-import           Game.Util.TileMap (basicTilemap)
-import           Game.Util.Shaders (makeShader, makeProgram)
+-- import           Game.Util.TileMap (basicTilemap)
+-- import           Game.Util.Shaders (makeShader, makeProgram)
 import           Game.Loop (mainLoop)
 import           Game.Effect.Renderer         ( Renderer(..)
                                               , drawScreen'
@@ -81,7 +81,7 @@ newtype Game a = Game
 runGame :: Env -> Game m -> IO m
 runGame env (Game m) = runReaderT m env
 
-type GLResources = (GL.Program, GL.AttribLocation)
+-- type GLResources = (GL.Program, GL.AttribLocation)
 
 main :: IO ()
 main = do
@@ -104,10 +104,10 @@ main = do
                       , SDL.windowOpenGL = Just SDL.defaultOpenGL }
   -- create OpenGL renderer context
   renderer       <- SDL.glCreateContext window
-  (prog, attrib) <- initResources
+  -- (prog, attrib) <- initResources
   let videoConfig = VideoConfig { vcWindow      = window
-                                , vcGLContext   = renderer
-                                , vcGLResources = (prog, attrib) }
+                                , vcGLContext   = renderer }
+                                -- , vcGLResources = (prog, attrib) }
 
   -- register joystick to receive events from it
   -- joysticks <- SDL.availableJoysticks
@@ -117,15 +117,15 @@ main = do
   world <- initWorld
 
   -- initialize various env variables
-  debugMode <- newIORef DebugMode'DrawDebug
+  -- debugMode <- newIORef DebugMode'DrawDebug
   gameState <- newIORef $ GameState { gsScene      = Scene'Init
-                                    , gsNextScene  = Scene'Title
-                                    , gsEventQueue = EventQueue []
-                                    , gsTileMap    = basicTilemap }
+                                    , gsNextScene  = Scene'Title }
+                                    -- , gsEventQueue = EventQueue []
+                                    -- , gsTileMap    = basicTilemap }
 
-  let runtimeConfig = RuntimeConfig { rcDebugMode = debugMode }
-      env = GameEnv { envVideoConfig   = videoConfig
-                    , envRuntimeConfig = runtimeConfig
+  -- let runtimeConfig = RuntimeConfig { rcDebugMode = debugMode }
+  let env = GameEnv { envVideoConfig   = videoConfig
+                    -- , envRuntimeConfig = runtimeConfig
                     , envGameState     = gameState
                     , envECSWorld      = world }
   -- start loop
@@ -139,35 +139,35 @@ main = do
   TTF.quit
   SDL.quit
 
-initResources :: IO (GL.Program, GL.AttribLocation)
-initResources = do
-  vs <- makeShader GL.VertexShader   vsSource
-  fs <- makeShader GL.FragmentShader fsSource
-  program <- makeProgram [vs, fs] [("coord2d", GL.AttribLocation 0)]
-  GL.currentProgram $= Just program
-  return (program, GL.AttribLocation 0)
+-- initResources :: IO (GL.Program, GL.AttribLocation)
+-- initResources = do
+--   vs <- makeShader GL.VertexShader   vsSource
+--   fs <- makeShader GL.FragmentShader fsSource
+--   program <- makeProgram [vs, fs] [("coord2d", GL.AttribLocation 0)]
+--   GL.currentProgram $= Just program
+--   return (program, GL.AttribLocation 0)
 
--- GLSL code for the vertex shader
-vsSource :: BS.ByteString
-vsSource = BS.intercalate "\n"
-           [
-            "attribute vec2 coord2d; "
-           , ""
-           , "void main(void) { "
-           , " gl_Position = vec4(coord2d, 0.0, 1.0); "
-           , "}"
-           ]
-
--- GLSL code for the fragment shader
-fsSource :: BS.ByteString
-fsSource = BS.intercalate "\n"
-           [
-            ""
-           , "#version 120"
-           , "void main(void) {"
-           , "gl_FragColor = vec4((gl_FragCoord.x/640), (gl_FragCoord.y/480), 0, 1);"
-           , "}"
-           ]
+-- -- GLSL code for the vertex shader
+-- vsSource :: BS.ByteString
+-- vsSource = BS.intercalate "\n"
+--            [
+--             "attribute vec2 coord2d; "
+--            , ""
+--            , "void main(void) { "
+--            , " gl_Position = vec4(coord2d, 0.0, 1.0); "
+--            , "}"
+--            ]
+--
+-- -- GLSL code for the fragment shader
+-- fsSource :: BS.ByteString
+-- fsSource = BS.intercalate "\n"
+--            [
+--             ""
+--            , "#version 120"
+--            , "void main(void) {"
+--            , "gl_FragColor = vec4((gl_FragCoord.x/640), (gl_FragCoord.y/480), 0, 1);"
+--            , "}"
+--            ]
 
 -- wrappers
 instance SDLInput Game where
