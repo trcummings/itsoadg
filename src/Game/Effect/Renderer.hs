@@ -17,7 +17,6 @@ class Monad m => Renderer m where
 
 clearScreen' :: (HasVideoConfig m, MonadIO m) => m ()
 clearScreen' = do
-  -- (prog, attrib) <- vcGLResources <$> getVideoConfig
   liftIO $ GL.clearColor $= GL.Color4 1 1 1 1
   liftIO $ GL.clear [GL.ColorBuffer]
   liftIO $ GL.viewport $= ( GL.Position 0 0
