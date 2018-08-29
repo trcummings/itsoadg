@@ -9,20 +9,20 @@
 
 module Game.System.Init where
 
-import qualified SDL
-import qualified SDL.Mixer as Mixer (load)
-import qualified Animate
-import           SDL.Font  as TTF (free, load, blended)
-import           SDL (($=))
-import           Linear (V4(..), V2(..))
-import qualified Data.Map as Map (empty, fromList)
-import           Data.Text (singleton)
-import           Control.Monad (void)
-import           Control.Monad.IO.Class (liftIO)
-import           Apecs (newEntity)
-
-import           Game.Util.Render (loadTexture, toTexture)
-import           Game.World (System')
+-- import qualified SDL
+-- import qualified SDL.Mixer as Mixer (load)
+-- import qualified Animate
+-- import           SDL.Font  as TTF (free, load, blended)
+-- import           SDL (($=))
+-- import           Linear (V4(..), V2(..))
+-- import qualified Data.Map as Map (empty, fromList)
+-- import           Data.Text (singleton)
+-- import           Control.Monad (void)
+-- import           Control.Monad.IO.Class (liftIO)
+-- import           Apecs (newEntity)
+--
+-- import           Game.Util.Render (loadTexture, toTexture)
+-- import           Game.World (System')
 -- import           Game.Util.Constants
 --   ( spriteSize
 --   , floorFriction
@@ -66,8 +66,8 @@ import           Game.World (System')
 
 -- type SpriteAnimation = System' (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
 
-initSystems :: SDL.Renderer -> System' ()
-initSystems renderer = void $ return ()
+-- initSystems :: SDL.Renderer -> System' ()
+-- initSystems renderer = void $ return ()
 -- initSystems renderer = void $ do
   -- load in assets, convert to textures
   -- spriteSheetTexture <- liftIO $ loadTexture renderer "assets/red_square.bmp"

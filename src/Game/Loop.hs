@@ -32,7 +32,7 @@ import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
 import Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
 import Game.System.Input (stepSDLInput)
-import Game.System.Audio (stepAudioQueue)
+-- import Game.System.Audio (stepAudioQueue)
 
 import Game.Scene.Title (titleStep, titleTransition, titleRender)
 

@@ -21,8 +21,8 @@ import           Game.Types
   ( PlayerInput(..)
   , MousePosition(..)
   , QueueEvent(..)
-  , Commandable
-  , Player
+  -- , Commandable
+  -- , Player
   , To(..)
   , From(..)
   , Dir(..)

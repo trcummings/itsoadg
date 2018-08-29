@@ -10,7 +10,6 @@ import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Data.ByteString as BS
--- import qualified Data.Vector.Storable as V
 import           Foreign.C.Types
 import           Control.Monad (when, unless)
 import           Control.Monad.IO.Class  (MonadIO(..), liftIO)
@@ -28,7 +27,7 @@ import           Game.Types
   , EventQueue(..)
   , Scene(..)
   , GameState(..) )
-import           Game.System.Init (initSystems)
+-- import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
 import           Game.Util.TileMap (basicTilemap)
 import           Game.Loop (mainLoop)
@@ -166,11 +165,12 @@ initResources = do
         exitFailure
 
     -- create program
+    -- a program represents fully processed executable code
     program <- GL.createProgram
     -- attach shaders to program
     GL.attachShader program vs
     GL.attachShader program fs
-    -- set program attribute location of "coord2d to 0"
+    -- set program attribute location of "coord2d" to 0
     GL.attribLocation program "coord2d" $= GL.AttribLocation 0
     -- link program, check linkage
     GL.linkProgram program
@@ -188,6 +188,7 @@ initResources = do
     GL.currentProgram $= Just program
     return (program, GL.AttribLocation 0)
 
+-- GLSL code for the vertex shader
 vsSource :: BS.ByteString
 vsSource = BS.intercalate "\n"
            [
@@ -198,6 +199,7 @@ vsSource = BS.intercalate "\n"
            , "}"
            ]
 
+-- GLSL code for the fragment shader
 fsSource :: BS.ByteString
 fsSource = BS.intercalate "\n"
            [

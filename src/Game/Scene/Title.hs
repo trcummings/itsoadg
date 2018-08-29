@@ -29,10 +29,10 @@ import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.System.Input (maintainInputs)
 -- import           Game.Util.Render (loadTexture, toTexture, renderText)
 import           Game.Types
-  ( Position(..)
-  , Font(..)
+  ( OptionList(..)
+  -- , Position(..)
+  -- , Font(..)
   -- , VideoConfig(..)
-  , OptionList(..)
   , Option(..)
   , Unit(..)
   , PlayerInput(..)
@@ -50,7 +50,7 @@ characters =
   ++ ['0'..'9']
   ++ [' ', ':', ',', '-', '.', '>', '<']
 
-type OptionMenu = (OptionList, Position)
+-- type OptionMenu = (OptionList, Position)
 
 oIdAction :: (SceneManager m, MonadIO m) => String -> m ()
 oIdAction oId = do
@@ -100,14 +100,15 @@ titleTransition = do
   --     Position $ V2 0 0
   --   , Font fontMap )
   newEntity ( -- options menu
-      Position $ V2 5 5
-    , OptionList titleOptions )
+      -- Position $ V2 5 5
+      OptionList titleOptions )
   return ()
 
 titleCleanUp :: (Apecs m) => m ()
 titleCleanUp = do
   -- delete the options menu
-  cmapM_ $ \(_ :: OptionMenu, ety) -> destroy ety (proxy :: OptionMenu)
+  -- cmapM_ $ \(_ :: OptionMenu, ety) -> destroy ety (proxy :: OptionMenu)
+  cmapM_ $ \(_ :: OptionList, ety) -> destroy ety (proxy :: OptionList)
   return ()
 
 toggleOptionSelected :: Option -> Option
