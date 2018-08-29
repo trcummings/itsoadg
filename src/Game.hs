@@ -39,8 +39,8 @@ import           Game.Effect.HasGameState     ( HasGameState(..)
                                               , setGameState' )
 import           Game.Effect.HasVideoConfig   ( HasVideoConfig(..)
                                               , getVideoConfig' )
-import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig(..)
-                                              , getRuntimeConfig' )
+-- import           Game.Effect.HasRuntimeConfig ( HasRuntimeConfig(..)
+--                                               , getRuntimeConfig' )
 import           Game.Effect.HasECSWorld      ( HasECSWorld(..)
                                               , getECSWorld' )
 import           Game.Effect.SceneManager     ( SceneManager(..)
@@ -48,10 +48,10 @@ import           Game.Effect.SceneManager     ( SceneManager(..)
                                               , setScene'
                                               , getNextScene'
                                               , setNextScene' )
-import           Game.Effect.HasEventQueue    ( HasEventQueue(..)
-                                              , getEvents'
-                                              , prependAndGetEvents'
-                                              , setEvents' )
+-- import           Game.Effect.HasEventQueue    ( HasEventQueue(..)
+--                                               , getEvents'
+--                                               , prependAndGetEvents'
+--                                               , setEvents' )
 import           Game.Wrapper.SDLInput    (SDLInput(..), pollEvents')
 import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
 import           Game.Wrapper.Apecs       ( Apecs(..)
@@ -202,8 +202,8 @@ instance SceneManager Game where
   getNextScene = getNextScene'
   setNextScene = setNextScene'
 
-instance HasRuntimeConfig Game where
-  getRuntimeConfig = getRuntimeConfig'
+-- instance HasRuntimeConfig Game where
+--   getRuntimeConfig = getRuntimeConfig'
 
 instance HasVideoConfig Game where
   getVideoConfig = getVideoConfig'
@@ -211,10 +211,10 @@ instance HasVideoConfig Game where
 instance HasECSWorld Game where
   getECSWorld = getECSWorld'
 
-instance HasEventQueue Game where
-  prependAndGetEvents = prependAndGetEvents'
-  getEvents = getEvents'
-  setEvents = setEvents'
+-- instance HasEventQueue Game where
+--   prependAndGetEvents = prependAndGetEvents'
+--   getEvents = getEvents'
+--   setEvents = setEvents'
 
 -- -- modules
 instance Renderer Game where
