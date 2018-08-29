@@ -47,6 +47,8 @@ dependencies:
 - apecs >= 0.3.0.2
 - animate >= 0.6.1
 - key-state >= 0.2.0
+- OpenGL >= 3.0.2.2
+- GLUT >= 2.7.0.14
 
 library:
   source-dirs: src
