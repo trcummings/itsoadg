@@ -28,6 +28,7 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- bytestring >= 0.10.4.0 && < 0.11
 - hspec
 - hspec-expectations
 - sdl2
@@ -48,7 +49,6 @@ dependencies:
 - animate >= 0.6.1
 - key-state >= 0.2.0
 - OpenGL >= 3.0.2.2
-- GLUT >= 2.7.0.14
 
 library:
   source-dirs: src

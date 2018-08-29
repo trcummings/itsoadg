@@ -22,16 +22,16 @@ import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           KeyState (isPressed)
 
-import           Game.Effect.HasVideoConfig (HasVideoConfig, getVideoConfig)
+-- import           Game.Effect.HasVideoConfig (HasVideoConfig, getVideoConfig)
 import           Game.Effect.SceneManager (SceneManager, setNextScene)
 import           Game.Wrapper.Apecs (Apecs(..))
 
 import           Game.System.Input (maintainInputs)
-import           Game.Util.Render (loadTexture, toTexture, renderText)
+-- import           Game.Util.Render (loadTexture, toTexture, renderText)
 import           Game.Types
   ( Position(..)
   , Font(..)
-  , VideoConfig(..)
+  -- , VideoConfig(..)
   , OptionList(..)
   , Option(..)
   , Unit(..)
@@ -78,27 +78,27 @@ titleOptions = [  Option { oId = "ToScene_Play"
                 ]
 
 titleTransition :: ( Apecs m
-                   , HasVideoConfig m
+                   -- , HasVideoConfig m
                    , MonadIO m
                    ) => m ()
 titleTransition = do
   liftIO $ putStrLn "Title Transition"
-  renderer  <- vcRenderer <$> getVideoConfig
-  -- load in assets, convert to textures
-  smallFont <- liftIO $ TTF.load "assets/fonts/04B_19__.TTF" 24
-  fontMap   <- liftIO $ mapM (\c -> do
-        texture <- toTexture renderer =<< TTF.blended
-          smallFont
-          (V4 255 255 255 255)
-          (singleton c)
-        return (c, texture)
-      ) $ characters
-  -- after we convert our font to textures we dont need the resource anymore
-  TTF.free smallFont
-  -- entities
-  newEntity ( -- small font
-      Position $ V2 0 0
-    , Font fontMap )
+  -- renderer  <- vcRenderer <$> getVideoConfig
+  -- -- load in assets, convert to textures
+  -- smallFont <- liftIO $ TTF.load "assets/fonts/04B_19__.TTF" 24
+  -- fontMap   <- liftIO $ mapM (\c -> do
+  --       texture <- toTexture renderer =<< TTF.blended
+  --         smallFont
+  --         (V4 255 255 255 255)
+  --         (singleton c)
+  --       return (c, texture)
+  --     ) $ characters
+  -- -- after we convert our font to textures we dont need the resource anymore
+  -- TTF.free smallFont
+  -- -- entities
+  -- newEntity ( -- small font
+  --     Position $ V2 0 0
+  --   , Font fontMap )
   newEntity ( -- options menu
       Position $ V2 5 5
     , OptionList titleOptions )
@@ -113,7 +113,10 @@ titleCleanUp = do
 toggleOptionSelected :: Option -> Option
 toggleOptionSelected op = op { selected = not $ selected op }
 
-titleStep :: (Apecs m, SceneManager m, MonadIO m) => m ()
+titleStep :: ( Apecs m
+             , SceneManager m
+             , MonadIO m
+             ) => m ()
 titleStep = do
   -- ensure inputs are continually updated
   cmap maintainInputs
@@ -150,21 +153,24 @@ titleStep = do
                         & element idx2 %~ toggleOptionSelected
     return ()
 
-titleRender :: (Apecs m, HasVideoConfig m, MonadIO m) => m ()
+titleRender :: ( Apecs m
+               -- , HasVideoConfig m
+               , MonadIO m
+               ) => m ()
 titleRender = do
-  renderer  <- vcRenderer <$> getVideoConfig
-  cmapM_ $ \(Font font) -> do
-    -- render title
-    liftIO $ renderText renderer font (V2 2 3) "Let Sleeping Gods Lie"
-    --render options menu
-    cmapM_ $ \(OptionList options, Position (V2 px py)) -> do
-      -- render each option descending vertically
-      mapM_ (\(option, yMod) -> do
-          let newY = py + Unit yMod
-          liftIO $ renderText renderer font (V2 px newY) (text option)
-          -- draw arrow next to selected option
-          when (selected option) $ do
-            liftIO $ renderText renderer font (V2 (px - Unit 1) newY) ">"
-        ) (zip options ( [x | x <- [0.0, 1.0..(fromIntegral $ length options)] ] ))
-      return ()
+  -- renderer  <- vcRenderer <$> getVideoConfig
+  -- cmapM_ $ \(Font font) -> do
+  --   -- render title
+  --   liftIO $ renderText renderer font (V2 2 3) "Let Sleeping Gods Lie"
+  --   --render options menu
+  --   cmapM_ $ \(OptionList options, Position (V2 px py)) -> do
+  --     -- render each option descending vertically
+  --     mapM_ (\(option, yMod) -> do
+  --         let newY = py + Unit yMod
+  --         liftIO $ renderText renderer font (V2 px newY) (text option)
+  --         -- draw arrow next to selected option
+  --         when (selected option) $ do
+  --           liftIO $ renderText renderer font (V2 (px - Unit 1) newY) ">"
+  --       ) (zip options ( [x | x <- [0.0, 1.0..(fromIntegral $ length options)] ] ))
+  --     return ()
   return ()

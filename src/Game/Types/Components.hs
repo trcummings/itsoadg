@@ -147,8 +147,6 @@ data CollisionModule = CollisionModule
 
 data Commandable = Commandable
 
-
-
 data Option =
   Option { oId      :: String
          , text     :: String

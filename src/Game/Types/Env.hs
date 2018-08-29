@@ -4,6 +4,7 @@
 module Game.Types.Env where
 
 import qualified SDL
+import qualified Graphics.Rendering.OpenGL as GL
 import           Data.IORef
 
 import           Game.Types.EventQueue (EventQueue(..))
@@ -23,5 +24,6 @@ data RuntimeConfig = RuntimeConfig
   { rcDebugMode :: !(IORef DebugMode) }
 
 data VideoConfig = VideoConfig
-  { vcWindow     :: SDL.Window
-  , vcRenderer   :: SDL.Renderer }
+  { vcWindow      :: SDL.Window
+  , vcGLContext   :: SDL.GLContext
+  , vcGLResources :: (GL.Program, GL.AttribLocation) }

@@ -24,7 +24,7 @@ import Game.World (Env)
 import Game.Effect.HasEventQueue (HasEventQueue(..))
 import Game.Effect.SceneManager (SceneManager(..))
 import Game.Effect.HasVideoConfig (HasVideoConfig(..))
-import Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
+-- import Game.Effect.Renderer (Renderer, clearScreen, drawScreen)
 
 import Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import Game.Wrapper.SDLTime (SDLTime, nextTick)
@@ -43,7 +43,7 @@ import Game.Util.Constants (dT)
 innerStep :: ( MonadReader Env m
              , SDLInput        m
              , SDLTime         m
-             , Renderer        m
+             -- , Renderer        m
              , Apecs           m
              , HasVideoConfig  m
              , SceneManager    m
@@ -80,7 +80,7 @@ innerStep acc events scene = do
 mainLoop :: ( MonadReader Env m
             , SDLInput        m
             , SDLTime         m
-            , Renderer        m
+            -- , Renderer        m
             , Apecs           m
             , SceneManager    m
             , HasEventQueue   m
@@ -89,7 +89,7 @@ mainLoop :: ( MonadReader Env m
             ) => m ()
 mainLoop = do
   -- prep screen for next render
-  clearScreen
+  -- clearScreen
   -- get next time tick from SDL
   nextTime <- nextTick
   -- update player input button-key keystate-value map
@@ -103,15 +103,15 @@ mainLoop = do
   innerStep acc [] scene
   -- effectEvents <- innerStep acc []
   -- setEvents effectEvents
-  case scene of
-    Scene'Title -> titleRender
-    _           -> return ()
+  -- case scene of
+  --   Scene'Title -> titleRender
+  --   _           -> return ()
   -- add all entities to render
   -- stepRender
   -- play audio
   -- stepAudioQueue
   -- run current render
-  drawScreen
+  -- drawScreen
   -- clear out queue for next round
   -- setEvents []
   -- garbage collect. yes, every frame
