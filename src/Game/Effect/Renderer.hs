@@ -34,7 +34,7 @@ drawScreen' = do
   -- set current program
   liftIO $ GL.currentProgram $= Just program
 
-  -- render vertext array
+  -- render vertex array
   liftIO $ GL.vertexAttribArray attrib $= GL.Enabled
   liftIO $ V.unsafeWith vertices $ \ptr ->
       liftIO $ GL.vertexAttribPointer attrib $=
