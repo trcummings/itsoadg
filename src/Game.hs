@@ -30,6 +30,7 @@ import           Game.Types
 -- import           Game.System.Init (initSystems)
 import           Game.Util.Constants (initialSize)
 import           Game.Util.TileMap (basicTilemap)
+import           Game.Util.Shaders (makeShader, makeProgram)
 import           Game.Loop (mainLoop)
 import           Game.Effect.Renderer         ( Renderer(..)
                                               , drawScreen'
@@ -142,51 +143,11 @@ main = do
 
 initResources :: IO (GL.Program, GL.AttribLocation)
 initResources = do
-    -- compile vertex shader
-    vs <- GL.createShader GL.VertexShader
-    GL.shaderSourceBS vs $= vsSource
-    GL.compileShader vs
-    -- did the vertex shader compile properly?
-    vsOK <- GL.get $ GL.compileStatus vs
-    -- if it didn't, throw an error. exit
-    unless vsOK $ do
-        hPutStrLn stderr "Error in vertex shader\n"
-        exitFailure
-
-    -- Do it again for the fragment shader
-    fs <- GL.createShader GL.FragmentShader
-    GL.shaderSourceBS fs $= fsSource
-    GL.compileShader fs
-    -- did the fragment shader compile properly?
-    fsOK <- GL.get $ GL.compileStatus fs
-    -- if it didn't, throw an error, exit
-    unless fsOK $ do
-        hPutStrLn stderr "Error in fragment shader\n"
-        exitFailure
-
-    -- create program
-    -- a program represents fully processed executable code
-    program <- GL.createProgram
-    -- attach shaders to program
-    GL.attachShader program vs
-    GL.attachShader program fs
-    -- set program attribute location of "coord2d" to 0
-    GL.attribLocation program "coord2d" $= GL.AttribLocation 0
-    -- link program, check linkage
-    GL.linkProgram program
-    linkOK <- GL.get $ GL.linkStatus program
-    -- validate program, check status
-    GL.validateProgram program
-    valid  <- GL.get $ GL.validateStatus program
-    -- if link or validation failed, throw error, log failure, exit
-    unless (linkOK && valid) $ do
-        hPutStrLn stderr "GL.linkProgram error"
-        plog <- GL.get $ GL.programInfoLog program
-        putStrLn plog
-        exitFailure
-    -- set current program to our program
-    GL.currentProgram $= Just program
-    return (program, GL.AttribLocation 0)
+  vs <- makeShader GL.VertexShader   vsSource
+  fs <- makeShader GL.FragmentShader fsSource
+  program <- makeProgram [vs, fs] [("coord2d", GL.AttribLocation 0)]
+  GL.currentProgram $= Just program
+  return (program, GL.AttribLocation 0)
 
 -- GLSL code for the vertex shader
 vsSource :: BS.ByteString
