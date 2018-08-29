@@ -10,7 +10,7 @@ import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Data.ByteString as BS
-import qualified Data.Vector.Storable as V
+-- import qualified Data.Vector.Storable as V
 import           Foreign.C.Types
 import           Control.Monad (when, unless)
 import           Control.Monad.IO.Class  (MonadIO(..), liftIO)
@@ -147,7 +147,9 @@ initResources = do
     vs <- GL.createShader GL.VertexShader
     GL.shaderSourceBS vs $= vsSource
     GL.compileShader vs
+    -- did the vertex shader compile properly?
     vsOK <- GL.get $ GL.compileStatus vs
+    -- if it didn't, throw an error. exit
     unless vsOK $ do
         hPutStrLn stderr "Error in vertex shader\n"
         exitFailure
@@ -156,24 +158,33 @@ initResources = do
     fs <- GL.createShader GL.FragmentShader
     GL.shaderSourceBS fs $= fsSource
     GL.compileShader fs
+    -- did the fragment shader compile properly?
     fsOK <- GL.get $ GL.compileStatus fs
+    -- if it didn't, throw an error, exit
     unless fsOK $ do
         hPutStrLn stderr "Error in fragment shader\n"
         exitFailure
-    -- create program and attribute location
+
+    -- create program
     program <- GL.createProgram
+    -- attach shaders to program
     GL.attachShader program vs
     GL.attachShader program fs
+    -- set program attribute location of "coord2d to 0"
     GL.attribLocation program "coord2d" $= GL.AttribLocation 0
+    -- link program, check linkage
     GL.linkProgram program
     linkOK <- GL.get $ GL.linkStatus program
+    -- validate program, check status
     GL.validateProgram program
-    status <- GL.get $ GL.validateStatus program
-    unless (linkOK && status) $ do
+    valid  <- GL.get $ GL.validateStatus program
+    -- if link or validation failed, throw error, log failure, exit
+    unless (linkOK && valid) $ do
         hPutStrLn stderr "GL.linkProgram error"
         plog <- GL.get $ GL.programInfoLog program
         putStrLn plog
         exitFailure
+    -- set current program to our program
     GL.currentProgram $= Just program
     return (program, GL.AttribLocation 0)
 
