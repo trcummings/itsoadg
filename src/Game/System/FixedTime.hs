@@ -5,9 +5,7 @@ module Game.System.FixedTime where
 import           Apecs (global)
 
 import           Game.Util.Constants (dT)
-import           Game.Types
-  ( PhysicsTime(..), time, accum
-  , GlobalTime(..) )
+import           Game.Types (PhysicsTime(..), GlobalTime(..))
 import           Game.Wrapper.Apecs (Apecs(..))
 
 getFixedTime :: Apecs m => m (Double, Double)
