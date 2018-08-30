@@ -11,7 +11,6 @@ module Game.Scene.Title where
 
 import qualified SDL
 import           SDL (($=))
--- import           SDL.Font  as TTF (free, load, blended)
 import           Apecs (proxy, global)
 import qualified Linear as L
 import           Linear ((!*!))

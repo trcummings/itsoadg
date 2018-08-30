@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Game.Effect.Renderer where
 
@@ -16,6 +17,11 @@ class Monad m => Renderer m where
   clearScreen :: m ()
   drawScreen  :: m ()
 
+getWindowDims :: MonadIO m => SDL.Window -> m (V2 Int32)
+getWindowDims window = do
+  (V2 width height) <- SDL.get $ SDL.windowSize window
+  return $ V2 (fromIntegral width :: Int32) (fromIntegral height :: Int32)
+
 clearScreen' :: (HasVideoConfig m, MonadIO m) => m ()
 clearScreen' = do
   window <- vcWindow <$> getVideoConfig
@@ -26,10 +32,9 @@ clearScreen' = do
   -- clear buffers
   liftIO $ GL.clear [GL.ColorBuffer, GL.DepthBuffer]
   -- set viewport
-  (V2 width height) <- SDL.get $ SDL.windowSize window
+  (V2 width height) <- getWindowDims window
   liftIO $ GL.viewport $= ( GL.Position 0 0
-                          , GL.Size (fromIntegral width  :: Int32)
-                                    (fromIntegral height :: Int32) )
+                          , GL.Size width height )
 
 drawScreen' :: (HasVideoConfig m, MonadIO m) => m ()
 drawScreen' = do

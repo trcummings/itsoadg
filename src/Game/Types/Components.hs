@@ -9,7 +9,7 @@ import qualified Graphics.GLUtil as U
 import qualified Linear as L
 import           Foreign.C.Types (CInt, CDouble)
 import           GHC.Int (Int32(..))
-import           Linear (V2)
+import           Linear (V2, V3)
 import           Apecs (Entity)
 import           KeyState
 
@@ -57,6 +57,8 @@ import           Game.Types.Player
 --   { size :: (V2 Unit)   -- camera height and width
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
 --   deriving Show
+
+data Position3D = Position3D (V3 Unit)
 
 data Camera = Camera deriving Show
 

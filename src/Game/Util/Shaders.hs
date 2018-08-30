@@ -7,6 +7,9 @@ import           Control.Monad (unless, mapM_)
 import           System.IO (hPutStrLn, stderr)
 import           System.Exit (exitFailure)
 
+data VertexShaderPath   = VertexShaderPath   FilePath
+data FragmentShaderPath = FragmentShaderPath FilePath
+
 printError :: IO ()
 printError = GL.get GL.errors >>= mapM_ (hPutStrLn stderr . ("GL: "++) . show)
 

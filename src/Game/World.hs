@@ -7,11 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell       #-}
 
-module Game.World
-  ( World
-  , System'
-  , Env
-  , initWorld ) where
+module Game.World (World, Env, initWorld) where
 
 import           Apecs
 import qualified Animate (KeyName)
@@ -28,6 +24,7 @@ import Game.Types
   -- , BoundingBox
   , Camera(..)
   , Model(..)
+  , Position3D(..)
   -- , CameraTarget
   -- , Texture
   -- , SpriteSheet
@@ -52,6 +49,8 @@ import Game.Types
 
 -- instance Component Position where
 --   type Storage Position = Map Position
+instance Component Position3D where
+  type Storage Position3D = Map Position3D
 --
 -- instance Component Velocity where
 --   type Storage Velocity = Map Velocity
@@ -148,6 +147,7 @@ makeWorld "World" [
   , ''PhysicsTime
   , ''PlayerInput
   , ''MousePosition
+  , ''Position3D
   --   ''Position
   -- , ''Velocity
   -- , ''Acceleration
@@ -171,5 +171,4 @@ makeWorld "World" [
   , ''OptionList
   ]
 
-type System' a = System World a
 type Env = GameEnv World

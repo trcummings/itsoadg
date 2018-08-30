@@ -22,7 +22,6 @@ module Game.System.Init where
 -- import           Apecs (newEntity)
 --
 -- import           Game.Util.Render (loadTexture, toTexture)
--- import           Game.World (System')
 -- import           Game.Util.Constants
 --   ( spriteSize
 --   , floorFriction

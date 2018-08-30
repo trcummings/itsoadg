@@ -47,7 +47,6 @@ module Game.System.Player where
 --   , frameDeltaSeconds
 --   , playerTopSpeed )
 -- import           Game.Util.Step (smash, peel)
--- import           Game.World (System')
 --
 -- -- movement
 -- bumpVelocityX :: Velocity -> Unit -> Velocity
