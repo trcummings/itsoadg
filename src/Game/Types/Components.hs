@@ -4,6 +4,9 @@ import qualified SDL (Texture, Keycode)
 import qualified SDL.Mixer as Mixer (Chunk, Channel)
 import qualified Data.Map as Map (Map)
 import qualified Animate
+import qualified Graphics.Rendering.OpenGL as GL
+import qualified Graphics.GLUtil as U
+import qualified Linear as L
 import           Foreign.C.Types (CInt, CDouble)
 import           GHC.Int (Int32(..))
 import           Linear (V2)
@@ -20,68 +23,79 @@ import           Game.Types.Player
   , Player'SFX'Key(..) )
 
 -- Aliases
-type BoxEntity = (CollisionModule, BoundingBox, Position, Entity)
-
-type AnimationKey =
-  PlayerKey
-
-type Animations key =
-  Animate.Animations key (Animate.SpriteClip key) Seconds
-
-
--- Component types
-newtype Position =
-  Position (V2 Unit) -- center point
-  deriving Show
-
-newtype Velocity =
-  Velocity (V2 Unit)
-  deriving Show
-
-newtype Acceleration =
-  Acceleration (V2 Unit)
-  deriving Show
-
-newtype BoundingBox =
-  BoundingBox (V2 Unit)
-  deriving Show
-
-data Player =
-  Player (Step PlayerAction)
-  deriving Show
-
-data Camera = Camera
-  { size :: (V2 Unit)   -- camera height and width
-  , ppos :: (V2 Unit) } -- past position for verlet transform
-  deriving Show
-
-data CameraTarget =
-  CameraTarget Entity
-  deriving Show
-
-data Texture =
-  Texture SDL.Texture (V2 CInt)
-
+-- type BoxEntity = (CollisionModule, BoundingBox, Position, Entity)
+--
 -- type AnimationKey =
 --   PlayerKey
-
+--
 -- type Animations key =
 --   Animate.Animations key (Animate.SpriteClip key) Seconds
+--
+--
+-- -- Component types
+-- newtype Position =
+--   Position (V2 Unit) -- center point
+--   deriving Show
+--
+-- newtype Velocity =
+--   Velocity (V2 Unit)
+--   deriving Show
+--
+-- newtype Acceleration =
+--   Acceleration (V2 Unit)
+--   deriving Show
+--
+-- newtype BoundingBox =
+--   BoundingBox (V2 Unit)
+--   deriving Show
+--
+-- data Player =
+--   Player (Step PlayerAction)
+--   deriving Show
 
-data SpriteSheet = SpriteSheet
-    (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
-    (Animate.Position AnimationKey Seconds)
+-- data Camera = Camera
+--   { size :: (V2 Unit)   -- camera height and width
+--   , ppos :: (V2 Unit) } -- past position for verlet transform
+--   deriving Show
 
-data Gravity = Gravity
-  { ascent  :: Unit
-  , descent :: Unit }
-  deriving Show
+data Camera = Camera deriving Show
 
-newtype Friction =
-  Friction Double
-  deriving Show
+data Resource = Resource { shaderProgram :: U.ShaderProgram
+                         , vertBuffer    :: GL.BufferObject
+                         , colorBuffer   :: GL.BufferObject
+                         , elementBuffer :: GL.BufferObject }
 
-data Font = Font [(Char, Texture)]
+data Model = Model { resource  :: Resource
+                   , vertices  :: [L.V3 Float]
+                   , colors    :: [L.V3 Float]
+                   , elements  :: [L.V3 GL.GLuint] }
+-- data CameraTarget =
+--   CameraTarget Entity
+--   deriving Show
+--
+-- data Texture =
+--   Texture SDL.Texture (V2 CInt)
+--
+-- -- type AnimationKey =
+-- --   PlayerKey
+--
+-- -- type Animations key =
+-- --   Animate.Animations key (Animate.SpriteClip key) Seconds
+--
+-- data SpriteSheet = SpriteSheet
+--     (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
+--     (Animate.Position AnimationKey Seconds)
+--
+-- data Gravity = Gravity
+--   { ascent  :: Unit
+--   , descent :: Unit }
+--   deriving Show
+--
+-- newtype Friction =
+--   Friction Double
+--   deriving Show
+--
+-- data Font = Font [(Char, Texture)]
 
 -- accumulator for physics frame time updates
 data PhysicsTime = PhysicsTime
@@ -105,47 +119,47 @@ data PlayerInput = PlayerInput
 data MousePosition =
   MousePosition (V2 Int32)
 
-data Jump = Jump
-  { requested :: Bool
-  , onGround  :: Bool }
-  deriving (Eq, Show)
-
-data FlowMeter = FlowMeter
-  { currentFlow :: Double
-  , baseFlow    :: Double
-  , flowLimit   :: Double
-  , counter     :: Double }
-  deriving Show
-
-data HardFlow = HardFlow
-
--- For flow effect emitter state
-data FlowEffectEmitState =
-    BurningFlow
-  | AbsorbingFlow
-  | NotEmittingFlowEffect
-  deriving Show
-
-newtype FlowEffectEmitter =
-  FlowEffectEmitter FlowEffectEmitState
-  deriving Show
-
-type SFX'Key =
-    Player'SFX'Key
-
-data SoundBank = SoundBank
-  { bank       :: (Map.Map SFX'Key Mixer.Chunk)
-  , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
-  deriving Show
-
-data CollisionModule = CollisionModule
- { layer :: CollisionLayer
- , layerCollisions :: [( CollisionLayer
-                       , RaycastHit
-                       , Either Entity TileType )] }
- deriving Show
-
-data Commandable = Commandable
+-- data Jump = Jump
+--   { requested :: Bool
+--   , onGround  :: Bool }
+--   deriving (Eq, Show)
+--
+-- data FlowMeter = FlowMeter
+--   { currentFlow :: Double
+--   , baseFlow    :: Double
+--   , flowLimit   :: Double
+--   , counter     :: Double }
+--   deriving Show
+--
+-- data HardFlow = HardFlow
+--
+-- -- For flow effect emitter state
+-- data FlowEffectEmitState =
+--     BurningFlow
+--   | AbsorbingFlow
+--   | NotEmittingFlowEffect
+--   deriving Show
+--
+-- newtype FlowEffectEmitter =
+--   FlowEffectEmitter FlowEffectEmitState
+--   deriving Show
+--
+-- type SFX'Key =
+--     Player'SFX'Key
+--
+-- data SoundBank = SoundBank
+--   { bank       :: (Map.Map SFX'Key Mixer.Chunk)
+--   , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
+--   deriving Show
+--
+-- data CollisionModule = CollisionModule
+--  { layer :: CollisionLayer
+--  , layerCollisions :: [( CollisionLayer
+--                        , RaycastHit
+--                        , Either Entity TileType )] }
+--  deriving Show
+--
+-- data Commandable = Commandable
 
 data Option =
   Option { oId      :: String

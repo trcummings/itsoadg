@@ -26,7 +26,8 @@ import Game.Types
   -- , Velocity
   -- , Acceleration
   -- , BoundingBox
-  -- , Camera
+  , Camera(..)
+  , Model(..)
   -- , CameraTarget
   -- , Texture
   -- , SpriteSheet
@@ -63,9 +64,12 @@ import Game.Types
 --
 -- instance Component Player where
 --   type Storage Player = Unique Player
---
--- instance Component Camera where
---   type Storage Camera = Unique Camera
+
+instance Component Camera where
+  type Storage Camera = Unique Camera
+
+instance Component Model where
+  type Storage Model = Map Model
 --
 -- instance Component CameraTarget where
 --   type Storage CameraTarget = Unique CameraTarget
@@ -153,7 +157,8 @@ makeWorld "World" [
   -- , ''Texture
   -- , ''SpriteSheet
   -- , ''Gravity
-  -- , ''Camera
+  , ''Camera
+  , ''Model
   -- , ''CameraTarget
   -- , ''Font
   -- , ''Jump

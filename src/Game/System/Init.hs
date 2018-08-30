@@ -57,12 +57,12 @@ module Game.System.Init where
 --   , Commandable(..) )
 -- import           Game.Sprite (loadSpriteSheet)
 
+-- characters :: String
 -- characters =
 --      ['a'..'z']
 --   ++ ['A'..'Z']
 --   ++ ['0'..'9']
---   ++ [' ', ':', ',', '-', '.']
-
+--   ++ [' ', ':', ',', '-', '.', '>', '<']
 
 -- type SpriteAnimation = System' (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
 
