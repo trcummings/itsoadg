@@ -32,8 +32,8 @@ class Monad m => Apecs m where
 
   cmapM_     :: forall c a. ECS.Has World c => (c -> m a) -> m ()
 
-  qmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
-             => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
+  -- qmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
+  --            => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
 
   get        :: forall c. ECS.Has World c
              => Core.Entity -> m c
@@ -79,23 +79,23 @@ cmapM_' f = do
   mapM_ f all
   return ()
 
-emap :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
-     => (cx -> (cy, [QueueEvent]))
-     -> ECS.System World [QueueEvent]
-emap f = do
-  sx :: ECS.Storage cx <- ECS.getStore
-  sy :: ECS.Storage cy <- ECS.getStore
-  sl <- ECS.liftIO $ Core.explMembers sx
-  qs <- ECS.liftIO $ U.foldM (\qs e -> do
-                                 x <- Core.explGet sx e
-                                 let (x', qs') = f x
-                                 Core.explSet sy e x'
-                                 return $ qs ++ qs' ) [] sl
-  return qs
-
-qmap' :: (Apecs m, ECS.Has World cx, ECS.Has World cy)
-      => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
-qmap' f = runSystem $ emap f
+-- emap :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
+--      => (cx -> (cy, [QueueEvent]))
+--      -> ECS.System World [QueueEvent]
+-- emap f = do
+--   sx :: ECS.Storage cx <- ECS.getStore
+--   sy :: ECS.Storage cy <- ECS.getStore
+--   sl <- ECS.liftIO $ Core.explMembers sx
+--   qs <- ECS.liftIO $ U.foldM (\qs e -> do
+--                                  x <- Core.explGet sx e
+--                                  let (x', qs') = f x
+--                                  Core.explSet sy e x'
+--                                  return $ qs ++ qs' ) [] sl
+--   return qs
+--
+-- qmap' :: (Apecs m, ECS.Has World cx, ECS.Has World cy)
+--       => (cx -> (cy, [QueueEvent])) -> m [QueueEvent]
+-- qmap' f = runSystem $ emap f
 
 get' :: (Apecs m, ECS.Has World c)
      => Core.Entity -> m c
