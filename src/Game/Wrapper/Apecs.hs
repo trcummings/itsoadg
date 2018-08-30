@@ -6,7 +6,7 @@ module Game.Wrapper.Apecs where
 
 import qualified Apecs               as ECS
 import qualified Apecs.Core          as Core
-import qualified Data.Vector.Unboxed as U
+-- import qualified Data.Vector.Unboxed as U
 import           Control.Monad (mapM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (runReaderT)
