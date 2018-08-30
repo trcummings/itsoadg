@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Game.System.FixedTime where
 
 import           Apecs (global)
@@ -13,16 +15,12 @@ getFixedTime = do
   PhysicsTime t acc <- get global
   return (t, acc)
 
+-- clamp frameTime at 25ms
 accumulateFixedTime :: Apecs m => Double -> m ()
 accumulateFixedTime nextTime = do
-  GlobalTime currentTime <- get global
-  -- update global time
-  cmap $ \(GlobalTime _) -> GlobalTime nextTime
-  -- update physics frame time accumulator
-  cmap $ \(PhysicsTime t acc) -> PhysicsTime
-    { time = t
-    -- clamp frameTime at 25ms
-    , accum = acc + (min 25 $ nextTime - currentTime) }
+  cmap $ \(GlobalTime cTime, pt :: PhysicsTime) ->
+    ( GlobalTime nextTime
+    , pt { accum = (accum pt) + (min 25 $ nextTime - cTime) } )
 
 clearFixedTime :: Apecs m => m ()
 clearFixedTime = cmap $ \(PhysicsTime t' acc') ->
