@@ -8,5 +8,5 @@ data Scene =
   deriving (Eq, Show)
 
 data GameState = GameState
-  { gsScene      :: Scene
-  , gsNextScene  :: Scene }
+  { _Scene      :: Scene
+  , _NextScene  :: Scene }

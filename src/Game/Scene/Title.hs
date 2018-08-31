@@ -40,7 +40,12 @@ import           Game.Types
   -- , Position(..)
   -- , Font(..)
   , VideoConfig(..)
-  -- , Camera(..)
+
+  , Camera(..)
+  , ClippingPlanes(..)
+  , FieldOfView(..)
+
+  , Position3D(..)
   , GlobalTime(..)
   , Model(..)
   , Resource(..)
@@ -78,17 +83,17 @@ transformM width height t = projection !*! view !*! model !*! anim where
   aspect     = fromIntegral width / fromIntegral height
 
 titleOptions :: [Option]
-titleOptions = [  Option { oId = "ToScene_Play"
-                         , text = "New Game"
+titleOptions = [  Option { oId      = "ToScene_Play"
+                         , text     = "New Game"
                          , selected = True }
-                , Option { oId = "ToScene_SelectFile"
-                         , text = "Load Game"
+                , Option { oId      = "ToScene_SelectFile"
+                         , text     = "Load Game"
                          , selected = False }
-                , Option { oId = "ToScene_Options"
-                         , text = "Options"
+                , Option { oId      = "ToScene_Options"
+                         , text     = "Options"
                          , selected = False }
-                , Option { oId = "ToScene_Quit"
-                         , text = "Quit Game"
+                , Option { oId      = "ToScene_Quit"
+                         , text     = "Quit Game"
                          , selected = False }
                 ]
 
@@ -128,6 +133,12 @@ titleTransition = do
             , vertices = verts
             , colors   = cols
             , elements = elems } )
+
+  -- camera
+  newEntity (
+      Camera { clippingPlanes = ClippingPlanes { near = 0.1, far = 10 }
+             , fieldOfView    = FieldOfView (-30) }
+    , Position3D $ L.V3 0 2 0 )
   return ()
 
 titleCleanUp :: (Apecs m) => m ()
@@ -145,6 +156,7 @@ titleStep :: ( Apecs m
 titleStep = do
   -- ensure inputs are continually updated
   cmap maintainInputs
+
   -- when up or down key pressed, shift the selected option up or down
   -- when enter key pressed, use the selected oId to an event fn
   cmapM_ $ \(PlayerInput m _) -> do
@@ -177,10 +189,12 @@ titleStep = do
                         & element idx1 %~ (\opt -> opt { selected = not $ selected opt })
                         & element idx2 %~ (\opt -> opt { selected = not $ selected opt })
     return ()
+  --
+
 
 titleRender :: (Apecs m, HasVideoConfig m, MonadIO m) => m ()
 titleRender = do
-  window <- vcWindow <$> getVideoConfig
+  window <- _Window <$> getVideoConfig
   (L.V2 width' height') <- SDL.get $ SDL.windowSize window
   cmapM_ $ \(model :: Model, GlobalTime t) -> do
     let r = resource model

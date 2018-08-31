@@ -60,8 +60,29 @@ import           Game.Types.Player
 
 data Position3D = Position3D (V3 Unit)
 
-data Camera = Camera deriving Show
+-- data Velocity3D = Velocity3D (V3 Unit)
 
+-- transformM :: Int -> Int -> Double -> L.M44 GL.GLfloat
+-- transformM width height t = projection !*! view !*! model !*! anim where
+--   angle      = realToFrac t * pi/4
+--   anim       = L.mkTransformation (L.axisAngle (L.V3 0 1 0) angle) L.zero
+--   model      = L.mkTransformationMat L.identity $ L.V3 0 0 (-4)
+--   view       = U.camMatrix cam
+--   cam        = U.tilt (-30) . U.dolly (L.V3 0 2 0) $ U.fpsCamera
+--   projection = U.projectionMatrix (pi/4) aspect 0.1 10
+--   aspect     = fromIntegral width / fromIntegral height
+
+-- Camera Types
+data ClippingPlanes = ClippingPlanes { near :: Double
+                                     , far  :: Double }
+
+newtype FieldOfView = FieldOfView Double
+
+data Camera =
+  Camera { clippingPlanes :: ClippingPlanes
+         , fieldOfView    :: FieldOfView }
+
+-- OpenGL types
 data Resource = Resource { shaderProgram :: U.ShaderProgram
                          , vertBuffer    :: GL.BufferObject
                          , colorBuffer   :: GL.BufferObject
@@ -71,6 +92,7 @@ data Model = Model { resource  :: Resource
                    , vertices  :: [L.V3 Float]
                    , colors    :: [L.V3 Float]
                    , elements  :: [L.V3 GL.GLuint] }
+
 -- data CameraTarget =
 --   CameraTarget Entity
 --   deriving Show

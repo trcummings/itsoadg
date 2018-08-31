@@ -14,7 +14,7 @@ import qualified Animate (KeyName)
 import qualified Data.Map as Map (fromList, empty)
 import qualified SDL
 import           Linear (V2(..))
-import qualified KeyState (initKeyState)
+import           KeyState (KeyState, initKeyState)
 
 import Game.Types
   ( GameEnv
@@ -98,17 +98,26 @@ instance Monoid GlobalTime where
 instance Component GlobalTime where
   type Storage GlobalTime = Global GlobalTime
 
+allKeys :: [SDL.Keycode]
+allKeys = [ SDL.KeycodeA
+          , SDL.KeycodeD
+          , SDL.KeycodeW
+          , SDL.KeycodeS
+          , SDL.KeycodeN
+          , SDL.KeycodeM
+          , SDL.KeycodeReturn
+          , SDL.KeycodeRight
+          , SDL.KeycodeLeft
+          , SDL.KeycodeUp
+          , SDL.KeycodeDown
+          ]
+
+keycodes :: [(SDL.Keycode, KeyState Double)]
+keycodes = map (\k -> (k, initKeyState)) allKeys
+
 instance Monoid PlayerInput where
   mempty = PlayerInput
-    { inputs = Map.fromList [
-          (SDL.KeycodeA, KeyState.initKeyState)
-        , (SDL.KeycodeD, KeyState.initKeyState)
-        , (SDL.KeycodeW, KeyState.initKeyState)
-        , (SDL.KeycodeS, KeyState.initKeyState)
-        , (SDL.KeycodeN, KeyState.initKeyState)
-        , (SDL.KeycodeM, KeyState.initKeyState)
-        , (SDL.KeycodeReturn, KeyState.initKeyState)
-        ]
+    { inputs = Map.fromList keycodes
     , justModified = Map.empty }
 instance Component PlayerInput where
   type Storage PlayerInput = Global PlayerInput

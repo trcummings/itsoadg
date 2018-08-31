@@ -11,4 +11,4 @@ class Monad m => HasECSWorld m where
   getECSWorld :: m World
 
 getECSWorld' :: (HasECSWorld m, MonadReader Env m) => m World
-getECSWorld' = envECSWorld <$> ask
+getECSWorld' = _World <$> ask

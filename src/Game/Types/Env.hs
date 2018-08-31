@@ -9,10 +9,10 @@ import           Data.IORef
 import           Game.Types.GameState (GameState(..))
 
 data VideoConfig = VideoConfig
-  { vcWindow      :: SDL.Window
-  , vcGLContext   :: SDL.GLContext }
+  { _Window      :: SDL.Window
+  , _GLContext   :: SDL.GLContext }
 
 data GameEnv w = GameEnv
-  { envVideoConfig   :: VideoConfig
-  , envGameState     :: !(IORef GameState)
-  , envECSWorld      :: w } -- game world
+  { _VideoConfig   :: VideoConfig
+  , _GameState     :: !(IORef GameState)
+  , _World      :: w } -- game world

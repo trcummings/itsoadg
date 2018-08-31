@@ -82,11 +82,11 @@ main = do
   window <- SDL.createWindow
     "Let Sleeping Gods Lie"
     SDL.defaultWindow { SDL.windowInitialSize = initialSize
-                      , SDL.windowOpenGL = Just SDL.defaultOpenGL }
+                      , SDL.windowOpenGL      = Just SDL.defaultOpenGL }
   -- create OpenGL renderer context
   renderer       <- SDL.glCreateContext window
-  let videoConfig = VideoConfig { vcWindow      = window
-                                , vcGLContext   = renderer }
+  let videoConfig = VideoConfig { _Window      = window
+                                , _GLContext   = renderer }
 
   -- register joystick to receive events from it
   -- joysticks <- SDL.availableJoysticks
@@ -96,13 +96,12 @@ main = do
   world <- initWorld
 
   -- initialize various env variables
-  gameState <- newIORef $ GameState { gsScene      = Scene'Init
-                                    , gsNextScene  = Scene'Title }
+  gameState <- newIORef $ GameState { _Scene      = Scene'Init
+                                    , _NextScene  = Scene'Title }
 
-  let env = GameEnv { envVideoConfig   = videoConfig
-                    -- , envRuntimeConfig = runtimeConfig
-                    , envGameState     = gameState
-                    , envECSWorld      = world }
+  let env = GameEnv { _VideoConfig = videoConfig
+                    , _GameState   = gameState
+                    , _World       = world }
   -- start loop
   runGame env mainLoop
 
