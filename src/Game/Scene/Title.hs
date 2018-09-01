@@ -22,6 +22,7 @@ import qualified Data.Map as Map (empty, fromList)
 import           Data.Map ((!), keys)
 import           Data.Text (singleton)
 import           Data.List (find, findIndex)
+import           Data.Coerce (coerce)
 import           Control.Lens ((&), (%~), element)
 import           Control.Monad (when, mapM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -44,6 +45,8 @@ import           Game.Types
   , Camera(..)
   , ClippingPlanes(..)
   , FieldOfView(..)
+  , Orientation(..)
+  , CameraAxes(..)
 
   , Position3D(..)
   , GlobalTime(..)
@@ -71,16 +74,6 @@ oIdAction oId = do
     "ToScene_Options"    -> return ()
     "ToScene_Quit"       -> setNextScene Scene'Quit
     _                    -> return ()
-
-transformM :: Int -> Int -> Double -> L.M44 GL.GLfloat
-transformM width height t = projection !*! view !*! model !*! anim where
-  angle      = realToFrac t * pi/4
-  anim       = L.mkTransformation (L.axisAngle (L.V3 0 1 0) angle) L.zero
-  model      = L.mkTransformationMat L.identity $ L.V3 0 0 (-4)
-  view       = U.camMatrix cam
-  cam        = U.tilt (-30) . U.dolly (L.V3 0 2 0) $ U.fpsCamera
-  projection = U.projectionMatrix (pi/4) aspect 0.1 10
-  aspect     = fromIntegral width / fromIntegral height
 
 titleOptions :: [Option]
 titleOptions = [  Option { oId      = "ToScene_Play"
@@ -132,12 +125,17 @@ titleTransition = do
       Model { resource = resrce
             , vertices = verts
             , colors   = cols
-            , elements = elems } )
+            , elements = elems }
+    , Position3D $ L.V3 0 0 (-4) )
 
   -- camera
   newEntity (
       Camera { clippingPlanes = ClippingPlanes { near = 0.1, far = 10 }
-             , fieldOfView    = FieldOfView (-30) }
+             , fieldOfView    = FieldOfView (-30)
+             , orientation    = Orientation $ L.Quaternion 1 (L.V3 0 0 0)
+             , cameraAxes     = CameraAxes { xAxis = L.V3 1 0 0
+                                           , yAxis = L.V3 0 1 0
+                                           , zAxis = L.V3 0 0 (-1) } }
     , Position3D $ L.V3 0 2 0 )
   return ()
 
@@ -191,54 +189,85 @@ titleStep = do
     return ()
   --
 
+-- transformM :: Int -> Int -> Double -> L.M44 GL.GLfloat
+-- transformM width height t = projection !*! view !*! model !*! anim where
+--   angle      = realToFrac t * pi/4
+--   anim       = L.mkTransformation (L.axisAngle (L.V3 0 1 0) angle) L.zero -- rotation around axis
+--   model      = L.mkTransformationMat L.identity $ L.V3 0 0 (-4) -- the cube
+--   view       = U.camMatrix cam
+--   cam        = U.tilt (-30) . U.dolly (L.V3 0 2 0) $ U.fpsCamera
+--   projection = U.projectionMatrix (pi/4) aspect 0.1 10
+--   aspect     = fromIntegral width / fromIntegral height
 
 titleRender :: (Apecs m, HasVideoConfig m, MonadIO m) => m ()
 titleRender = do
   window <- _Window <$> getVideoConfig
   (L.V2 width' height') <- SDL.get $ SDL.windowSize window
-  cmapM_ $ \(model :: Model, GlobalTime t) -> do
-    let r = resource model
-        v = vertices model
-        c = colors   model
-        e = elements model
-        dgt = t / 1000
-        sProgram    = shaderProgram r
-        attribKeys  = keys $ U.attribs sProgram
-        uniformKeys = keys $ U.uniforms sProgram
-        height = fromIntegral height'
-        width  = fromIntegral width'
+  (GlobalTime t) <- get global
+  cmapM_ $ \(camera :: Camera, Position3D cPos) -> do
+    cmapM_ $ \(model :: Model, Position3D mPos) -> do
+      let r = resource model
+          v = vertices model
+          c = colors   model
+          e = elements model
+          dgt = t / 1000
+          sProgram    = shaderProgram r
+          attribKeys  = keys $ U.attribs sProgram
+          uniformKeys = keys $ U.uniforms sProgram
+          height = fromIntegral height'
+          width  = fromIntegral width'
+          -- camera stuff
+          Orientation ore   = orientation camera
+          FieldOfView fov   = fieldOfView camera
+          projectionMatrix  = U.projectionMatrix
+                                (pi / 4)
+                                (width / height)
+                                (near . clippingPlanes $ camera)
+                                (far  . clippingPlanes $ camera)
+          cameraOrientation = ore * ( L.axisAngle
+                                        (xAxis . cameraAxes $ camera)
+                                        (realToFrac (fov * pi / 180) :: Float) )
+          cameraViewMatrix  = L.mkTransformation q (L.rotate q $ negate cPos)
+            where q = L.conjugate $ ore
+          -- the cube
+          cubeModel = L.mkTransformationMat L.identity mPos
+          cubeAnim  = L.mkTransformation (L.axisAngle (L.V3 0 1 0) (realToFrac dgt * pi / 4)) L.zero
+          cubeTrans =     projectionMatrix
+                      !*! cameraViewMatrix
+                      !*! cubeModel
+                      !*! cubeAnim :: L.M44 GL.GLfloat
 
-    -- set current program to shaderProgram
-    liftIO $ GL.currentProgram $= (Just $ U.program sProgram)
+      -- set current program to shaderProgram
+      liftIO $ GL.currentProgram $= (Just $ U.program sProgram)
 
-    -- enable all attributes
-    liftIO $ mapM_ (\k -> liftIO $ U.enableAttrib sProgram k) attribKeys
+      -- enable all attributes
+      liftIO $ mapM_ (\k -> liftIO $ U.enableAttrib sProgram k) attribKeys
 
-    -- bind all buffers & set all attributes
-    liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (vertBuffer r)
-    liftIO $ U.setAttrib sProgram "coord3d"
-        GL.ToFloat $ GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
+      -- bind all buffers & set all attributes
+      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (vertBuffer r)
+      liftIO $ U.setAttrib sProgram "coord3d"
+          GL.ToFloat $ GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
 
-    liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (colorBuffer r)
-    liftIO $ U.setAttrib sProgram "v_color"
-        GL.ToFloat $ GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
+      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (colorBuffer r)
+      liftIO $ U.setAttrib sProgram "v_color"
+          GL.ToFloat $ GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
 
-    -- transform all uniforms
-    liftIO $ mapM_ (\k -> do
-          U.asUniform (transformM width height dgt)
-        $ U.getUniform sProgram k
-      ) uniformKeys
+      -- transform all uniforms
+      liftIO $ mapM_ (\k -> do
+            U.asUniform $ cubeTrans
+          $ U.getUniform sProgram k
+        ) uniformKeys
 
-    -- bind element buffer
-    liftIO $ GL.bindBuffer GL.ElementArrayBuffer $= Just (elementBuffer r)
+      -- bind element buffer
+      liftIO $ GL.bindBuffer GL.ElementArrayBuffer $= Just (elementBuffer r)
 
-    -- draw indexed triangles
-    liftIO $ U.drawIndexedTris (fromIntegral $ length e)
+      -- draw indexed triangles
+      liftIO $ U.drawIndexedTris (fromIntegral $ length e)
 
-    -- disable all attributes
-    liftIO $ mapM_ (\k -> do
-        GL.vertexAttribArray (U.getAttrib sProgram k) $= GL.Disabled
-      ) attribKeys
+      -- disable all attributes
+      liftIO $ mapM_ (\k -> do
+          GL.vertexAttribArray (U.getAttrib sProgram k) $= GL.Disabled
+        ) attribKeys
     return ()
 
 

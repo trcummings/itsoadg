@@ -58,29 +58,26 @@ import           Game.Types.Player
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
 --   deriving Show
 
-data Position3D = Position3D (V3 Unit)
+data Position3D = Position3D (V3 Float)
 
 -- data Velocity3D = Velocity3D (V3 Unit)
 
--- transformM :: Int -> Int -> Double -> L.M44 GL.GLfloat
--- transformM width height t = projection !*! view !*! model !*! anim where
---   angle      = realToFrac t * pi/4
---   anim       = L.mkTransformation (L.axisAngle (L.V3 0 1 0) angle) L.zero
---   model      = L.mkTransformationMat L.identity $ L.V3 0 0 (-4)
---   view       = U.camMatrix cam
---   cam        = U.tilt (-30) . U.dolly (L.V3 0 2 0) $ U.fpsCamera
---   projection = U.projectionMatrix (pi/4) aspect 0.1 10
---   aspect     = fromIntegral width / fromIntegral height
-
 -- Camera Types
-data ClippingPlanes = ClippingPlanes { near :: Double
-                                     , far  :: Double }
+data ClippingPlanes = ClippingPlanes { near :: Float
+                                     , far  :: Float }
 
-newtype FieldOfView = FieldOfView Double
+newtype FieldOfView = FieldOfView Float
 
-data Camera =
-  Camera { clippingPlanes :: ClippingPlanes
-         , fieldOfView    :: FieldOfView }
+data CameraAxes = CameraAxes { xAxis :: L.V3 Float
+                             , yAxis :: L.V3 Float
+                             , zAxis :: L.V3 Float }
+
+newtype Orientation = Orientation (L.Quaternion Float)
+
+data Camera = Camera { clippingPlanes :: ClippingPlanes
+                     , fieldOfView    :: FieldOfView
+                     , orientation    :: Orientation
+                     , cameraAxes     :: CameraAxes }
 
 -- OpenGL types
 data Resource = Resource { shaderProgram :: U.ShaderProgram
