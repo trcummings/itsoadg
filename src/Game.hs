@@ -85,8 +85,8 @@ main = do
                       , SDL.windowOpenGL      = Just SDL.defaultOpenGL }
   -- create OpenGL renderer context
   renderer       <- SDL.glCreateContext window
-  let videoConfig = VideoConfig { _Window      = window
-                                , _GLContext   = renderer }
+  let videoConfig = VideoConfig { _Window    = window
+                                , _GLContext = renderer }
 
   -- register joystick to receive events from it
   -- joysticks <- SDL.availableJoysticks
@@ -96,8 +96,8 @@ main = do
   world <- initWorld
 
   -- initialize various env variables
-  gameState <- newIORef $ GameState { _Scene      = Scene'Init
-                                    , _NextScene  = Scene'Title }
+  gameState <- newIORef $ GameState { _Scene     = Scene'Init
+                                    , _NextScene = Scene'Title }
 
   let env = GameEnv { _VideoConfig = videoConfig
                     , _GameState   = gameState

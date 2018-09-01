@@ -21,7 +21,6 @@ import Game.Types
   , QueueEvent(..) )
 import Game.World (Env)
 
--- import Game.Effect.HasEventQueue (HasEventQueue(..))
 import Game.Effect.SceneManager (SceneManager(..))
 import Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import Game.Effect.Renderer (Renderer(..), clearScreen, drawScreen)
@@ -72,7 +71,6 @@ mainLoop :: ( MonadReader Env m
             , Renderer        m
             , Apecs           m
             , SceneManager    m
-            -- , HasEventQueue   m
             , HasVideoConfig  m
             , MonadIO         m
             ) => m ()
@@ -99,8 +97,6 @@ mainLoop = do
   -- stepAudioQueue
   -- run current render, swap background buffer
   drawScreen
-  -- clear out queue for next round
-  -- setEvents []
   -- garbage collect. yes, every frame
   runGC
   -- loop if game still running
