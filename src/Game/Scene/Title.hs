@@ -84,7 +84,7 @@ oIdAction oId = do
 titleOptions :: [Option]
 titleOptions = [  Option { oId      = "ToScene_Play"
                          , text     = "New Game"
-                         , selected = True }
+                         , selected = False }
                 , Option { oId      = "ToScene_SelectFile"
                          , text     = "Load Game"
                          , selected = False }
@@ -93,7 +93,7 @@ titleOptions = [  Option { oId      = "ToScene_Play"
                          , selected = False }
                 , Option { oId      = "ToScene_Quit"
                          , text     = "Quit Game"
-                         , selected = False }
+                         , selected = True }
                 ]
 
 titleTransition :: (Apecs m, MonadIO m) => m ()
@@ -137,7 +137,7 @@ titleTransition = do
   -- camera
   newEntity (
       Camera { clippingPlanes = ClippingPlanes { near = 0.1, far = 10 }
-             , fieldOfView    = FieldOfView (-30)
+             , fieldOfView    = FieldOfView (pi / 4)
              , orientation    = Orientation $ L.Quaternion 1 (L.V3 0 0 0)
              , cameraAxes     = CameraAxes { xAxis = L.V3 1 0 0
                                            , yAxis = L.V3 0 1 0
@@ -223,8 +223,9 @@ titleRender = do
           width  = fromIntegral width'
           -- camera stuff
           Orientation ore   = orientation camera
+          FieldOfView fov   = fieldOfView camera
           projectionMatrix  = U.projectionMatrix
-                                (pi / 4)
+                                fov
                                 (width / height)
                                 (near . clippingPlanes $ camera)
                                 (far  . clippingPlanes $ camera)
