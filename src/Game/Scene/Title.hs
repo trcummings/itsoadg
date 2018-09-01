@@ -237,7 +237,7 @@ titleRender = do
           cubeTrans =     projectionMatrix
                       !*! cameraViewMatrix
                       !*! cubeModel
-                      !*! cubeAnim :: L.M44 GL.GLfloat
+                      !*! cubeAnim
 
       -- set current program to shaderProgram
       liftIO $ GL.currentProgram $= (Just $ U.program sProgram)
