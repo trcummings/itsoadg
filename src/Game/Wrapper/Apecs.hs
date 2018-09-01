@@ -21,8 +21,7 @@ class Monad m => Apecs m where
   runGC      :: m ()
 
   newEntity  :: forall c. ( Core.Store (ECS.Storage c)
-                          , ECS.Has World c
-                          , ECS.Has World ECS.EntityCounter )
+                          , ECS.Has World c )
              => c -> m ECS.Entity
 
   cmap       :: forall cx cy. (ECS.Has World cx, ECS.Has World cy)
