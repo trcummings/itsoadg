@@ -24,12 +24,11 @@ import Game.World (Env)
 import Game.Effect.SceneManager (SceneManager(..))
 import Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import Game.Effect.Renderer (Renderer(..), clearScreen, drawScreen)
+import Game.Effect.Clock (Clock(..), accumulateFixedTime, clearFixedTime, getFixedTime)
 
 import Game.Wrapper.SDLInput (SDLInput, pollEvents)
-import Game.Wrapper.SDLTime (SDLTime, nextTick)
 import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
-import Game.System.FixedTime (accumulateFixedTime, clearFixedTime, getFixedTime)
 import Game.System.Input (stepSDLInput)
 -- import Game.System.Audio (stepAudioQueue)
 
@@ -38,10 +37,9 @@ import Game.Scene.Title (titleStep, titleTransition, titleRender)
 import Game.Util.Constants (dT)
 
 -- update physics multiple times if time step is less than frame update time
-innerStep :: ( MonadReader Env m
-             , SDLInput        m
-             , SDLTime         m
+innerStep :: ( SDLInput        m
              , Apecs           m
+             , Clock           m
              , HasVideoConfig  m
              , SceneManager    m
              , MonadIO         m )
@@ -65,9 +63,8 @@ innerStep acc events scene = do
         Scene'Title -> titleStep
         _           -> return ()
 
-mainLoop :: ( MonadReader Env m
-            , SDLInput        m
-            , SDLTime         m
+mainLoop :: ( SDLInput        m
+            , Clock           m
             , Renderer        m
             , Apecs           m
             , SceneManager    m
@@ -77,12 +74,10 @@ mainLoop :: ( MonadReader Env m
 mainLoop = do
   -- prep screen for next render
   clearScreen
-  -- get next time tick from SDL
-  nextTime <- nextTick
   -- update player input button-key keystate-value map
   stepSDLInput
   -- accumulate fixed time for updates
-  accumulateFixedTime nextTime
+  accumulateFixedTime
   -- get fixed time for inner step
   (_, acc) <- getFixedTime
   -- run inner step

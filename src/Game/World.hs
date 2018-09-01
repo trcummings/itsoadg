@@ -31,8 +31,6 @@ import Game.Types
   -- , Gravity
   -- , Friction
   -- , Font
-  , PhysicsTime(..)
-  , GlobalTime(..)
   , PlayerInput(..)
   , MousePosition(..)
   -- , Jump(..)
@@ -87,17 +85,7 @@ instance Component Model where
 --
 -- instance Component Font where
 --   type Storage Font = Map Font
-
-instance Monoid PhysicsTime where
-  mempty = PhysicsTime 0 0
-instance Component PhysicsTime where
-  type Storage PhysicsTime = Global PhysicsTime
-
-instance Monoid GlobalTime where
-  mempty = GlobalTime 0
-instance Component GlobalTime where
-  type Storage GlobalTime = Global GlobalTime
-
+--
 allKeys :: [SDL.Keycode]
 allKeys = [ SDL.KeycodeA
           , SDL.KeycodeD
@@ -114,7 +102,7 @@ allKeys = [ SDL.KeycodeA
 
 keycodes :: [(SDL.Keycode, KeyState Double)]
 keycodes = map (\k -> (k, initKeyState)) allKeys
-
+--
 instance Monoid PlayerInput where
   mempty = PlayerInput
     { inputs = Map.fromList keycodes
@@ -152,9 +140,7 @@ instance Component OptionList where
   type Storage OptionList = Map OptionList
 
 makeWorld "World" [
-    ''GlobalTime
-  , ''PhysicsTime
-  , ''PlayerInput
+    ''PlayerInput
   , ''MousePosition
   , ''Position3D
   --   ''Position

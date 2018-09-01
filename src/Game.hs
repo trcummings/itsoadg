@@ -17,6 +17,8 @@ import           Game.Types
   ( GameEnv(..)
   , VideoConfig(..)
   , Scene(..)
+  , GlobalTime(..)
+  , PhysicsTime(..)
   , GameState(..) )
 import           Game.Util.Constants (initialSize)
 import           Game.Loop (mainLoop)
@@ -35,6 +37,11 @@ import           Game.Effect.SceneManager     ( SceneManager(..)
                                               , setScene'
                                               , getNextScene'
                                               , setNextScene' )
+import           Game.Effect.Clock            ( Clock(..)
+                                              , getFixedTime'
+                                              , accumulateFixedTime'
+                                              , clearFixedTime'
+                                              , getGlobalTime' )
 import           Game.Wrapper.SDLInput    (SDLInput(..), pollEvents')
 import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
 import           Game.Wrapper.Apecs       ( Apecs(..)
@@ -96,8 +103,10 @@ main = do
   world <- initWorld
 
   -- initialize various env variables
-  gameState <- newIORef $ GameState { _Scene     = Scene'Init
-                                    , _NextScene = Scene'Title }
+  gameState <- newIORef $ GameState { _Scene        = Scene'Init
+                                    , _NextScene    = Scene'Title
+                                    , _GlobalClock  = GlobalTime 0
+                                    , _PhysicsClock = PhysicsTime 0 0 }
 
   let env = GameEnv { _VideoConfig = videoConfig
                     , _GameState   = gameState
@@ -152,6 +161,11 @@ instance HasVideoConfig Game where
 instance HasECSWorld Game where
   getECSWorld = getECSWorld'
 
+instance Clock Game where
+  getFixedTime        = getFixedTime'
+  getGlobalTime       = getGlobalTime'
+  accumulateFixedTime = accumulateFixedTime'
+  clearFixedTime      = clearFixedTime'
 -- -- modules
 instance Renderer Game where
   clearScreen = clearScreen'

@@ -32,6 +32,7 @@ import           System.FilePath ((</>))
 
 import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.SceneManager (SceneManager, setNextScene)
+import           Game.Effect.Clock (Clock, getGlobalTime)
 import           Game.Wrapper.Apecs (Apecs(..))
 
 import           Game.Util.Camera
@@ -55,7 +56,6 @@ import           Game.Types
   , CameraAxes(..)
 
   , Position3D(..)
-  , GlobalTime(..)
   , Model(..)
   , Resource(..)
   , Unit(..)
@@ -204,11 +204,11 @@ titleStep = do
     return ()
 
 
-titleRender :: (Apecs m, HasVideoConfig m, MonadIO m) => m ()
+titleRender :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
 titleRender = do
   window <- _Window <$> getVideoConfig
   (L.V2 width' height') <- SDL.get $ SDL.windowSize window
-  (GlobalTime t) <- get global
+  t <- getGlobalTime
   cmapM_ $ \(camera :: Camera, Position3D cPos) -> do
     cmapM_ $ \(model :: Model, Position3D mPos) -> do
       let r = resource model

@@ -118,17 +118,6 @@ data Model = Model { resource  :: Resource
 --
 -- data Font = Font [(Char, Texture)]
 
--- accumulator for physics frame time updates
-data PhysicsTime = PhysicsTime
-  { time  :: Double
-  , accum :: Double }
-  deriving Show
-
--- global timer
-newtype GlobalTime =
-  GlobalTime Double
-  deriving Show
-
 -- global input for player
 type PlayerInputMap = (Map.Map SDL.Keycode (KeyState Double))
 type NewlyModifiedInputs = (Map.Map SDL.Keycode Bool)
