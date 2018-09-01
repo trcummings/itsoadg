@@ -34,6 +34,12 @@ import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.SceneManager (SceneManager, setNextScene)
 import           Game.Wrapper.Apecs (Apecs(..))
 
+import           Game.Util.Camera
+  ( runCameraAction
+  , CameraEntity
+  , CameraAction(..)
+  , Degrees(..)
+  , Rotation(..) )
 import           Game.System.Input (maintainInputs)
 import           Game.Types
   ( OptionList(..)
@@ -136,15 +142,24 @@ titleTransition = do
              , cameraAxes     = CameraAxes { xAxis = L.V3 1 0 0
                                            , yAxis = L.V3 0 1 0
                                            , zAxis = L.V3 0 0 (-1) } }
-    , Position3D $ L.V3 0 2 0 )
+    , Position3D $ L.V3 0 0 0 )
+  cmap $ \(c :: CameraEntity) ->
+      runCameraAction (Camera'Rotation Tilt (Degrees (-30)))
+    . runCameraAction (Camera'Dolly (L.V3 0 2 0)) $ c
+
   return ()
 
 titleCleanUp :: (Apecs m) => m ()
 titleCleanUp = do
   -- delete the options menu
-  cmapM_ $ \(_ :: OptionList, ety) -> destroy ety (proxy :: OptionList)
+  cmapM_ $ \(_ :: OptionList, ety) ->
+    destroy ety (proxy :: OptionList)
   -- destroy the cube
-  cmapM_ $ \(_ :: Model, ety) -> destroy ety (proxy :: Model)
+  cmapM_ $ \(_ :: Model, _ :: Position3D, ety) ->
+    destroy ety (proxy :: (Model, Position3D))
+  -- destroy the camera
+  cmapM_ $ \(_ :: CameraEntity, ety) ->
+    destroy ety (proxy :: CameraEntity)
   return ()
 
 titleStep :: ( Apecs m
@@ -187,17 +202,7 @@ titleStep = do
                         & element idx1 %~ (\opt -> opt { selected = not $ selected opt })
                         & element idx2 %~ (\opt -> opt { selected = not $ selected opt })
     return ()
-  --
 
--- transformM :: Int -> Int -> Double -> L.M44 GL.GLfloat
--- transformM width height t = projection !*! view !*! model !*! anim where
---   angle      = realToFrac t * pi/4
---   anim       = L.mkTransformation (L.axisAngle (L.V3 0 1 0) angle) L.zero -- rotation around axis
---   model      = L.mkTransformationMat L.identity $ L.V3 0 0 (-4) -- the cube
---   view       = U.camMatrix cam
---   cam        = U.tilt (-30) . U.dolly (L.V3 0 2 0) $ U.fpsCamera
---   projection = U.projectionMatrix (pi/4) aspect 0.1 10
---   aspect     = fromIntegral width / fromIntegral height
 
 titleRender :: (Apecs m, HasVideoConfig m, MonadIO m) => m ()
 titleRender = do
@@ -212,21 +217,17 @@ titleRender = do
           e = elements model
           dgt = t / 1000
           sProgram    = shaderProgram r
-          attribKeys  = keys $ U.attribs sProgram
+          attribKeys  = keys $ U.attribs  sProgram
           uniformKeys = keys $ U.uniforms sProgram
           height = fromIntegral height'
           width  = fromIntegral width'
           -- camera stuff
           Orientation ore   = orientation camera
-          FieldOfView fov   = fieldOfView camera
           projectionMatrix  = U.projectionMatrix
                                 (pi / 4)
                                 (width / height)
                                 (near . clippingPlanes $ camera)
                                 (far  . clippingPlanes $ camera)
-          cameraOrientation = ore * ( L.axisAngle
-                                        (xAxis . cameraAxes $ camera)
-                                        (realToFrac (fov * pi / 180) :: Float) )
           cameraViewMatrix  = L.mkTransformation q (L.rotate q $ negate cPos)
             where q = L.conjugate $ ore
           -- the cube
