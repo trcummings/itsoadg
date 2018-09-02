@@ -24,7 +24,11 @@ import Game.World (Env)
 import Game.Effect.SceneManager (SceneManager(..))
 import Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import Game.Effect.Renderer (Renderer(..), clearScreen, drawScreen)
-import Game.Effect.Clock (Clock(..), accumulateFixedTime, clearFixedTime, getFixedTime)
+import Game.Effect.Clock
+  ( Clock(..)
+  , accumulateFixedTime
+  , clearFixedTime
+  , getFixedTime )
 import Game.Effect.Input (Input(..), processInputs)
 
 import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
@@ -57,9 +61,9 @@ innerStep acc events scene = do
     -- recurse if we need to run another fixed step update
     innerStep acc' events scene
   where
-    step scene = do
+    step s = do
       -- liftIO $ putStrLn $ show scene
-      case scene of
+      case s of
         Scene'Title -> stepTitle
         Scene'Play  -> stepPlay
         _           -> return ()

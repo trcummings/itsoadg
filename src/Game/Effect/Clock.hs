@@ -1,9 +1,9 @@
 module Game.Effect.Clock where
 
-import Game.Util.Constants (dT)
 import Game.Types (GameState(..), PhysicsTime(..), GlobalTime(..))
 import Game.Wrapper.SDLTime (SDLTime(..))
 import Game.Effect.HasGameState (HasGameState(..))
+import Game.Util.Constants (dT)
 
 class Monad m => Clock m where
   getFixedTime        :: m (Double, Double)
@@ -33,8 +33,10 @@ accumulateFixedTime' = do
           -- clamp frameTime at 25ms
           , _PhysicsClock = pt { accum = (accum pt) + (min 25 $ nextTime - cTime) } }
 
+stepFixedTime :: PhysicsTime -> PhysicsTime
+stepFixedTime pt = PhysicsTime { time  = (time  pt + dT)
+                               , accum = (accum pt - dT) }
+
 clearFixedTime' :: HasGameState m => m ()
 clearFixedTime' = setGameState $ \gs ->
-  let PhysicsTime t' acc' = _PhysicsClock gs
-  in gs { _PhysicsClock = PhysicsTime { time = (t' + dT)
-                                      , accum = (acc' - dT) } }
+  gs { _PhysicsClock = stepFixedTime $ _PhysicsClock gs }
