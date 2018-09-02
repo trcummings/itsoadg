@@ -156,8 +156,8 @@ titleTransition = do
 titleCleanUp :: (Apecs m) => m ()
 titleCleanUp = do
   -- delete the options menu
-  cmapM_ $ \(_ :: OptionList, ety) ->
-    destroy ety (proxy :: OptionList)
+  cmapM_ $ \(_ :: OptionMenu, ety) ->
+    destroy ety (proxy :: OptionMenu)
   -- destroy the cube
   cmapM_ $ \(_ :: Model, _ :: Position3D, ety) ->
     destroy ety (proxy :: (Model, Position3D))
@@ -228,7 +228,6 @@ titleStep = do
           Just selectedId -> oIdAction selectedId
           Nothing         -> return ()
         destroy ety (proxy :: Not HasOptionMenuEvent)
-        -- return $ Left (proxy :: Not HasOptionMenuEvent)
       -- otherwise, update the option, remove its event
       _            -> do
         modify  ety $ updateOption command
