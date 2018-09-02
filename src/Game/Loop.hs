@@ -31,7 +31,8 @@ import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
 -- import Game.System.Audio (stepAudioQueue)
 
-import Game.Scene.Title (titleStep, titleTransition, titleRender)
+import Game.Scene.Title (stepTitle, initTitle, renderTitle, cleanUpTitle)
+import Game.Scene.Play  (stepPlay, initPlay, renderPlay, cleanUpPlay)
 
 import Game.Util.Constants (dT)
 
@@ -59,7 +60,8 @@ innerStep acc events scene = do
     step scene = do
       -- liftIO $ putStrLn $ show scene
       case scene of
-        Scene'Title -> titleStep
+        Scene'Title -> stepTitle
+        Scene'Play  -> stepPlay
         _           -> return ()
 
 mainLoop :: ( Clock           m
@@ -85,7 +87,8 @@ mainLoop = do
   -- effectEvents <- innerStep acc []
   -- setEvents effectEvents
   case scene of
-    Scene'Title -> titleRender
+    Scene'Title -> renderTitle
+    Scene'Play  -> renderPlay
     _           -> return ()
   -- play audio
   -- stepAudioQueue
@@ -103,6 +106,14 @@ mainLoop = do
     stepScene scene nextScene = do
       when (nextScene /= scene) $ do
         case nextScene of
-          Scene'Title -> titleTransition
+          Scene'Title -> initTitle
+          Scene'Play  -> do
+            case scene of Scene'Title -> cleanUpTitle
+                          _           -> return ()
+            initPlay
+          Scene'Quit  ->
+            case scene of Scene'Title -> cleanUpTitle
+                          Scene'Play  -> cleanUpPlay
+                          _           -> return ()
           _           -> return ()
         setScene nextScene

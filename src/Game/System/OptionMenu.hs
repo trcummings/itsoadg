@@ -35,25 +35,25 @@ oIdAction :: (SceneManager m, MonadIO m) => String -> m ()
 oIdAction oId = do
   liftIO $ putStrLn $ "Running " ++ oId ++ "!"
   case oId of
-    "ToScene_Play"       -> return ()
-    "ToScene_SelectFile" -> return ()
-    "ToScene_Options"    -> return ()
+    "ToScene_Play"       -> setNextScene Scene'Play
+    -- "ToScene_SelectFile" -> return ()
+    -- "ToScene_Options"    -> return ()
     "ToScene_Quit"       -> setNextScene Scene'Quit
     _                    -> return ()
 
 titleOptions :: [Option]
 titleOptions = [  Option { oId      = "ToScene_Play"
                          , text     = "New Game"
-                         , selected = False }
-                , Option { oId      = "ToScene_SelectFile"
-                         , text     = "Load Game"
-                         , selected = False }
-                , Option { oId      = "ToScene_Options"
-                         , text     = "Options"
-                         , selected = False }
+                         , selected = True }
+                -- , Option { oId      = "ToScene_SelectFile"
+                --          , text     = "Load Game"
+                --          , selected = False }
+                -- , Option { oId      = "ToScene_Options"
+                --          , text     = "Options"
+                --          , selected = False }
                 , Option { oId      = "ToScene_Quit"
                          , text     = "Quit Game"
-                         , selected = True }
+                         , selected = False }
                 ]
 
 type OptionMenu = ( Maybe ActiveOptionList

@@ -43,6 +43,7 @@ allKeys = [ SDL.KeycodeA
           , SDL.KeycodeLeft
           , SDL.KeycodeUp
           , SDL.KeycodeDown
+          , SDL.KeycodeEscape
           ]
 
 keycodes :: PlayerInputMap
