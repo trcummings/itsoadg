@@ -35,6 +35,10 @@ import           Game.Effect.SceneManager (SceneManager, setNextScene)
 import           Game.Effect.Clock (Clock, getGlobalTime)
 import           Game.Effect.Input (Input, updateInputs, getInputs)
 import           Game.Wrapper.Apecs (Apecs(..))
+import           Game.System.OptionMenu ( initOptionsMenu
+                                        , cleanUpOptionsMenu
+                                        , renderOptionMenu
+                                        , stepOptionMenu )
 
 import           Game.Util.Camera
   ( runCameraAction
@@ -43,14 +47,7 @@ import           Game.Util.Camera
   , Degrees(..)
   , Rotation(..) )
 import           Game.Types
-  ( OptionList(..)
-  , Option(..)
-  , ActiveOptionList(..)
-  , HasOptionMenuEvent(..)
-  , OptionMenuCommand(..)
-  -- , Position(..)
-  -- , Font(..)
-  , VideoConfig(..)
+  ( VideoConfig(..)
 
   , Camera(..)
   , ClippingPlanes(..)
@@ -62,7 +59,6 @@ import           Game.Types
   , Model(..)
   , Resource(..)
   , Unit(..)
-  , PlayerInput(..)
   , Scene(..) )
 
 -- class Monad m => Scene m where
@@ -74,40 +70,12 @@ import           Game.Types
 shaderPath :: FilePath
 shaderPath = "assets" </> "glsl"
 
-oIdAction :: (SceneManager m, MonadIO m) => String -> m ()
-oIdAction oId = do
-  liftIO $ putStrLn $ "Running " ++ oId ++ "!"
-  case oId of
-    "ToScene_Play"       -> return ()
-    "ToScene_SelectFile" -> return ()
-    "ToScene_Options"    -> return ()
-    "ToScene_Quit"       -> setNextScene Scene'Quit
-    _                    -> return ()
-
-titleOptions :: [Option]
-titleOptions = [  Option { oId      = "ToScene_Play"
-                         , text     = "New Game"
-                         , selected = False }
-                , Option { oId      = "ToScene_SelectFile"
-                         , text     = "Load Game"
-                         , selected = False }
-                , Option { oId      = "ToScene_Options"
-                         , text     = "Options"
-                         , selected = False }
-                , Option { oId      = "ToScene_Quit"
-                         , text     = "Quit Game"
-                         , selected = True }
-                ]
-
 titleTransition :: (Apecs m, MonadIO m) => m ()
 titleTransition = do
   liftIO $ putStrLn "Title Transition"
 
   -- options menu
-  newEntity (
-      -- Position $ V2 5 5
-      OptionList titleOptions
-    , ActiveOptionList )
+  initOptionsMenu
 
    -- cube
   let v = shaderPath </> "cube.v.glsl"
@@ -156,8 +124,7 @@ titleTransition = do
 titleCleanUp :: (Apecs m) => m ()
 titleCleanUp = do
   -- delete the options menu
-  cmapM_ $ \(_ :: OptionMenu, ety) ->
-    destroy ety (proxy :: OptionMenu)
+  cleanUpOptionsMenu
   -- destroy the cube
   cmapM_ $ \(_ :: Model, _ :: Position3D, ety) ->
     destroy ety (proxy :: (Model, Position3D))
@@ -165,26 +132,6 @@ titleCleanUp = do
   cmapM_ $ \(_ :: CameraEntity, ety) ->
     destroy ety (proxy :: CameraEntity)
   return ()
-
-type OptionMenu = ( Maybe ActiveOptionList
-                  , Maybe HasOptionMenuEvent
-                  , OptionList )
-
-updateOption :: OptionMenuCommand -> OptionList -> OptionList
-updateOption SelectOption ol = ol
-updateOption move (OptionList options) =
-  let op      = if move == MoveUp then (-) else (+)
-      idx     = findIndex selected options
-      -- next index in cyclical list
-      nextIdx = flip mod (length options) <$> (flip op 1 <$> idx)
-  in case (idx, nextIdx) of
-      (Nothing, _) -> OptionList options
-      (_, Nothing) -> OptionList options
-      (Just idx1, Just idx2) ->
-          OptionList
-        $ options
-        & element idx1 %~ (\opt -> opt { selected = not $ selected opt })
-        & element idx2 %~ (\opt -> opt { selected = not $ selected opt })
 
 titleStep :: ( Apecs m
              , Input m
@@ -194,48 +141,15 @@ titleStep :: ( Apecs m
 titleStep = do
   -- ensure inputs are continually updated
   updateInputs
-
-  -- when up or down key pressed, shift the selected option up or down
-  -- when enter key pressed, use the selected oId to an event fn
-  (PlayerInput { inputs = m }) <- getInputs
-  let upPress    = isPressed $ m ! SDL.KeycodeW
-      downPress  = isPressed $ m ! SDL.KeycodeS
-      enterPress = isPressed $ m ! SDL.KeycodeReturn
-
-  -- get all active option menus
-  -- give them HasEvent component based on button presses
-  -- (if simultaneous privilege enter presses, then down, then up)
-  cmap $ \( ActiveOptionList
-          , o :: OptionList
-          , _ :: Not HasOptionMenuEvent ) ->
-    if enterPress
-    then Left (o, HasOptionMenuEvent SelectOption)
-    else if downPress
-         then Left (o, HasOptionMenuEvent MoveDown)
-         else if upPress
-              then Left (o, HasOptionMenuEvent MoveUp)
-              else Right o
-
-  -- handle option menu events
-  cmapM_ $ \( ActiveOptionList
-            , HasOptionMenuEvent command
-            , OptionList options
-            , ety ) -> do
-    case command of
-      -- find the selected oId, run its oIdAction, remove its event
-      SelectOption -> do
-        case oId <$> find selected options of
-          Just selectedId -> oIdAction selectedId
-          Nothing         -> return ()
-        destroy ety (proxy :: Not HasOptionMenuEvent)
-      -- otherwise, update the option, remove its event
-      _            -> do
-        modify  ety $ updateOption command
-        destroy ety (proxy :: HasOptionMenuEvent)
+  -- step option menu
+  stepOptionMenu
 
 
 titleRender :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
 titleRender = do
+  -- render option menu
+  renderOptionMenu
+  -- render cube
   window <- _Window <$> getVideoConfig
   (L.V2 width' height') <- SDL.get $ SDL.windowSize window
   t <- getGlobalTime
