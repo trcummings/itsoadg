@@ -11,7 +11,7 @@ module Game.Scene.Title where
 
 import qualified SDL
 import           SDL (($=))
-import           Apecs (proxy, global)
+import           Apecs (Not(..), proxy, global)
 import qualified Linear as L
 import           Linear ((!*!))
 import qualified Graphics.GLUtil as U
@@ -45,6 +45,9 @@ import           Game.Util.Camera
 import           Game.Types
   ( OptionList(..)
   , Option(..)
+  , ActiveOptionList(..)
+  , HasOptionMenuEvent(..)
+  , OptionMenuCommand(..)
   -- , Position(..)
   -- , Font(..)
   , VideoConfig(..)
@@ -103,7 +106,8 @@ titleTransition = do
   -- options menu
   newEntity (
       -- Position $ V2 5 5
-      OptionList titleOptions )
+      OptionList titleOptions
+    , ActiveOptionList )
 
    -- cube
   let v = shaderPath </> "cube.v.glsl"
@@ -162,6 +166,26 @@ titleCleanUp = do
     destroy ety (proxy :: CameraEntity)
   return ()
 
+type OptionMenu = ( Maybe ActiveOptionList
+                  , Maybe HasOptionMenuEvent
+                  , OptionList )
+
+updateOption :: OptionMenuCommand -> OptionList -> OptionList
+updateOption SelectOption ol = ol
+updateOption move (OptionList options) =
+  let op      = if move == MoveUp then (-) else (+)
+      idx     = findIndex selected options
+      -- next index in cyclical list
+      nextIdx = flip mod (length options) <$> (flip op 1 <$> idx)
+  in case (idx, nextIdx) of
+      (Nothing, _) -> OptionList options
+      (_, Nothing) -> OptionList options
+      (Just idx1, Just idx2) ->
+          OptionList
+        $ options
+        & element idx1 %~ (\opt -> opt { selected = not $ selected opt })
+        & element idx2 %~ (\opt -> opt { selected = not $ selected opt })
+
 titleStep :: ( Apecs m
              , Input m
              , SceneManager m
@@ -170,40 +194,45 @@ titleStep :: ( Apecs m
 titleStep = do
   -- ensure inputs are continually updated
   updateInputs
+
   -- when up or down key pressed, shift the selected option up or down
   -- when enter key pressed, use the selected oId to an event fn
   (PlayerInput { inputs = m }) <- getInputs
+  let upPress    = isPressed $ m ! SDL.KeycodeW
+      downPress  = isPressed $ m ! SDL.KeycodeS
+      enterPress = isPressed $ m ! SDL.KeycodeReturn
 
-  do
-    let upPress      = isPressed $ m ! SDL.KeycodeW
-        downPress    = isPressed $ m ! SDL.KeycodeS
-        enterPress   = isPressed $ m ! SDL.KeycodeReturn
-    if (not enterPress && not downPress && not upPress)
-    then return ()
-    else if enterPress
-         -- find the selected oId, run its oIdAction
-         then cmapM_ $ \ol@(OptionList options) -> do
-                case oId <$> find selected options of
-                  Just selectedId -> oIdAction selectedId
-                  Nothing         -> return ()
-         -- increment or decrement selected option
-         else if (not upPress && not downPress)
-              then return ()
-              else do
-                cmap $ \(OptionList options) ->
-                  let op      = if upPress then (-) else (+)
-                      idx     = findIndex selected options
-                      -- next index in cyclical list
-                      nextIdx = flip mod (length options) <$> (flip op 1 <$> idx)
-                  in case (idx, nextIdx) of
-                      (Nothing, _) -> OptionList options
-                      (_, Nothing) -> OptionList options
-                      (Just idx1, Just idx2) ->
-                          OptionList
-                        $ options
-                        & element idx1 %~ (\opt -> opt { selected = not $ selected opt })
-                        & element idx2 %~ (\opt -> opt { selected = not $ selected opt })
-    return ()
+  -- get all active option menus
+  -- give them HasEvent component based on button presses
+  -- (if simultaneous privilege enter presses, then down, then up)
+  cmap $ \( ActiveOptionList
+          , o :: OptionList
+          , _ :: Not HasOptionMenuEvent ) ->
+    if enterPress
+    then Left (o, HasOptionMenuEvent SelectOption)
+    else if downPress
+         then Left (o, HasOptionMenuEvent MoveDown)
+         else if upPress
+              then Left (o, HasOptionMenuEvent MoveUp)
+              else Right o
+
+  -- handle option menu events
+  cmapM_ $ \( ActiveOptionList
+            , HasOptionMenuEvent command
+            , OptionList options
+            , ety ) -> do
+    case command of
+      -- find the selected oId, run its oIdAction, remove its event
+      SelectOption -> do
+        case oId <$> find selected options of
+          Just selectedId -> oIdAction selectedId
+          Nothing         -> return ()
+        destroy ety (proxy :: Not HasOptionMenuEvent)
+        -- return $ Left (proxy :: Not HasOptionMenuEvent)
+      -- otherwise, update the option, remove its event
+      _            -> do
+        modify  ety $ updateOption command
+        destroy ety (proxy :: HasOptionMenuEvent)
 
 
 titleRender :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()

@@ -36,6 +36,9 @@ import Game.Types
   -- , CollisionModule
   -- , Commandable
   -- , QueueEvent
+
+  , HasOptionMenuEvent
+  , ActiveOptionList
   , OptionList )
 
 -- instance Component Position where
@@ -103,6 +106,12 @@ instance Component Model where
 instance Component OptionList where
   type Storage OptionList = Map OptionList
 
+instance Component HasOptionMenuEvent where
+  type Storage HasOptionMenuEvent = Map HasOptionMenuEvent
+
+instance Component ActiveOptionList where
+  type Storage ActiveOptionList = Map ActiveOptionList
+
 makeWorld "World" [
     ''Position3D
   --   ''Position
@@ -126,6 +135,8 @@ makeWorld "World" [
   -- , ''CollisionModule
   -- , ''Commandable
   , ''OptionList
+  , ''HasOptionMenuEvent
+  , ''ActiveOptionList
   ]
 
 type Env = GameEnv World

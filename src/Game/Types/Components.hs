@@ -62,6 +62,26 @@ data Position3D = Position3D (V3 Float)
 
 -- data Velocity3D = Velocity3D (V3 Unit)
 
+-- Option Menu Types
+data OptionMenuCommand =
+    MoveUp
+  | MoveDown
+  | SelectOption
+  deriving Eq
+
+newtype HasOptionMenuEvent =
+  HasOptionMenuEvent OptionMenuCommand
+
+data ActiveOptionList = ActiveOptionList
+
+data Option =
+  Option { oId      :: String
+         , text     :: String
+         , selected :: Bool   }
+
+data OptionList = OptionList [Option]
+
+
 -- Camera Types
 data ClippingPlanes = ClippingPlanes { near :: Float
                                      , far  :: Float }
@@ -159,10 +179,3 @@ data Model = Model { resource  :: Resource
 --  deriving Show
 --
 -- data Commandable = Commandable
-
-data Option =
-  Option { oId      :: String
-         , text     :: String
-         , selected :: Bool   }
-
-data OptionList = OptionList [Option]
