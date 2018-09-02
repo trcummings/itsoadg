@@ -9,12 +9,7 @@
 
 module Game.World (World, Env, initWorld) where
 
-import           Apecs
-import qualified Animate (KeyName)
-import qualified Data.Map as Map (fromList, empty)
-import qualified SDL
-import           Linear (V2(..))
-import           KeyState (KeyState, initKeyState)
+import Apecs
 
 import Game.Types
   ( GameEnv
@@ -31,8 +26,6 @@ import Game.Types
   -- , Gravity
   -- , Friction
   -- , Font
-  , PlayerInput(..)
-  , MousePosition(..)
   -- , Jump(..)
   -- , Player(..)
   -- , SpriteSheet(..)
@@ -85,35 +78,6 @@ instance Component Model where
 --
 -- instance Component Font where
 --   type Storage Font = Map Font
---
-allKeys :: [SDL.Keycode]
-allKeys = [ SDL.KeycodeA
-          , SDL.KeycodeD
-          , SDL.KeycodeW
-          , SDL.KeycodeS
-          , SDL.KeycodeN
-          , SDL.KeycodeM
-          , SDL.KeycodeReturn
-          , SDL.KeycodeRight
-          , SDL.KeycodeLeft
-          , SDL.KeycodeUp
-          , SDL.KeycodeDown
-          ]
-
-keycodes :: [(SDL.Keycode, KeyState Double)]
-keycodes = map (\k -> (k, initKeyState)) allKeys
---
-instance Monoid PlayerInput where
-  mempty = PlayerInput
-    { inputs = Map.fromList keycodes
-    , justModified = Map.empty }
-instance Component PlayerInput where
-  type Storage PlayerInput = Global PlayerInput
-
-instance Monoid MousePosition where
-  mempty = MousePosition $ V2 0 0
-instance Component MousePosition where
-  type Storage MousePosition = Global MousePosition
 
 -- instance Component Jump where
 --   type Storage Jump = Map Jump
@@ -140,9 +104,7 @@ instance Component OptionList where
   type Storage OptionList = Map OptionList
 
 makeWorld "World" [
-    ''PlayerInput
-  , ''MousePosition
-  , ''Position3D
+    ''Position3D
   --   ''Position
   -- , ''Velocity
   -- , ''Acceleration

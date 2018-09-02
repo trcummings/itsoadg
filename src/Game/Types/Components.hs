@@ -118,17 +118,6 @@ data Model = Model { resource  :: Resource
 --
 -- data Font = Font [(Char, Texture)]
 
--- global input for player
-type PlayerInputMap = (Map.Map SDL.Keycode (KeyState Double))
-type NewlyModifiedInputs = (Map.Map SDL.Keycode Bool)
-data PlayerInput = PlayerInput
-  { inputs       :: PlayerInputMap
-  , justModified :: NewlyModifiedInputs }
-  deriving Show
-
-data MousePosition =
-  MousePosition (V2 Int32)
-
 -- data Jump = Jump
 --   { requested :: Bool
 --   , onGround  :: Bool }

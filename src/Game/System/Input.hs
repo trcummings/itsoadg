@@ -1,79 +1,108 @@
 module Game.System.Input where
-
-import qualified SDL
-import           Apecs (Entity, global)
-import qualified Data.Map as Map (lookup, mapWithKey, empty)
-import           Data.Map (insert, (!), (!?))
-import           Data.Maybe (catMaybes)
-import           KeyState
-  ( KeyState(..)
-  , updateKeyState
-  , maintainKeyState
-  , ksCounter
-  , isPressed
-  , isTouched
-  , isReleased
-  , isHeld )
-
-import           Game.Wrapper.Apecs (Apecs(..))
-import           Game.Wrapper.SDLInput (SDLInput(..))
-import           Game.Types
-  ( PlayerInput(..)
-  , MousePosition(..)
-  , QueueEvent(..)
-  -- , Commandable
-  -- , Player
-  , To(..)
-  , From(..)
-  , Dir(..)
-  , Motion(..)
-  , MovementCommand(..) )
-import           Game.Util.Constants (frameDeltaSeconds)
-
-updateKey :: KeyState Double -> SDL.InputMotion -> KeyState Double
-updateKey ks motion = updateKeyState frameDeltaSeconds ks touched
-  where touched = motion == SDL.Pressed
-
-maintainKey :: KeyState Double -> KeyState Double
-maintainKey ks = maintainKeyState frameDeltaSeconds ks
-
-maintainInputs :: PlayerInput -> PlayerInput
-maintainInputs m =
-  m { inputs = Map.mapWithKey maintainIfNotNew (inputs m)
-    , justModified = Map.empty }
-  where maintainIfNotNew k v =
-          case (justModified m !? k) of Nothing -> maintainKey v
-                                        Just _  -> v
-
-stepSDLInput :: (Apecs m, SDLInput m) => m ()
-stepSDLInput = do
-  sdlEvents  <- pollEvents
-  mapM handleSDLInput sdlEvents
-  return ()
-
-handleSDLInput :: (Apecs m) => QueueEvent -> m ()
-handleSDLInput (InputEvent event) = do
-  case SDL.eventPayload event of
-    SDL.KeyboardEvent keyboardEvent ->
-      cmap $ \(m@(PlayerInput _ _)) ->
-        case (Map.lookup keyCode $ inputs m) of
-          -- NB: Int keys work best performance-wise for maps,
-          --     if performance is slow here, change to Int map
-          Just ks ->
-            -- add to inputs & newly updated
-            m { inputs       = insert keyCode (updateKey ks motion) (inputs m)
-              , justModified = insert keyCode True (justModified m) }
-          Nothing -> m
-      where
-        keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
-        motion  = SDL.keyboardEventKeyMotion keyboardEvent
-
-    SDL.MouseMotionEvent mouseMotionEvent -> do
-      cmap $ \(MousePosition _) -> MousePosition pos
-      where (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
-
-    _ -> return ()
-handleSDLInput _ = return ()
+--
+-- import qualified SDL
+-- import           Linear (V2(..))
+-- import           Apecs (Entity, global)
+-- import qualified Data.Map as Map (lookup, mapWithKey, empty, fromList)
+-- import           Data.Map (insert, (!), (!?))
+-- import           Data.Maybe (catMaybes)
+-- import           KeyState
+--   ( KeyState(..)
+--   , updateKeyState
+--   , maintainKeyState
+--   , initKeyState
+--   , ksCounter
+--   , isPressed
+--   , isTouched
+--   , isReleased
+--   , isHeld )
+--
+-- -- import           Game.Wrapper.Apecs (Apecs(..))
+-- import           Game.Wrapper.SDLInput (SDLInput(..))
+-- import           Game.Types (PlayerInput(..), MousePosition(..))
+--   -- , QueueEvent(..)
+--   -- , Commandable
+--   -- , Player
+--   -- , To(..)
+--   -- , From(..)
+--   -- , Dir(..)
+--   -- , Motion(..)
+--   -- , MovementCommand(..) )
+-- import           Game.Util.Constants (frameDeltaSeconds)
+--
+-- allKeys :: [SDL.Keycode]
+-- allKeys = [ SDL.KeycodeA
+--           , SDL.KeycodeD
+--           , SDL.KeycodeW
+--           , SDL.KeycodeS
+--           , SDL.KeycodeN
+--           , SDL.KeycodeM
+--           , SDL.KeycodeReturn
+--           , SDL.KeycodeRight
+--           , SDL.KeycodeLeft
+--           , SDL.KeycodeUp
+--           , SDL.KeycodeDown
+--           ]
+--
+-- keycodes :: [(SDL.Keycode, KeyState Double)]
+-- keycodes = map (\k -> (k, initKeyState)) allKeys
+-- --
+-- -- instance Monoid PlayerInput where
+-- --   mempty = PlayerInput
+-- --     { inputs = Map.fromList keycodes
+-- --     , justModified = Map.empty }
+-- -- instance Component PlayerInput where
+-- --   type Storage PlayerInput = Global PlayerInput
+-- --
+-- -- instance Monoid MousePosition where
+-- --   mempty = MousePosition $ V2 0 0
+-- -- instance Component MousePosition where
+-- --   type Storage MousePosition = Global MousePosition
+--
+-- updateKey :: KeyState Double -> SDL.InputMotion -> KeyState Double
+-- updateKey ks motion = updateKeyState frameDeltaSeconds ks touched
+--   where touched = motion == SDL.Pressed
+--
+-- maintainKey :: KeyState Double -> KeyState Double
+-- maintainKey ks = maintainKeyState frameDeltaSeconds ks
+--
+-- maintainInputs :: PlayerInput -> PlayerInput
+-- maintainInputs m =
+--   m { inputs = Map.mapWithKey maintainIfNotNew (inputs m)
+--     , justModified = Map.empty }
+--   where maintainIfNotNew k v =
+--           case (justModified m !? k) of Nothing -> maintainKey v
+--                                         Just _  -> v
+--
+-- stepSDLInput :: (Apecs m, SDLInput m) => m ()
+-- stepSDLInput = do
+--   sdlEvents  <- pollEvents
+--   mapM handleSDLInput sdlEvents
+--   return ()
+--
+-- handleSDLInput :: (Apecs m) => QueueEvent -> m ()
+-- handleSDLInput (InputEvent event) = do
+--   case SDL.eventPayload event of
+--     SDL.KeyboardEvent keyboardEvent ->
+--       cmap $ \(m@(PlayerInput _ _)) ->
+--         case (Map.lookup keyCode $ inputs m) of
+--           -- NB: Int keys work best performance-wise for maps,
+--           --     if performance is slow here, change to Int map
+--           Just ks ->
+--             -- add to inputs & newly updated
+--             m { inputs       = insert keyCode (updateKey ks motion) (inputs m)
+--               , justModified = insert keyCode True (justModified m) }
+--           Nothing -> m
+--       where
+--         keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
+--         motion  = SDL.keyboardEventKeyMotion keyboardEvent
+--
+--     SDL.MouseMotionEvent mouseMotionEvent -> do
+--       cmap $ \(MousePosition _) -> MousePosition pos
+--       where (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
+--
+--     _ -> return ()
+-- handleSDLInput _ = return ()
 --
 -- -- if W tapped then jump, but not if held
 -- addJumpCommand :: PlayerInput -> Entity -> Maybe QueueEvent

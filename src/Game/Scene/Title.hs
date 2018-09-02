@@ -33,6 +33,7 @@ import           System.FilePath ((</>))
 import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.SceneManager (SceneManager, setNextScene)
 import           Game.Effect.Clock (Clock, getGlobalTime)
+import           Game.Effect.Input (Input, updateInputs, getInputs)
 import           Game.Wrapper.Apecs (Apecs(..))
 
 import           Game.Util.Camera
@@ -41,7 +42,6 @@ import           Game.Util.Camera
   , CameraAction(..)
   , Degrees(..)
   , Rotation(..) )
-import           Game.System.Input (maintainInputs)
 import           Game.Types
   ( OptionList(..)
   , Option(..)
@@ -163,16 +163,18 @@ titleCleanUp = do
   return ()
 
 titleStep :: ( Apecs m
+             , Input m
              , SceneManager m
              , MonadIO m
              ) => m ()
 titleStep = do
   -- ensure inputs are continually updated
-  cmap maintainInputs
-
+  updateInputs
   -- when up or down key pressed, shift the selected option up or down
   -- when enter key pressed, use the selected oId to an event fn
-  cmapM_ $ \(PlayerInput m _) -> do
+  (PlayerInput { inputs = m }) <- getInputs
+
+  do
     let upPress      = isPressed $ m ! SDL.KeycodeW
         downPress    = isPressed $ m ! SDL.KeycodeS
         enterPress   = isPressed $ m ! SDL.KeycodeReturn

@@ -25,11 +25,10 @@ import Game.Effect.SceneManager (SceneManager(..))
 import Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import Game.Effect.Renderer (Renderer(..), clearScreen, drawScreen)
 import Game.Effect.Clock (Clock(..), accumulateFixedTime, clearFixedTime, getFixedTime)
+import Game.Effect.Input (Input(..), processInputs)
 
-import Game.Wrapper.SDLInput (SDLInput, pollEvents)
 import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
-import Game.System.Input (stepSDLInput)
 -- import Game.System.Audio (stepAudioQueue)
 
 import Game.Scene.Title (titleStep, titleTransition, titleRender)
@@ -37,9 +36,9 @@ import Game.Scene.Title (titleStep, titleTransition, titleRender)
 import Game.Util.Constants (dT)
 
 -- update physics multiple times if time step is less than frame update time
-innerStep :: ( SDLInput        m
-             , Apecs           m
+innerStep :: ( Input           m
              , Clock           m
+             , Apecs           m
              , HasVideoConfig  m
              , SceneManager    m
              , MonadIO         m )
@@ -63,8 +62,8 @@ innerStep acc events scene = do
         Scene'Title -> titleStep
         _           -> return ()
 
-mainLoop :: ( SDLInput        m
-            , Clock           m
+mainLoop :: ( Clock           m
+            , Input           m
             , Renderer        m
             , Apecs           m
             , SceneManager    m
@@ -75,7 +74,7 @@ mainLoop = do
   -- prep screen for next render
   clearScreen
   -- update player input button-key keystate-value map
-  stepSDLInput
+  processInputs
   -- accumulate fixed time for updates
   accumulateFixedTime
   -- get fixed time for inner step
