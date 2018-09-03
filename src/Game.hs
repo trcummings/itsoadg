@@ -12,7 +12,7 @@ import           Control.Monad.IO.Class  (MonadIO(..), liftIO)
 import           Control.Monad.Reader    (MonadReader, ReaderT, runReaderT)
 import           Data.IORef
 
-import           Game.World (Env, World, initWorld)
+-- import           Game.World (Env, World, initWorld)
 import           Game.Types
   ( GameEnv(..)
   , VideoConfig(..)
@@ -27,8 +27,8 @@ import           Game.Effect.HasGameState     ( HasGameState(..)
                                               , setGameState' )
 import           Game.Effect.HasVideoConfig   ( HasVideoConfig(..)
                                               , getVideoConfig' )
-import           Game.Effect.HasECSWorld      ( HasECSWorld(..)
-                                              , getECSWorld' )
+-- import           Game.Effect.HasECSWorld      ( HasECSWorld(..)
+--                                               , getECSWorld' )
 import           Game.Effect.SceneManager     ( SceneManager(..)
                                               , getScene'
                                               , setScene'
@@ -45,31 +45,31 @@ import           Game.Effect.Input            ( Input(..)
                                               , getInputs' )
 import           Game.Wrapper.SDLInput    (SDLInput(..), pollEvents')
 import           Game.Wrapper.SDLTime     (SDLTime(..), nextTick')
-import           Game.Wrapper.Apecs       ( Apecs(..)
-                                          , runSystem'
-                                          , runGC'
-                                          , newEntity'
-                                          , cmap'
-                                          -- , qmap'
-                                          , get'
-                                          , set'
-                                          , cmapM'
-                                          , cmapM_'
-                                          , getAll'
-                                          , destroy'
-                                          , modify'
-                                          , exists' )
+-- import           Game.Wrapper.Apecs       ( Apecs(..)
+--                                           , runSystem'
+--                                           , runGC'
+--                                           , newEntity'
+--                                           , cmap'
+--                                           -- , qmap'
+--                                           , get'
+--                                           , set'
+--                                           , cmapM'
+--                                           , cmapM_'
+--                                           , getAll'
+--                                           , destroy'
+--                                           , modify'
+--                                           , exists' )
 
 newtype Game a = Game
-  (ReaderT Env IO a)
+  (ReaderT GameEnv IO a)
   deriving
     ( Functor
     , Applicative
     , Monad
-    , MonadReader Env
+    , MonadReader GameEnv
     , MonadIO )
 
-runGame :: Env -> Game m -> IO m
+runGame :: GameEnv -> Game m -> IO m
 runGame env (Game m) = runReaderT m env
 
 main :: IO ()
@@ -101,13 +101,13 @@ main = do
   -- mapM_ SDL.openJoystick joysticks
 
   -- initialize ECS game world
-  world <- initWorld
+  -- world <- initWorld
 
   -- initialize various env variables
   gameState <- newIORef $ initGameState
   let env = GameEnv { _VideoConfig = videoConfig
-                    , _GameState   = gameState
-                    , _World       = world }
+                    , _GameState   = gameState }
+                    -- , _World       = world }
   -- start loop
   runGame env mainLoop
 
@@ -126,20 +126,20 @@ instance SDLInput Game where
 instance SDLTime Game where
   nextTick = nextTick'
 
-instance Apecs Game where
-  runSystem = runSystem'
-  runGC     = runGC'
-  newEntity = newEntity'
-  cmap      = cmap'
-  cmapM     = cmapM'
-  cmapM_    = cmapM_'
-  -- qmap      = qmap'
-  get       = get'
-  set       = set'
-  getAll    = getAll'
-  destroy   = destroy'
-  modify    = modify'
-  exists    = exists'
+-- instance Apecs Game where
+--   runSystem = runSystem'
+--   runGC     = runGC'
+--   newEntity = newEntity'
+--   cmap      = cmap'
+--   cmapM     = cmapM'
+--   cmapM_    = cmapM_'
+--   -- qmap      = qmap'
+--   get       = get'
+--   set       = set'
+--   getAll    = getAll'
+--   destroy   = destroy'
+--   modify    = modify'
+--   exists    = exists'
 
 -- effects
 instance HasGameState Game where
@@ -155,8 +155,8 @@ instance SceneManager Game where
 instance HasVideoConfig Game where
   getVideoConfig = getVideoConfig'
 
-instance HasECSWorld Game where
-  getECSWorld = getECSWorld'
+-- instance HasECSWorld Game where
+--   getECSWorld = getECSWorld'
 
 instance Clock Game where
   getFixedTime        = getFixedTime'

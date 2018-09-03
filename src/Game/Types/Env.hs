@@ -12,7 +12,8 @@ data VideoConfig = VideoConfig
   { _Window    :: SDL.Window
   , _GLContext :: SDL.GLContext }
 
-data GameEnv w = GameEnv
+-- data GameEnv w = GameEnv
+data GameEnv = GameEnv
   { _VideoConfig :: VideoConfig
-  , _GameState   :: !(IORef GameState)
-  , _World       :: w } -- game world
+  , _GameState   :: !(IORef GameState) }
+  -- , _World       :: w } -- game world

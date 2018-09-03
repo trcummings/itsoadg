@@ -19,7 +19,7 @@ import Game.Types
   , EventQueue(..)
   , Scene(..)
   , QueueEvent(..) )
-import Game.World (Env)
+-- import Game.World (Env)
 
 import Game.Effect.SceneManager (SceneManager(..))
 import Game.Effect.HasVideoConfig (HasVideoConfig(..))
@@ -31,7 +31,7 @@ import Game.Effect.Clock
   , getFixedTime )
 import Game.Effect.Input (Input(..), processInputs)
 
-import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
+-- import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
 -- import Game.System.Audio (stepAudioQueue)
 
@@ -43,7 +43,7 @@ import Game.Util.Constants (dT)
 -- update physics multiple times if time step is less than frame update time
 innerStep :: ( Input           m
              , Clock           m
-             , Apecs           m
+             -- , Apecs           m
              , HasVideoConfig  m
              , SceneManager    m
              , MonadIO         m )
@@ -71,7 +71,7 @@ innerStep acc events scene = do
 mainLoop :: ( Clock           m
             , Input           m
             , Renderer        m
-            , Apecs           m
+            -- , Apecs           m
             , SceneManager    m
             , HasVideoConfig  m
             , MonadIO         m
@@ -99,7 +99,7 @@ mainLoop = do
   -- run current render, swap background buffer
   drawScreen
   -- garbage collect. yes, every frame
-  runGC
+  -- runGC
   -- loop if game still running
   nextScene <- getNextScene
   stepScene scene nextScene

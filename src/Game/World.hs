@@ -7,142 +7,143 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell       #-}
 
-module Game.World (World, Env, initWorld) where
-
-import Apecs
-
-import Game.Types
-  ( GameEnv
-  -- , Position
-  -- , Velocity
-  -- , Acceleration
-  -- , BoundingBox
-  , Camera
-  , HasCameraEvent
-  , Model
-  , Position3D
-  -- , CameraTarget
-  -- , Texture
-  -- , SpriteSheet
-  -- , Gravity
-  -- , Friction
-  -- , Font
-  -- , Jump(..)
-  -- , Player(..)
-  -- , SpriteSheet(..)
-  -- , FlowMeter(..)
-  -- , HardFlow(..)
-  -- , FlowEffectEmitter(..)
-  -- , SoundBank(..)
-  -- , CollisionModule
-  -- , Commandable
-  -- , QueueEvent
-
-  , HasOptionMenuEvent
-  , ActiveOptionList
-  , OptionList )
-
--- instance Component Position where
---   type Storage Position = Map Position
-instance Component Position3D where
-  type Storage Position3D = Map Position3D
-
-instance Component Model where
-  type Storage Model = Map Model
+-- module Game.World (World, Env, initWorld) where
+module Game.World where
 --
--- instance Component Velocity where
---   type Storage Velocity = Map Velocity
+-- import Apecs
 --
--- instance Component Acceleration where
---   type Storage Acceleration = Map Acceleration
+-- import Game.Types
+--   ( GameEnv
+--   -- , Position
+--   -- , Velocity
+--   -- , Acceleration
+--   -- , BoundingBox
+--   , Camera
+--   , HasCameraEvent
+--   , Model
+--   , Position3D
+--   -- , CameraTarget
+--   -- , Texture
+--   -- , SpriteSheet
+--   -- , Gravity
+--   -- , Friction
+--   -- , Font
+--   -- , Jump(..)
+--   -- , Player(..)
+--   -- , SpriteSheet(..)
+--   -- , FlowMeter(..)
+--   -- , HardFlow(..)
+--   -- , FlowEffectEmitter(..)
+--   -- , SoundBank(..)
+--   -- , CollisionModule
+--   -- , Commandable
+--   -- , QueueEvent
 --
--- instance Component BoundingBox where
---   type Storage BoundingBox = Map BoundingBox
+--   , HasOptionMenuEvent
+--   , ActiveOptionList
+--   , OptionList )
 --
--- instance Component Player where
---   type Storage Player = Unique Player
-
-instance Component Camera where
-  type Storage Camera = Unique Camera
-
-instance Component HasCameraEvent where
-  type Storage HasCameraEvent = Unique HasCameraEvent
-
+-- -- instance Component Position where
+-- --   type Storage Position = Map Position
+-- instance Component Position3D where
+--   type Storage Position3D = Map Position3D
 --
--- instance Component CameraTarget where
---   type Storage CameraTarget = Unique CameraTarget
+-- instance Component Model where
+--   type Storage Model = Map Model
+-- --
+-- -- instance Component Velocity where
+-- --   type Storage Velocity = Map Velocity
+-- --
+-- -- instance Component Acceleration where
+-- --   type Storage Acceleration = Map Acceleration
+-- --
+-- -- instance Component BoundingBox where
+-- --   type Storage BoundingBox = Map BoundingBox
+-- --
+-- -- instance Component Player where
+-- --   type Storage Player = Unique Player
 --
--- instance Component Texture where
---   type Storage Texture = Map Texture
+-- instance Component Camera where
+--   type Storage Camera = Unique Camera
 --
--- instance Component SpriteSheet where
---   type Storage SpriteSheet = Map SpriteSheet
+-- instance Component HasCameraEvent where
+--   type Storage HasCameraEvent = Unique HasCameraEvent
 --
--- instance Component Gravity where
---   type Storage Gravity = Map Gravity
+-- --
+-- -- instance Component CameraTarget where
+-- --   type Storage CameraTarget = Unique CameraTarget
+-- --
+-- -- instance Component Texture where
+-- --   type Storage Texture = Map Texture
+-- --
+-- -- instance Component SpriteSheet where
+-- --   type Storage SpriteSheet = Map SpriteSheet
+-- --
+-- -- instance Component Gravity where
+-- --   type Storage Gravity = Map Gravity
+-- --
+-- -- instance Component Friction where
+-- --   type Storage Friction = Map Friction
+-- --
+-- -- instance Component Font where
+-- --   type Storage Font = Map Font
 --
--- instance Component Friction where
---   type Storage Friction = Map Friction
+-- -- instance Component Jump where
+-- --   type Storage Jump = Map Jump
+-- --
+-- -- instance Component FlowMeter where
+-- --   type Storage FlowMeter = Map FlowMeter
+-- --
+-- -- instance Component HardFlow where
+-- --   type Storage HardFlow = Map HardFlow
+-- --
+-- -- instance Component FlowEffectEmitter where
+-- --   type Storage FlowEffectEmitter = Map FlowEffectEmitter
+-- --
+-- -- instance Component SoundBank where
+-- --   type Storage SoundBank = Unique SoundBank
+-- --
+-- -- instance Component CollisionModule where
+-- --   type Storage CollisionModule = Map CollisionModule
+-- --
+-- -- instance Component Commandable where
+-- --   type Storage Commandable = Map Commandable
 --
--- instance Component Font where
---   type Storage Font = Map Font
-
--- instance Component Jump where
---   type Storage Jump = Map Jump
+-- instance Component OptionList where
+--   type Storage OptionList = Map OptionList
 --
--- instance Component FlowMeter where
---   type Storage FlowMeter = Map FlowMeter
+-- instance Component HasOptionMenuEvent where
+--   type Storage HasOptionMenuEvent = Map HasOptionMenuEvent
 --
--- instance Component HardFlow where
---   type Storage HardFlow = Map HardFlow
+-- instance Component ActiveOptionList where
+--   type Storage ActiveOptionList = Map ActiveOptionList
 --
--- instance Component FlowEffectEmitter where
---   type Storage FlowEffectEmitter = Map FlowEffectEmitter
+-- makeWorld "World" [
+--     ''Position3D
+--   --   ''Position
+--   -- , ''Velocity
+--   -- , ''Acceleration
+--   -- , ''BoundingBox
+--   -- , ''Friction
+--   -- , ''Player
+--   -- , ''Texture
+--   -- , ''SpriteSheet
+--   -- , ''Gravity
+--   , ''Camera
+--   , ''HasCameraEvent
+--   , ''Model
+--   -- , ''CameraTarget
+--   -- , ''Font
+--   -- , ''Jump
+--   -- , ''FlowMeter
+--   -- , ''HardFlow
+--   -- , ''FlowEffectEmitter
+--   -- , ''SoundBank
+--   -- , ''CollisionModule
+--   -- , ''Commandable
+--   , ''OptionList
+--   , ''HasOptionMenuEvent
+--   , ''ActiveOptionList
+--   ]
 --
--- instance Component SoundBank where
---   type Storage SoundBank = Unique SoundBank
---
--- instance Component CollisionModule where
---   type Storage CollisionModule = Map CollisionModule
---
--- instance Component Commandable where
---   type Storage Commandable = Map Commandable
-
-instance Component OptionList where
-  type Storage OptionList = Map OptionList
-
-instance Component HasOptionMenuEvent where
-  type Storage HasOptionMenuEvent = Map HasOptionMenuEvent
-
-instance Component ActiveOptionList where
-  type Storage ActiveOptionList = Map ActiveOptionList
-
-makeWorld "World" [
-    ''Position3D
-  --   ''Position
-  -- , ''Velocity
-  -- , ''Acceleration
-  -- , ''BoundingBox
-  -- , ''Friction
-  -- , ''Player
-  -- , ''Texture
-  -- , ''SpriteSheet
-  -- , ''Gravity
-  , ''Camera
-  , ''HasCameraEvent
-  , ''Model
-  -- , ''CameraTarget
-  -- , ''Font
-  -- , ''Jump
-  -- , ''FlowMeter
-  -- , ''HardFlow
-  -- , ''FlowEffectEmitter
-  -- , ''SoundBank
-  -- , ''CollisionModule
-  -- , ''Commandable
-  , ''OptionList
-  , ''HasOptionMenuEvent
-  , ''ActiveOptionList
-  ]
-
-type Env = GameEnv World
+-- type Env = GameEnv World

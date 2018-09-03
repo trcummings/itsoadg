@@ -11,7 +11,7 @@ module Game.Scene.Title where
 
 import qualified SDL
 import           SDL (($=))
-import           Apecs (Not(..), proxy, global)
+-- import           Apecs (Not(..), proxy, global)
 import qualified Linear as L
 import           Linear ((!*!))
 import qualified Graphics.GLUtil as U
@@ -34,11 +34,11 @@ import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.SceneManager (SceneManager, setNextScene)
 import           Game.Effect.Clock (Clock, getGlobalTime)
 import           Game.Effect.Input (Input, updateInputs, getInputs)
-import           Game.Wrapper.Apecs (Apecs(..))
-import           Game.System.OptionMenu ( initOptionsMenu
-                                        , cleanUpOptionsMenu
-                                        , renderOptionMenu
-                                        , stepOptionMenu )
+-- import           Game.Wrapper.Apecs (Apecs(..))
+-- import           Game.System.OptionMenu ( initOptionsMenu
+--                                         , cleanUpOptionsMenu
+--                                         , renderOptionMenu
+--                                         , stepOptionMenu )
 
 import           Game.Types
   ( VideoConfig(..)
@@ -55,36 +55,44 @@ import           Game.Types
   , Unit(..)
   , Scene(..) )
 
-initTitle :: (Apecs m, MonadIO m) => m ()
+-- initTitle :: (Apecs m, MonadIO m) => m ()
+initTitle :: MonadIO m => m ()
 initTitle = do
   liftIO $ putStrLn "Initialize Title"
-  -- options menu
-  initOptionsMenu
-  return ()
+  -- -- options menu
+  -- initOptionsMenu
+  -- return ()
 
-cleanUpTitle :: (Apecs m, MonadIO m) => m ()
+-- cleanUpTitle :: (Apecs m, MonadIO m) => m ()
+cleanUpTitle :: MonadIO m => m ()
 cleanUpTitle = do
   liftIO $ putStrLn "Clean Up Title"
-  -- delete the options menu
-  cleanUpOptionsMenu
-  return ()
+  -- -- delete the options menu
+  -- cleanUpOptionsMenu
+  -- return ()
 
-stepTitle :: ( Apecs m
-             , Input m
+-- stepTitle :: ( Apecs m
+--              , Input m
+--              , SceneManager m
+--              , MonadIO m
+--              ) => m ()
+stepTitle :: ( Input m
              , SceneManager m
              , MonadIO m
              ) => m ()
 stepTitle = do
-  -- ensure inputs are continually updated
-  updateInputs
-  -- step option menu
-  stepOptionMenu
+  -- -- ensure inputs are continually updated
+  -- updateInputs
+  -- -- step option menu
+  -- stepOptionMenu
+  return ()
 
 
-renderTitle :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
+-- renderTitle :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
+renderTitle :: (Clock m, HasVideoConfig m, MonadIO m) => m ()
 renderTitle = do
-  -- render option menu
-  renderOptionMenu
+  -- -- render option menu
+  -- renderOptionMenu
   -- renderer  <- vcRenderer <$> getVideoConfig
   -- cmapM_ $ \(Font font) -> do
   --   -- render title
