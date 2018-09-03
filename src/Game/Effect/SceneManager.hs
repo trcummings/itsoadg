@@ -14,13 +14,13 @@ class Monad m => SceneManager m where
   setNextScene :: Scene -> m ()
 
 getScene' :: HasGameState m => m Scene
-getScene' = _Scene <$> getGameState
+getScene' = _scene <$> getGameState
 
 setScene' :: HasGameState m => Scene -> m ()
-setScene' scene = setGameState $ \gs -> gs { _Scene = scene }
+setScene' scene = setGameState $ \gs -> gs { _scene = scene }
 
 getNextScene' :: HasGameState m => m Scene
-getNextScene' = _NextScene <$> getGameState
+getNextScene' = _nextScene <$> getGameState
 
 setNextScene' :: HasGameState m => Scene -> m ()
-setNextScene' scene = setGameState $ \gs -> gs { _NextScene = scene }
+setNextScene' scene = setGameState $ \gs -> gs { _nextScene = scene }

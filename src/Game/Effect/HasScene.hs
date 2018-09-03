@@ -10,7 +10,7 @@ class Monad m => HasScene m where
   getNextScene :: m Scene
 
 getScene' :: (HasGameState m, HasScene m) => m Scene
-getScene' = _Scene <$> getGameState
+getScene' = _scene <$> getGameState
 
 getNextScene' :: (HasGameState m, HasScene m) => m Scene
-getNextScene' = _NextScene <$> getGameState
+getNextScene' = _nextScene <$> getGameState

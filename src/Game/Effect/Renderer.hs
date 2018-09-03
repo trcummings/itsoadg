@@ -24,7 +24,7 @@ getWindowDims window = do
 
 clearScreen' :: (HasVideoConfig m, MonadIO m) => m ()
 clearScreen' = do
-  window <- _Window <$> getVideoConfig
+  window <- _window <$> getVideoConfig
   -- clear background color to black
   liftIO $ GL.clearColor $= GL.Color4 0 0 0 0
   -- set depth function to sort by "Less" depth
@@ -38,6 +38,6 @@ clearScreen' = do
 
 drawScreen' :: (HasVideoConfig m, MonadIO m) => m ()
 drawScreen' = do
-  window <- _Window <$> getVideoConfig
+  window <- _window <$> getVideoConfig
   -- swap buffer
   SDL.glSwapWindow window

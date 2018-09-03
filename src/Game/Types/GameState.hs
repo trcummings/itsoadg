@@ -51,19 +51,19 @@ keycodes = fromList $ map (\k -> (k, initKeyState)) allKeys
 
 -- Game State
 data GameState = GameState
-  { _Scene         :: Scene
-  , _NextScene     :: Scene
-  , _GlobalClock   :: GlobalTime
-  , _PhysicsClock  :: PhysicsTime
-  , _PlayerInput   :: PlayerInput
-  , _MousePosition :: MousePosition }
+  { _scene         :: Scene
+  , _nextScene     :: Scene
+  , _globalClock   :: GlobalTime
+  , _physicsClock  :: PhysicsTime
+  , _playerInput   :: PlayerInput
+  , _mousePosition :: MousePosition }
 
 initGameState :: GameState
 initGameState =
-  GameState { _Scene         = Scene'Init
-            , _NextScene     = Scene'Title
-            , _GlobalClock   = GlobalTime 0
-            , _PhysicsClock  = PhysicsTime { time = 0, accum = 0 }
-            , _PlayerInput   = PlayerInput { inputs       = keycodes
+  GameState { _scene         = Scene'Init
+            , _nextScene     = Scene'Title
+            , _globalClock   = GlobalTime 0
+            , _physicsClock  = PhysicsTime { time = 0, accum = 0 }
+            , _playerInput   = PlayerInput { inputs       = keycodes
                                            , justModified = empty }
-            , _MousePosition = MousePosition $ V2 0 0 }
+            , _mousePosition = MousePosition $ V2 0 0 }

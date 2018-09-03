@@ -15,12 +15,12 @@ class Monad m => HasGameState m where
 
 getGameState' :: (HasGameState m, MonadReader GameEnv m, MonadIO m) => m GameState
 getGameState' = do
-  gsIO <- _GameState <$> ask
+  gsIO <- _gameState <$> ask
   gs   <- liftIO $ readIORef gsIO
   return gs
 
 setGameState' :: (HasGameState m, MonadReader GameEnv m, MonadIO m)
               => (GameState -> GameState) -> m ()
 setGameState' f = do
-  gsIO <- _GameState <$> ask
+  gsIO <- _gameState <$> ask
   liftIO $ modifyIORef gsIO f

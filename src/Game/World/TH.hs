@@ -8,7 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell       #-}
 
-module Game.World (World, initWorld) where
+module Game.World.TH (ECS, World, initWorld) where
 
 import Apecs
 
@@ -67,3 +67,5 @@ makeWorld "World" [
   , ''HasOptionMenuEvent
   , ''ActiveOptionList
   ]
+
+type ECS a = System World a

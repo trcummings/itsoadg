@@ -45,12 +45,12 @@ handleSDLInput event gs =
     SDL.KeyboardEvent keyboardEvent ->
       let keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
           motion  = SDL.keyboardEventKeyMotion keyboardEvent
-          m       = _PlayerInput gs
+          m       = _playerInput gs
       -- NB: Int keys work best performance-wise for maps,
       --     if performance is slow here, change to Int map
       in case (Map.lookup keyCode $ inputs m) of
           -- add to inputs & newly updated
-          Just ks -> gs { _PlayerInput =
+          Just ks -> gs { _playerInput =
             m { inputs     = insert keyCode (updateKey ks motion) (inputs m)
             , justModified = insert keyCode True (justModified m) }
           }
@@ -59,7 +59,7 @@ handleSDLInput event gs =
     -- mouse movements
     SDL.MouseMotionEvent mouseMotionEvent ->
       let (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
-      in gs { _MousePosition = MousePosition pos }
+      in gs { _mousePosition = MousePosition pos }
 
     _ -> gs
 
@@ -80,7 +80,7 @@ processInputs' = do
 
 updateInputs' :: (HasGameState m, SDLInput m) => m ()
 updateInputs' = setGameState $ \gs ->
-  gs { _PlayerInput = maintainInputs $ _PlayerInput gs }
+  gs { _playerInput = maintainInputs $ _playerInput gs }
 
 getInputs' :: HasGameState m => m PlayerInput
-getInputs' = _PlayerInput <$> getGameState
+getInputs' = _playerInput <$> getGameState

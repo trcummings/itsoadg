@@ -11,7 +11,7 @@ module Game.Scene.Title where
 
 import qualified SDL
 import           SDL (($=))
--- import           Apecs (Not(..), proxy, global)
+-- import           Apecs
 import qualified Linear as L
 import           Linear ((!*!))
 import qualified Graphics.GLUtil as U
@@ -24,14 +24,14 @@ import           Data.Text (singleton)
 import           Data.List (find, findIndex)
 import           Data.Coerce (coerce)
 import           Control.Lens ((&), (%~), element)
-import           Control.Monad (when, mapM_)
+import           Control.Monad (void, when, mapM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           KeyState (isPressed)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
 import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
-import           Game.Effect.SceneManager (SceneManager, setNextScene)
+import           Game.Effect.SceneManager (SceneManager, setNextScene, getNextScene)
 import           Game.Effect.Clock (Clock, getGlobalTime)
 import           Game.Effect.Input (Input, updateInputs, getInputs)
 -- import           Game.Wrapper.Apecs (Apecs(..))
@@ -39,7 +39,6 @@ import           Game.Effect.Input (Input, updateInputs, getInputs)
 --                                         , cleanUpOptionsMenu
 --                                         , renderOptionMenu
 --                                         , stepOptionMenu )
-
 import           Game.Types
   ( VideoConfig(..)
 
@@ -54,14 +53,17 @@ import           Game.Types
   , Resource(..)
   , Unit(..)
   , Scene(..) )
+import Game.World (initWorld, World)
 
 -- initTitle :: (Apecs m, MonadIO m) => m ()
 initTitle :: MonadIO m => m ()
 initTitle = do
-  liftIO $ putStrLn "Initialize Title"
+  -- world <- liftIO $ initWorld
+  -- liftIO $ runWith world $ void $ newEntity (Position3D $ L.V3 0 0 0)
+  -- liftIO $ putStrLn "Initialize Title"
   -- -- options menu
   -- initOptionsMenu
-  -- return ()
+  return ()
 
 -- cleanUpTitle :: (Apecs m, MonadIO m) => m ()
 cleanUpTitle :: MonadIO m => m ()
@@ -76,10 +78,7 @@ cleanUpTitle = do
 --              , SceneManager m
 --              , MonadIO m
 --              ) => m ()
-stepTitle :: ( Input m
-             , SceneManager m
-             , MonadIO m
-             ) => m ()
+stepTitle :: (Input m, SceneManager m) => m ()
 stepTitle = do
   -- -- ensure inputs are continually updated
   -- updateInputs

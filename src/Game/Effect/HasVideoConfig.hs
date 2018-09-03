@@ -11,4 +11,4 @@ class Monad m => HasVideoConfig m where
   getVideoConfig :: m VideoConfig
 
 getVideoConfig' :: (HasVideoConfig m, MonadReader GameEnv m) => m VideoConfig
-getVideoConfig' = _VideoConfig <$> ask
+getVideoConfig' = _videoConfig <$> ask

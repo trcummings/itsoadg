@@ -13,12 +13,12 @@ class Monad m => Clock m where
 
 getFixedTime' :: HasGameState m => m (Double, Double)
 getFixedTime' = do
-  PhysicsTime t acc <- _PhysicsClock <$> getGameState
+  PhysicsTime t acc <- _physicsClock <$> getGameState
   return (t, acc)
 
 getGlobalTime' :: HasGameState m => m Double
 getGlobalTime' = do
-  GlobalTime gt <- _GlobalClock <$> getGameState
+  GlobalTime gt <- _globalClock <$> getGameState
   return gt
 
 accumulateFixedTime' :: (HasGameState m, SDLTime m) => m ()
@@ -27,11 +27,11 @@ accumulateFixedTime' = do
   nextTime <- nextTick
   -- pull game state
   setGameState $ \gs ->
-    let GlobalTime cTime = _GlobalClock gs
-        pt               = _PhysicsClock gs
-    in gs { _GlobalClock  = GlobalTime nextTime
+    let GlobalTime cTime = _globalClock gs
+        pt               = _physicsClock gs
+    in gs { _globalClock  = GlobalTime nextTime
           -- clamp frameTime at 25ms
-          , _PhysicsClock = pt { accum = (accum pt) + (min 25 $ nextTime - cTime) } }
+          , _physicsClock = pt { accum = (accum pt) + (min 25 $ nextTime - cTime) } }
 
 stepFixedTime :: PhysicsTime -> PhysicsTime
 stepFixedTime pt = PhysicsTime { time  = (time  pt + dT)
@@ -39,4 +39,4 @@ stepFixedTime pt = PhysicsTime { time  = (time  pt + dT)
 
 clearFixedTime' :: HasGameState m => m ()
 clearFixedTime' = setGameState $ \gs ->
-  gs { _PhysicsClock = stepFixedTime $ _PhysicsClock gs }
+  gs { _physicsClock = stepFixedTime $ _physicsClock gs }

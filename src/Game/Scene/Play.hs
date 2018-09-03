@@ -184,7 +184,7 @@ stepPlay = do
 renderPlay :: (Clock m, HasVideoConfig m, MonadIO m) => m ()
 renderPlay = do
   -- render cube
-  window <- _Window <$> getVideoConfig
+  window <- _window <$> getVideoConfig
   (L.V2 width' height') <- SDL.get $ SDL.windowSize window
   t <- getGlobalTime
   -- cmapM_ $ \(camera :: Camera, Position3D cPos) -> do
