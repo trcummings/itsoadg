@@ -26,7 +26,7 @@ import           Data.Coerce (coerce)
 import           Control.Lens ((&), (%~), element)
 import           Control.Monad (when, mapM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           KeyState (isPressed)
+import           KeyState (isPressed, isTouched)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
@@ -35,17 +35,19 @@ import           Game.Effect.SceneManager (SceneManager, setNextScene)
 import           Game.Effect.Clock (Clock, getGlobalTime)
 import           Game.Effect.Input (Input, updateInputs, getInputs)
 import           Game.Wrapper.Apecs (Apecs(..))
+import           Game.Util.Constants (frameDeltaSeconds)
 
 import           Game.Util.Camera
   ( runCameraAction
-  , CameraEntity
-  , CameraAction(..)
-  , Degrees(..)
-  , Rotation(..) )
+  , CameraEntity )
 import           Game.Types
   ( VideoConfig(..)
   , PlayerInput(..)
 
+  , HasCameraEvent(..)
+  , CameraAction(..)
+  , Degrees(..)
+  , Rotation(..)
   , Camera(..)
   , ClippingPlanes(..)
   , FieldOfView(..)
@@ -121,8 +123,8 @@ cleanUpPlay = do
   cmapM_ $ \(_ :: Model, _ :: Position3D, ety) ->
     destroy ety (proxy :: (Model, Position3D))
   -- destroy the camera
-  cmapM_ $ \(_ :: CameraEntity, ety) ->
-    destroy ety (proxy :: CameraEntity)
+  cmapM_ $ \(_ :: (CameraEntity, Maybe HasCameraEvent), ety) ->
+    destroy ety (proxy :: (CameraEntity, Maybe HasCameraEvent))
   return ()
 
 stepPlay :: ( Apecs m
@@ -134,9 +136,44 @@ stepPlay = do
   -- ensure inputs are continually updated
   updateInputs
   -- if escape pressed, transition to quit
-  (PlayerInput { inputs = m }) <- getInputs
-  when (isPressed $ m ! SDL.KeycodeEscape) $ do
+  iMap <- getInputs
+  when (isPressed $ inputs iMap ! SDL.KeycodeEscape) $ do
     setNextScene Scene'Quit
+  -- send camera events based on WASD presses
+  cmap $ \( c :: Camera
+          , _ :: Not HasCameraEvent ) ->
+    let leftPress    = isTouched $ inputs iMap ! SDL.KeycodeA
+        rightPress   = isTouched $ inputs iMap ! SDL.KeycodeD
+        forwardPress = isTouched $ inputs iMap ! SDL.KeycodeW
+        backPress    = isTouched $ inputs iMap ! SDL.KeycodeS
+        emptyV = L.V3 0 0 0
+        vx = if leftPress && rightPress
+             then emptyV
+             else if leftPress
+                  then L.V3 (-1) 0 0
+                  else if rightPress
+                       then L.V3 1 0 0
+                       else emptyV
+        vz = if forwardPress && backPress
+             then emptyV
+             else if backPress
+                  then L.V3 0 0 1
+                  else if forwardPress
+                       then L.V3 0 0 (-1)
+                       else emptyV
+        vec = vx + vz
+    in if vec == emptyV
+       then Left c
+       else Right (c, HasCameraEvent (Camera'Dolly vec))
+
+  -- resolve camera movement based on camera events
+  cmap $ \(HasCameraEvent e, (c :: CameraEntity)) ->
+    case e of
+      Camera'Dolly v ->
+        Left ( runCameraAction (Camera'Dolly $ v L.^* (realToFrac frameDeltaSeconds :: Float)) $ c
+             , proxy :: Not HasCameraEvent )
+      _              ->
+        Right ( proxy :: Not HasCameraEvent )
 
 renderPlay :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
 renderPlay = do

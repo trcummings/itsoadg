@@ -83,6 +83,21 @@ data OptionList = OptionList [Option]
 
 
 -- Camera Types
+newtype Degrees = Degrees Float deriving Show
+
+data Rotation =
+    Pan
+  | Tilt
+  | Roll
+  deriving Show
+
+data CameraAction =
+    Camera'Dolly (V3 Float)
+  | Camera'Rotation Rotation Degrees
+  deriving Show
+
+newtype HasCameraEvent = HasCameraEvent CameraAction
+
 data ClippingPlanes = ClippingPlanes { near :: Float
                                      , far  :: Float }
 

@@ -6,22 +6,14 @@ import Graphics.GLUtil.Camera3D (deg2rad)
 
 import Game.Types
   ( Camera(..)
+  , Degrees(..)
+  , Rotation(..)
+  , CameraAction(..)
   , ClippingPlanes(..)
   , FieldOfView(..)
   , Orientation(..)
   , CameraAxes(..)
   , Position3D(..) )
-
-newtype Degrees = Degrees Float
-
-data Rotation =
-    Pan
-  | Tilt
-  | Roll
-
-data CameraAction =
-    Camera'Dolly (V3 Float)
-  | Camera'Rotation Rotation Degrees
 
 type CameraEntity = (Camera, Position3D)
 

@@ -40,12 +40,6 @@ import           Game.System.OptionMenu ( initOptionsMenu
                                         , renderOptionMenu
                                         , stepOptionMenu )
 
-import           Game.Util.Camera
-  ( runCameraAction
-  , CameraEntity
-  , CameraAction(..)
-  , Degrees(..)
-  , Rotation(..) )
 import           Game.Types
   ( VideoConfig(..)
 

@@ -17,9 +17,10 @@ import Game.Types
   -- , Velocity
   -- , Acceleration
   -- , BoundingBox
-  , Camera(..)
-  , Model(..)
-  , Position3D(..)
+  , Camera
+  , HasCameraEvent
+  , Model
+  , Position3D
   -- , CameraTarget
   -- , Texture
   -- , SpriteSheet
@@ -45,6 +46,9 @@ import Game.Types
 --   type Storage Position = Map Position
 instance Component Position3D where
   type Storage Position3D = Map Position3D
+
+instance Component Model where
+  type Storage Model = Map Model
 --
 -- instance Component Velocity where
 --   type Storage Velocity = Map Velocity
@@ -61,8 +65,9 @@ instance Component Position3D where
 instance Component Camera where
   type Storage Camera = Unique Camera
 
-instance Component Model where
-  type Storage Model = Map Model
+instance Component HasCameraEvent where
+  type Storage HasCameraEvent = Unique HasCameraEvent
+
 --
 -- instance Component CameraTarget where
 --   type Storage CameraTarget = Unique CameraTarget
@@ -124,6 +129,7 @@ makeWorld "World" [
   -- , ''SpriteSheet
   -- , ''Gravity
   , ''Camera
+  , ''HasCameraEvent
   , ''Model
   -- , ''CameraTarget
   -- , ''Font
