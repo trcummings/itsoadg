@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Game.Types.GameState where
 
 import qualified SDL
@@ -13,6 +15,14 @@ data Scene =
   | Scene'Play
   | Scene'Quit
   deriving (Eq, Show)
+
+data SceneControl = SceneControl { _scene     :: Scene
+                                 , _nextScene :: Scene }
+
+instance Monoid SceneControl where
+  mempty = SceneControl { _scene     = Scene'Init
+                        , _nextScene = Scene'Init }
+  mappend _ sc2 = sc2
 
 -- Clock
 -- accumulator for fixed time step

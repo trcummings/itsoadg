@@ -15,6 +15,8 @@ import Apecs
 import Game.Types
   ( VideoConfig
 
+  , SceneControl
+
   , Position3D
 
   , Model
@@ -26,9 +28,17 @@ import Game.Types
   , ActiveOptionList
   , OptionList )
 
+-- Config Components
 instance Component VideoConfig where
   type Storage VideoConfig = Unique VideoConfig
 
+
+-- Globals
+instance Component SceneControl where
+  type Storage SceneControl = Global SceneControl
+
+
+-- Entity related Components
 instance Component Position3D where
   type Storage Position3D = Map Position3D
 
@@ -55,6 +65,8 @@ instance Component ActiveOptionList where
 
 makeWorld "World" [
     ''VideoConfig
+
+  , ''SceneControl
 
   , ''Position3D
 

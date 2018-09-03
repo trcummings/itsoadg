@@ -53,7 +53,7 @@ import           Game.Types
   , Resource(..)
   , Unit(..)
   , Scene(..) )
-import Game.World (initWorld, World)
+import Game.World.TH (initWorld, World)
 
 -- initTitle :: (Apecs m, MonadIO m) => m ()
 initTitle :: MonadIO m => m ()

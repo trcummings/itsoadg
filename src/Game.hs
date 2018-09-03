@@ -10,23 +10,19 @@ import           Control.Monad.IO.Class  (liftIO)
 import           Game.World.TH (ECS, World, initWorld)
 import           Game.Util.Config (initConfig, cleanUpConfig)
 import           Game.Types (VideoConfig(..))
--- import           Game.Loop (mainLoop)
+import           Game.Loop (mainLoop)
 
 initVC :: ECS ()
 initVC = do
   vc <- liftIO $ initConfig
   void $ newEntity vc
 
-cleanUpVC :: VideoConfig -> ECS (Maybe VideoConfig)
+cleanUpVC :: VideoConfig -> IO ()
 cleanUpVC vc = do
   dims <- SDL.get $ SDL.windowSize $ _window vc
   liftIO $ putStrLn $ show dims
   liftIO $ cleanUpVC vc
-  return Nothing
+  return ()
 
 main :: IO ()
-main = do
-  -- initialize ECS game world
-  initWorld >>= runSystem $ do
-    initVC            -- init config
-    (cmapM cleanUpVC) -- clean up on quit
+main = initWorld >>= runSystem mainLoop
