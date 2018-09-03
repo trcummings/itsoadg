@@ -18,8 +18,10 @@ import Game.Types
 type CameraEntity = (Camera, Position3D)
 
 runCameraAction :: CameraAction -> (CameraEntity -> CameraEntity)
-runCameraAction (Camera'Dolly    v)   = dollyCamera  v
-runCameraAction (Camera'Rotation r d) = rotateCamera r d
+runCameraAction (Camera'Dolly    v)    = dollyCamera  v
+runCameraAction (Camera'Rotation r d)  = rotateCamera r d
+runCameraAction (Camera'Compose a1 a2) = runCameraAction a2 .
+                                         runCameraAction a1
 
 dollyCamera :: V3 Float -> (CameraEntity -> CameraEntity)
 dollyCamera tr (c, Position3D pos) = (c, Position3D $ pos + tr')

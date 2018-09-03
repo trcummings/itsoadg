@@ -94,6 +94,7 @@ data Rotation =
 data CameraAction =
     Camera'Dolly (V3 Float)
   | Camera'Rotation Rotation Degrees
+  | Camera'Compose CameraAction CameraAction
   deriving Show
 
 newtype HasCameraEvent = HasCameraEvent CameraAction

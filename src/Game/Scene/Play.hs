@@ -146,34 +146,33 @@ stepPlay = do
         rightPress   = isTouched $ inputs iMap ! SDL.KeycodeD
         forwardPress = isTouched $ inputs iMap ! SDL.KeycodeW
         backPress    = isTouched $ inputs iMap ! SDL.KeycodeS
-        emptyV = L.V3 0 0 0
-        vx = if leftPress && rightPress
-             then emptyV
+        t            = realToFrac frameDeltaSeconds :: Float
+        toDolly v    = Camera'Dolly $ v L.^* t
+        toRotat r    = Camera'Rotation Pan (Degrees $ r * t)
+        rt = if leftPress && rightPress
+             then Nothing
              else if leftPress
-                  then L.V3 (-1) 0 0
+                  then Just $ toRotat 90
                   else if rightPress
-                       then L.V3 1 0 0
-                       else emptyV
-        vz = if forwardPress && backPress
-             then emptyV
+                       then Just $ toRotat (-90)
+                       else Nothing
+        vx = if forwardPress && backPress
+             then Nothing
              else if backPress
-                  then L.V3 0 0 1
+                  then Just $ toDolly $ L.V3 0 0 1
                   else if forwardPress
-                       then L.V3 0 0 (-1)
-                       else emptyV
-        vec = vx + vz
-    in if vec == emptyV
-       then Left c
-       else Right (c, HasCameraEvent (Camera'Dolly vec))
+                       then Just $ toDolly $ L.V3 0 0 (-1)
+                       else Nothing
+    in case (vx, rt) of
+        (Nothing , Nothing ) -> Left c
+        (Just vx', Just rt') -> Right (c, HasCameraEvent (Camera'Compose vx' rt'))
+        (Just vx', _       ) -> Right (c, HasCameraEvent vx')
+        (_       , Just rt') -> Right (c, HasCameraEvent rt')
 
   -- resolve camera movement based on camera events
   cmap $ \(HasCameraEvent e, (c :: CameraEntity)) ->
-    case e of
-      Camera'Dolly v ->
-        Left ( runCameraAction (Camera'Dolly $ v L.^* (realToFrac frameDeltaSeconds :: Float)) $ c
-             , proxy :: Not HasCameraEvent )
-      _              ->
-        Right ( proxy :: Not HasCameraEvent )
+    ( runCameraAction e c
+    , proxy :: Not HasCameraEvent )
 
 renderPlay :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
 renderPlay = do
