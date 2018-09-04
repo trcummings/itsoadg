@@ -3,6 +3,7 @@ module Game.Effect.Input where
 import qualified SDL
 import           Linear (V2(..))
 import qualified Data.Map as Map (lookup)
+import           Apecs
 import           Data.Map (mapWithKey, empty, fromList, insert, (!), (!?))
 import           Data.Maybe (catMaybes)
 import           Control.Lens ((&), (%~))
@@ -17,18 +18,25 @@ import           KeyState
   , isReleased
   , isHeld )
 
-import           Game.Effect.HasGameState (HasGameState(..))
-import           Game.Wrapper.SDLInput (SDLInput(..))
+import           Game.World.TH (ECS)
 import           Game.Util.Constants (frameDeltaSeconds)
 import           Game.Types
-  ( GameState(..)
+  ( Inputs(..)
   , PlayerInput(..)
   , MousePosition(..) )
 
-class Monad m => Input m where
-  processInputs :: m ()
-  updateInputs  :: m ()
-  getInputs     :: m PlayerInput
+-- poll SDL for events, process them
+processInputs :: ECS ()
+processInputs = do
+  events <- SDL.pollEvents
+  ipts   <- get global :: ECS Inputs
+  set global $ consumeInputs events ipts
+
+-- update each fixed step cycle
+updateInputs :: ECS ()
+updateInputs = do
+  ipts <- get global :: ECS Inputs
+  set global $ ipts { _keyboardInput = maintainInputs $ _keyboardInput ipts }
 
 -- helper functions
 updateKey :: KeyState Double -> SDL.InputMotion -> KeyState Double
@@ -38,49 +46,42 @@ updateKey ks motion = updateKeyState frameDeltaSeconds ks touched
 maintainKey :: KeyState Double -> KeyState Double
 maintainKey ks = maintainKeyState frameDeltaSeconds ks
 
-handleSDLInput :: SDL.Event -> GameState -> GameState
-handleSDLInput event gs =
+handleKeyboardEvent :: SDL.KeyboardEventData -> Inputs -> Inputs
+handleKeyboardEvent keyboardEvent ipts =
+  let keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
+      motion  = SDL.keyboardEventKeyMotion keyboardEvent
+      m       = _keyboardInput ipts
+  -- NB: Int keys work best performance-wise for maps,
+  --     if performance is slow here, change to Int map
+  in case (Map.lookup keyCode $ inputs m) of
+      -- add to inputs & newly updated
+      Just ks -> ipts { _keyboardInput =
+        m { inputs       = insert keyCode (updateKey ks motion) (inputs m)
+          , justModified = insert keyCode True (justModified m) }
+      }
+      Nothing -> ipts
+
+handleMousePosEvent :: SDL.MouseMotionEventData -> Inputs -> Inputs
+handleMousePosEvent mouseMotionEvent ipts =
+  let (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
+  in ipts { _mousePosition = MousePosition pos }
+
+handleSDLInput :: SDL.Event -> Inputs -> Inputs
+handleSDLInput event ipts = case SDL.eventPayload event of
   -- keyboard presses
-  case SDL.eventPayload event of
-    SDL.KeyboardEvent keyboardEvent ->
-      let keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
-          motion  = SDL.keyboardEventKeyMotion keyboardEvent
-          m       = _playerInput gs
-      -- NB: Int keys work best performance-wise for maps,
-      --     if performance is slow here, change to Int map
-      in case (Map.lookup keyCode $ inputs m) of
-          -- add to inputs & newly updated
-          Just ks -> gs { _playerInput =
-            m { inputs     = insert keyCode (updateKey ks motion) (inputs m)
-            , justModified = insert keyCode True (justModified m) }
-          }
-          Nothing -> gs
-
-    -- mouse movements
-    SDL.MouseMotionEvent mouseMotionEvent ->
-      let (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
-      in gs { _mousePosition = MousePosition pos }
-
-    _ -> gs
+  SDL.KeyboardEvent    e -> handleKeyboardEvent e ipts
+  -- mouse movements
+  SDL.MouseMotionEvent e -> handleMousePosEvent e ipts
+  -- otherwise
+  _ -> ipts
 
 maintainInputs :: PlayerInput -> PlayerInput
 maintainInputs m =
-  m { inputs     = mapWithKey maintainIfNotNew (inputs m)
-  , justModified = empty }
+  m { inputs       = mapWithKey maintainIfNotNew (inputs m)
+    , justModified = empty }
   where maintainIfNotNew k v =
           case (justModified m !? k) of Nothing -> maintainKey v
                                         Just _  -> v
 
--- class functions
-
-processInputs' :: (HasGameState m, SDLInput m) => m ()
-processInputs' = do
-  events <- pollEvents
-  setGameState $ \gs -> foldr handleSDLInput gs events
-
-updateInputs' :: (HasGameState m, SDLInput m) => m ()
-updateInputs' = setGameState $ \gs ->
-  gs { _playerInput = maintainInputs $ _playerInput gs }
-
-getInputs' :: HasGameState m => m PlayerInput
-getInputs' = _playerInput <$> getGameState
+consumeInputs :: [SDL.Event] -> Inputs -> Inputs
+consumeInputs events ipts = foldr handleSDLInput ipts events

@@ -32,6 +32,12 @@ data PhysicsTime =
 -- global timer
 newtype GlobalTime = GlobalTime Double deriving Show
 
+instance Monoid Clock where
+  mempty = Clock { _globalTime  = GlobalTime 0
+                 , _physicsTime = PhysicsTime { time = 0, accum = 0 } }
+data Clock = Clock { _globalTime  :: GlobalTime
+                   , _physicsTime :: PhysicsTime }
+
 -- Input
 type PlayerInputMap = (Map SDL.Keycode (KeyState Double))
 type NewlyModifiedInputs = (Map SDL.Keycode Bool)
@@ -40,6 +46,14 @@ data PlayerInput = PlayerInput
   , justModified :: NewlyModifiedInputs }
   deriving Show
 data MousePosition = MousePosition (V2 Int32)
+
+instance Monoid Inputs where
+  mempty = Inputs { _keyboardInput = PlayerInput { inputs       = keycodes
+                                                 , justModified = empty }
+                  , _mousePosition = MousePosition $ V2 0 0 }
+
+data Inputs = Inputs { _keyboardInput :: PlayerInput
+                     , _mousePosition :: MousePosition }
 
 allKeys :: [SDL.Keycode]
 allKeys = [ SDL.KeycodeA

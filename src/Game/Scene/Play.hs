@@ -30,16 +30,16 @@ import           KeyState (isPressed, isTouched)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
-import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
+-- import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
 import           Game.Effect.SceneManager (SceneManager, setNextScene)
-import           Game.Effect.Clock (Clock, getGlobalTime)
-import           Game.Effect.Input (Input, updateInputs, getInputs)
+-- import           Game.Effect.Clock (Clock, getGlobalTime)
+import           Game.Effect.Input (updateInputs)
 -- import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.Util.Constants (frameDeltaSeconds)
 
--- import           Game.Util.Camera
---   ( runCameraAction
---   , CameraEntity )
+import           Game.Util.Camera
+  ( runCameraAction
+  , CameraEntity )
 import           Game.Types
   ( VideoConfig(..)
   , PlayerInput(..)
@@ -60,16 +60,9 @@ import           Game.Types
   , Unit(..)
   , Scene(..) )
 
--- class Monad m => Scene m where
---   step       :: m ()
---   render     :: m ()
---   transition :: m ()
---   cleanUp    :: m ()
-
 shaderPath :: FilePath
 shaderPath = "assets" </> "glsl"
 
--- initPlay :: (Apecs m, MonadIO m) => m ()
 initPlay :: MonadIO m => m ()
 initPlay = do
   liftIO $ putStrLn "Init Play"
@@ -111,13 +104,12 @@ initPlay = do
   --                                          , yAxis = L.V3 0 1 0
   --                                          , zAxis = L.V3 0 0 (-1) } }
   --   , Position3D $ L.V3 0 0 0 )
+  -- -- move up, tilt down to look at cube
   -- cmap $ \(c :: CameraEntity) ->
-  --     runCameraAction (Camera'Rotation Tilt (Degrees (-30)))
-  --   . runCameraAction (Camera'Dolly (L.V3 0 2 0)) $ c
-  --
-  -- return ()
+  --     runCameraAction Compose
+  --       (Camera'Rotation Tilt (Degrees (-30)))
+  --       (Camera'Dolly (L.V3 0 2 0)) $ c
 
--- cleanUpPlay :: (Apecs m, MonadIO m) => m ()
 cleanUpPlay :: MonadIO m => m ()
 cleanUpPlay = do
   liftIO $ putStrLn "Clean Up Play"
@@ -129,22 +121,18 @@ cleanUpPlay = do
   --   destroy ety (proxy :: (CameraEntity, Maybe HasCameraEvent))
   -- return ()
 
--- stepPlay :: ( Apecs m
---             , Input m
---             , SceneManager m
---             , MonadIO m
---             ) => m ()
-stepPlay :: ( Input m
-            , SceneManager m
+
+stepPlay :: ( SceneManager m
             , MonadIO m
             ) => m ()
 stepPlay = do
   -- ensure inputs are continually updated
-  updateInputs
-  -- if escape pressed, transition to quit
-  iMap <- getInputs
-  when (isPressed $ inputs iMap ! SDL.KeycodeEscape) $ do
-    setNextScene Scene'Quit
+  -- updateInputs
+  return ()
+  -- -- if escape pressed, transition to quit
+  -- iMap <- getInputs
+  -- when (isPressed $ inputs iMap ! SDL.KeycodeEscape) $ do
+  --   setNextScene Scene'Quit
   -- -- send camera events based on WASD presses
   -- cmap $ \( c :: Camera
   --         , _ :: Not HasCameraEvent ) ->
@@ -181,12 +169,12 @@ stepPlay = do
   --   , proxy :: Not HasCameraEvent )
 
 -- renderPlay :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
-renderPlay :: (Clock m, HasVideoConfig m, MonadIO m) => m ()
+renderPlay :: (MonadIO m) => m ()
 renderPlay = do
   -- render cube
-  window <- _window <$> getVideoConfig
-  (L.V2 width' height') <- SDL.get $ SDL.windowSize window
-  t <- getGlobalTime
+  -- window <- _window <$> getVideoConfig
+  -- (L.V2 width' height') <- SDL.get $ SDL.windowSize window
+  -- t <- getGlobalTime
   -- cmapM_ $ \(camera :: Camera, Position3D cPos) -> do
   --   cmapM_ $ \(model :: Model, Position3D mPos) -> do
   --     let r = resource model
@@ -248,9 +236,6 @@ renderPlay = do
   --     liftIO $ mapM_ (\k -> do
   --         GL.vertexAttribArray (U.getAttrib sProgram k) $= GL.Disabled
   --       ) attribKeys
-  --   return ()
-  --
-  --
   -- -- renderer  <- vcRenderer <$> getVideoConfig
   -- -- cmapM_ $ \(Font font) -> do
   -- --   -- render title

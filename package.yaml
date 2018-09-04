@@ -79,3 +79,7 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - itsoadg
+
+default-extensions: &extensions
+  - GeneralizedNewtypeDeriving
+  - ScopedTypeVariables

@@ -2,7 +2,7 @@
 
 module Game.Loop where
 
-import Apecs (cmap, get, set, global)
+import Apecs (cmap, get, set, global, runGC, cmapM_)
 import Control.Monad (when)
 -- import Control.Monad.IO.Class (MonadIO, liftIO)
 -- import Control.Monad.Reader (MonadReader)
@@ -18,13 +18,9 @@ import Game.World.TH (ECS)
 
 -- import Game.Effect.SceneManager (SceneManager(..))
 -- import Game.Effect.HasVideoConfig (HasVideoConfig(..))
--- import Game.Effect.Renderer (Renderer(..), clearScreen, drawScreen)
--- import Game.Effect.Clock
---   ( Clock(..)
---   , accumulateFixedTime
---   , clearFixedTime
---   , getFixedTime )
--- import Game.Effect.Input (Input(..), processInputs)
+import Game.Effect.Renderer (clearScreen, drawScreen)
+import Game.Effect.Clock (accumulateFixedTime)
+import Game.Effect.Input (processInputs)
 
 -- import Game.Wrapper.Apecs (Apecs, runGC, runSystem)
 
@@ -85,11 +81,11 @@ stepSceneControl scene nextScene = do
 mainLoop :: ECS ()
 mainLoop = do
   -- prep screen for next render
-  -- clearScreen
+  -- cmapM_ clearScreen
   -- update player input button-key keystate-value map
-  -- processInputs
+  processInputs
   -- accumulate fixed time for updates
-  -- accumulateFixedTime
+  accumulateFixedTime
   -- get fixed time for inner step
   -- (_, acc) <- getFixedTime
   -- run inner step
@@ -106,9 +102,9 @@ mainLoop = do
   -- play audio
   -- stepAudioQueue
   -- run current render, swap background buffer
-  -- drawScreen
+  -- cmapM_ drawScreen
   -- garbage collect. yes, every frame
-  -- runGC
+  runGC
   -- loop if game still running
   stepSceneControl (_scene sc) (_nextScene sc)
   case _scene sc of

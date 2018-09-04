@@ -16,6 +16,8 @@ import Game.Types
   ( VideoConfig
 
   , SceneControl
+  , Inputs
+  , Clock
 
   , Position3D
 
@@ -36,6 +38,12 @@ instance Component VideoConfig where
 -- Globals
 instance Component SceneControl where
   type Storage SceneControl = Global SceneControl
+
+instance Component Inputs where
+  type Storage Inputs = Global Inputs
+
+instance Component Clock where
+  type Storage Clock = Global Clock
 
 
 -- Entity related Components
@@ -67,6 +75,8 @@ makeWorld "World" [
     ''VideoConfig
 
   , ''SceneControl
+  , ''Inputs
+  , ''Clock
 
   , ''Position3D
 
