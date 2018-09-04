@@ -9,7 +9,7 @@ import Game.Effect.Clock
   ( accumulateFixedTime
   , clearFixedTime
   , getFixedTime )
-import Game.Effect.Input    (processInputs)
+import Game.Effect.Input    (processInputs, updateInputs)
 import Game.Util.Constants  (dT)
 import Game.World.TH        (ECS)
 
@@ -26,6 +26,9 @@ innerStep acc scene = do
   then return ()
   -- when we've accumulated a fixed step update
   else do
+    -- update the inputs each fixed step
+    updateInputs
+    -- run the scene's step function
     step scene
     -- clear away the fixed time we've accumulated
     clearFixedTime
@@ -63,7 +66,7 @@ stepSceneControl scene nextScene = do
 mainLoop :: ECS ()
 mainLoop = do
   -- prep screen for next render
-  -- cmapM_ clearScreen
+  clearScreen
   -- update player input button-key keystate-value map
   processInputs
   -- accumulate fixed time for updates
@@ -82,7 +85,7 @@ mainLoop = do
   -- play audio
   -- stepAudioQueue
   -- run current render, swap background buffer
-  -- cmapM_ drawScreen
+  drawScreen
   -- garbage collect. yes, every frame
   runGC
   -- loop if game still running

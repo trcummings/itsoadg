@@ -22,7 +22,6 @@ import           Control.Applicative
 import           System.FilePath ((</>))
 
 import           Game.Effect.Clock (getGlobalTime)
-import           Game.Effect.Input (updateInputs)
 -- import           Game.System.OptionMenu ( initOptionsMenu
 --                                         , cleanUpOptionsMenu
 --                                         , renderOptionMenu
