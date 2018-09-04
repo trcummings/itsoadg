@@ -3,22 +3,14 @@
 module Game.Util.Config where
 
 import qualified SDL
-import qualified SDL.Font  as TTF
-import qualified SDL.Mixer as Mixer
 import           SDL (($=))
 import           Control.Monad (when)
 
-import           Game.Types.Env (VideoConfig(..))
+import           Game.Types (VideoConfig(..))
 import           Game.Util.Constants (initialSize)
 
 initConfig :: IO VideoConfig
 initConfig = do
-    -- initialize all SDL systems
-    SDL.initializeAll
-    -- initialize SDL.Font
-    TTF.initialize
-    -- initialize SDL.Mixer with 256 chunk size
-    Mixer.openAudio Mixer.defaultAudio 256
     -- check for enabled linear texture filtering
     SDL.HintRenderScaleQuality $= SDL.ScaleLinear
     do
@@ -44,7 +36,3 @@ cleanUpConfig :: VideoConfig -> IO ()
 cleanUpConfig vc = do
   SDL.glDeleteContext $ _glContext vc
   SDL.destroyWindow   $ _window    vc
-  Mixer.closeAudio
-  Mixer.quit
-  TTF.quit
-  SDL.quit

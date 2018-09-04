@@ -1,5 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Game.Effect.Renderer where
 
 import qualified SDL

@@ -8,6 +8,11 @@ import           KeyState (KeyState, initKeyState)
 import           GHC.Int (Int32)
 import           Data.Map (Map, empty, fromList)
 
+-- Video Config
+data VideoConfig = VideoConfig
+  { _window    :: SDL.Window
+  , _glContext :: SDL.GLContext }
+
 -- Scene
 data Scene =
     Scene'Init
@@ -72,22 +77,3 @@ allKeys = [ SDL.KeycodeA
 
 keycodes :: PlayerInputMap
 keycodes = fromList $ map (\k -> (k, initKeyState)) allKeys
-
--- Game State
-data GameState = GameState
-  { _scene         :: Scene
-  , _nextScene     :: Scene
-  , _globalClock   :: GlobalTime
-  , _physicsClock  :: PhysicsTime
-  , _playerInput   :: PlayerInput
-  , _mousePosition :: MousePosition }
-
-initGameState :: GameState
-initGameState =
-  GameState { _scene         = Scene'Init
-            , _nextScene     = Scene'Title
-            , _globalClock   = GlobalTime 0
-            , _physicsClock  = PhysicsTime { time = 0, accum = 0 }
-            , _playerInput   = PlayerInput { inputs       = keycodes
-                                           , justModified = empty }
-            , _mousePosition = MousePosition $ V2 0 0 }

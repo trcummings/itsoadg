@@ -8,15 +8,21 @@ import Game.Types (Clock(..), PhysicsTime(..), GlobalTime(..))
 import Game.Util.Constants (dT)
 import Game.World.TH (ECS)
 
--- getFixedTime' :: HasGameState m => m (Double, Double)
--- getFixedTime' = do
---   PhysicsTime t acc <- _physicsTime <$> getGameState
---   return (t, acc)
---
--- getGlobalTime' :: ECS Double
--- getGlobalTime' = do
---   GlobalTime gt <- _globalTime <$> get global
---   return gt
+getFixedTime :: ECS (Double, Double)
+getFixedTime = do
+  c <- (get global :: ECS Clock)
+  return (time $ _physicsTime c, accum $ _physicsTime c)
+
+getGlobalTime :: ECS Double
+getGlobalTime = do
+  clock <- get global :: ECS Clock
+  let GlobalTime t = _globalTime clock
+  return t
+
+clearFixedTime :: ECS ()
+clearFixedTime = do
+  clock <- get global :: ECS Clock
+  set global $ stepFixedTime clock
 
 accumulateFixedTime :: ECS ()
 accumulateFixedTime = do
@@ -26,10 +32,10 @@ accumulateFixedTime = do
   clock    <- get global :: ECS Clock
   let GlobalTime cTime = _globalTime  clock
       pt               = _physicsTime clock
+      accum'           = min 25 $ nextTime - cTime
   -- clamp frameTime at 25ms
   set global (clock { _globalTime  = GlobalTime nextTime
-                    , _physicsTime = pt { accum = (accum pt)
-                                                + (min 25 $ nextTime - cTime) } })
+                    , _physicsTime = pt { accum = (accum pt) + accum' } })
 
 stepFixedTime :: Clock -> Clock
 stepFixedTime clock =

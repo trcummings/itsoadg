@@ -1,12 +1,3 @@
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell       #-}
-
 module Game.Scene.Title where
 
 import qualified SDL
@@ -30,7 +21,7 @@ import           KeyState (isPressed)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
--- import           Game.Effect.Clock (Clock, getGlobalTime)
+import           Game.Effect.Clock (getGlobalTime)
 import           Game.Effect.Input (updateInputs)
 -- import           Game.System.OptionMenu ( initOptionsMenu
 --                                         , cleanUpOptionsMenu
