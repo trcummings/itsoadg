@@ -30,11 +30,8 @@ import           KeyState (isPressed, isTouched)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
--- import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
-import           Game.Effect.SceneManager (SceneManager, setNextScene)
 -- import           Game.Effect.Clock (Clock, getGlobalTime)
 import           Game.Effect.Input (updateInputs)
--- import           Game.Wrapper.Apecs (Apecs(..))
 import           Game.Util.Constants (frameDeltaSeconds)
 
 import           Game.Util.Camera
@@ -122,8 +119,7 @@ cleanUpPlay = do
   -- return ()
 
 
-stepPlay :: ( SceneManager m
-            , MonadIO m
+stepPlay :: ( MonadIO m
             ) => m ()
 stepPlay = do
   -- ensure inputs are continually updated

@@ -1,5 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Game.Loop where
 
 import Apecs (cmap, get, set, global, runGC, cmapM_)

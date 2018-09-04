@@ -30,11 +30,8 @@ import           KeyState (isPressed)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
--- import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
-import           Game.Effect.SceneManager (SceneManager, setNextScene, getNextScene)
 -- import           Game.Effect.Clock (Clock, getGlobalTime)
 import           Game.Effect.Input (updateInputs)
--- import           Game.Wrapper.Apecs (Apecs(..))
 -- import           Game.System.OptionMenu ( initOptionsMenu
 --                                         , cleanUpOptionsMenu
 --                                         , renderOptionMenu
@@ -67,7 +64,7 @@ cleanUpTitle = do
   -- cleanUpOptionsMenu
 
 
-stepTitle :: (SceneManager m) => m ()
+stepTitle :: IO ()
 stepTitle = do
   return ()
   -- ensure inputs are continually updated
