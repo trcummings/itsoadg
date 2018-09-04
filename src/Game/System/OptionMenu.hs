@@ -1,45 +1,39 @@
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell       #-}
-
 module Game.System.OptionMenu where
 
 import qualified SDL
-import           Apecs (Not(..), proxy)
+import           Apecs
 
 import           Data.Map ((!), keys)
 import           Data.List (find, findIndex)
 import           Control.Lens ((&), (%~), element)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (liftIO)
 import           KeyState (isPressed)
 
-import           Game.Effect.SceneManager (SceneManager, setNextScene)
-import           Game.Effect.Input (Input, getInputs)
-import           Game.Wrapper.Apecs (Apecs(..))
+-- import           Game.Effect.SceneManager (SceneManager, setNextScene)
 
+import           Game.World.TH (ECS)
+import           Game.Effect.Input (getInputs)
 import           Game.Types
   ( OptionList(..)
   , Option(..)
   , ActiveOptionList(..)
   , HasOptionMenuEvent(..)
   , OptionMenuCommand(..)
+  , Inputs(..)
+  , SceneControl(..)
   , PlayerInput(..)
   , Scene(..) )
 
-oIdAction :: (SceneManager m, MonadIO m) => String -> m ()
+oIdAction :: String -> ECS ()
 oIdAction oId = do
-  liftIO $ putStrLn $ "Running " ++ oId ++ "!"
-  case oId of
-    "ToScene_Play"       -> setNextScene Scene'Play
-    -- "ToScene_SelectFile" -> return ()
-    -- "ToScene_Options"    -> return ()
-    "ToScene_Quit"       -> setNextScene Scene'Quit
-    _                    -> return ()
+  liftIO $ putStrLn $ "Running Option Menu Action with oId: " ++ oId ++ "!"
+  sc <- get global :: ECS SceneControl
+  set global $ case oId of
+      "ToScene_Play"       -> sc { _nextScene = Scene'Play }
+      -- "ToScene_SelectFile" -> return ()
+      -- "ToScene_Options"    -> return ()
+      "ToScene_Quit"       -> sc { _nextScene = Scene'Quit }
+      _                    -> sc
 
 titleOptions :: [Option]
 titleOptions = [  Option { oId      = "ToScene_Play"
@@ -60,7 +54,7 @@ type OptionMenu = ( Maybe ActiveOptionList
                   , Maybe HasOptionMenuEvent
                   , OptionList )
 
-initOptionsMenu :: (Apecs m, MonadIO m) => m ()
+initOptionsMenu :: ECS ()
 initOptionsMenu = do
   -- options menu
   newEntity (
@@ -69,11 +63,13 @@ initOptionsMenu = do
     , ActiveOptionList )
   return ()
 
-cleanUpOptionsMenu :: Apecs m => m ()
+cleanUpOptionsMenu :: ECS ()
 cleanUpOptionsMenu = do
   -- delete the options menu
-  cmapM_ $ \(_ :: OptionMenu, ety) ->
-    destroy ety (proxy :: OptionMenu)
+  -- FIXME: this is laborious. is there a better way?
+  cmap $ \(_ :: ActiveOptionList  ) -> Not :: Not ActiveOptionList
+  cmap $ \(_ :: HasOptionMenuEvent) -> Not :: Not HasOptionMenuEvent
+  cmap $ \(_ :: OptionList        ) -> Not :: Not OptionList
 
 updateOption :: OptionMenuCommand -> OptionList -> OptionList
 updateOption SelectOption ol = ol
@@ -91,16 +87,13 @@ updateOption move (OptionList options) =
         & element idx1 %~ (\opt -> opt { selected = not $ selected opt })
         & element idx2 %~ (\opt -> opt { selected = not $ selected opt })
 
-stepOptionMenu :: ( Apecs m
-                  , Input m
-                  , SceneManager m
-                  , MonadIO m
-                  ) => m ()
+stepOptionMenu :: ECS ()
 stepOptionMenu = do
   -- when up or down key pressed, shift the selected option up or down
   -- when enter key pressed, use the selected oId to an event fn
-  (PlayerInput { inputs = m }) <- getInputs
-  let upPress    = isPressed $ m ! SDL.KeycodeW
+  ipts <- getInputs
+  let m          = inputs . _keyboardInput $ ipts
+      upPress    = isPressed $ m ! SDL.KeycodeW
       downPress  = isPressed $ m ! SDL.KeycodeS
       enterPress = isPressed $ m ! SDL.KeycodeReturn
 
@@ -119,24 +112,23 @@ stepOptionMenu = do
               else Right o
 
   -- handle option menu events
-  cmapM_ $ \( ActiveOptionList
-            , HasOptionMenuEvent command
-            , OptionList options
-            , ety ) -> do
+  cmapM $ \( ActiveOptionList
+           , HasOptionMenuEvent command
+           , OptionList options ) ->
     case command of
       -- find the selected oId, run its oIdAction, remove its event
       SelectOption -> do
         case oId <$> find selected options of
           Just selectedId -> oIdAction selectedId
           Nothing         -> return ()
-        destroy ety (proxy :: Not HasOptionMenuEvent)
+        return $ Left  $ ( Not :: Not HasOptionMenuEvent )
       -- otherwise, update the option, remove its event
       _            -> do
-        modify  ety $ updateOption command
-        destroy ety (proxy :: HasOptionMenuEvent)
+        return $ Right $ ( updateOption command $ OptionList options
+                         , Not :: Not HasOptionMenuEvent )
 
 
-renderOptionMenu :: (Apecs m, MonadIO m) => m ()
+renderOptionMenu :: ECS ()
 renderOptionMenu = do
   -- renderer  <- vcRenderer <$> getVideoConfig
   -- cmapM_ $ \(Font font) -> do

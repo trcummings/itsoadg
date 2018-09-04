@@ -1,17 +1,8 @@
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell       #-}
-
 module Game.Scene.Title where
 
 import qualified SDL
 import           SDL (($=))
-import           Apecs (Not(..), proxy, global)
+-- import           Apecs
 import qualified Linear as L
 import           Linear ((!*!))
 import qualified Graphics.GLUtil as U
@@ -24,22 +15,19 @@ import           Data.Text (singleton)
 import           Data.List (find, findIndex)
 import           Data.Coerce (coerce)
 import           Control.Lens ((&), (%~), element)
-import           Control.Monad (when, mapM_)
+import           Control.Monad (void, when, mapM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           KeyState (isPressed)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
-import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
-import           Game.Effect.SceneManager (SceneManager, setNextScene)
-import           Game.Effect.Clock (Clock, getGlobalTime)
-import           Game.Effect.Input (Input, updateInputs, getInputs)
-import           Game.Wrapper.Apecs (Apecs(..))
-import           Game.System.OptionMenu ( initOptionsMenu
-                                        , cleanUpOptionsMenu
-                                        , renderOptionMenu
-                                        , stepOptionMenu )
-
+import           Game.Effect.Clock (getGlobalTime)
+import           Game.System.OptionMenu
+  ( initOptionsMenu
+  , cleanUpOptionsMenu
+  , renderOptionMenu
+  , stepOptionMenu )
+import           Game.World.TH (ECS)
 import           Game.Types
   ( VideoConfig(..)
 
@@ -55,34 +43,25 @@ import           Game.Types
   , Unit(..)
   , Scene(..) )
 
-initTitle :: (Apecs m, MonadIO m) => m ()
-initTitle = do
-  liftIO $ putStrLn "Initialize Title"
+initialize :: ECS ()
+initialize = do
   -- options menu
   initOptionsMenu
-  return ()
 
-cleanUpTitle :: (Apecs m, MonadIO m) => m ()
-cleanUpTitle = do
-  liftIO $ putStrLn "Clean Up Title"
+cleanUp :: ECS ()
+cleanUp = do
   -- delete the options menu
   cleanUpOptionsMenu
-  return ()
 
-stepTitle :: ( Apecs m
-             , Input m
-             , SceneManager m
-             , MonadIO m
-             ) => m ()
-stepTitle = do
-  -- ensure inputs are continually updated
-  updateInputs
+
+step :: ECS ()
+step = do
   -- step option menu
   stepOptionMenu
 
 
-renderTitle :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
-renderTitle = do
+render :: ECS ()
+render = do
   -- render option menu
   renderOptionMenu
   -- renderer  <- vcRenderer <$> getVideoConfig
@@ -100,4 +79,3 @@ renderTitle = do
   --           liftIO $ renderText renderer font (V2 (px - Unit 1) newY) ">"
   --       ) (zip options ( [x | x <- [0.0, 1.0..(fromIntegral $ length options)] ] ))
   --     return ()
-  return ()

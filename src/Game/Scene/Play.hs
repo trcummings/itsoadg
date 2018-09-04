@@ -1,17 +1,8 @@
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell       #-}
-
 module Game.Scene.Play where
 
 import qualified SDL
 import           SDL (($=))
-import           Apecs (Not(..), proxy, global)
+import           Apecs
 import qualified Linear as L
 import           Linear ((!*!))
 import qualified Graphics.GLUtil as U
@@ -25,24 +16,25 @@ import           Data.List (find, findIndex)
 import           Data.Coerce (coerce)
 import           Control.Lens ((&), (%~), element)
 import           Control.Monad (when, mapM_)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (liftIO)
 import           KeyState (isPressed, isTouched)
 import           Control.Applicative
 import           System.FilePath ((</>))
 
-import           Game.Effect.HasVideoConfig (HasVideoConfig(..))
-import           Game.Effect.SceneManager (SceneManager, setNextScene)
-import           Game.Effect.Clock (Clock, getGlobalTime)
-import           Game.Effect.Input (Input, updateInputs, getInputs)
-import           Game.Wrapper.Apecs (Apecs(..))
-import           Game.Util.Constants (frameDeltaSeconds)
+import           Game.Effect.Clock    (getGlobalTime)
+import           Game.Effect.Input    (getInputs)
+import           Game.Effect.Renderer (getWindowDims)
+import           Game.Util.Constants  (frameDeltaSeconds)
 
+import           Game.World.TH (ECS)
 import           Game.Util.Camera
   ( runCameraAction
   , CameraEntity )
 import           Game.Types
   ( VideoConfig(..)
   , PlayerInput(..)
+  , Inputs(..)
+  , SceneControl(..)
 
   , HasCameraEvent(..)
   , CameraAction(..)
@@ -60,18 +52,11 @@ import           Game.Types
   , Unit(..)
   , Scene(..) )
 
--- class Monad m => Scene m where
---   step       :: m ()
---   render     :: m ()
---   transition :: m ()
---   cleanUp    :: m ()
-
 shaderPath :: FilePath
 shaderPath = "assets" </> "glsl"
 
-initPlay :: (Apecs m, MonadIO m) => m ()
-initPlay = do
-  liftIO $ putStrLn "Init Play"
+initialize :: ECS ()
+initialize = do
    -- cube
   let v = shaderPath </> "cube.v.glsl"
       f = shaderPath </> "cube.f.glsl"
@@ -110,42 +95,36 @@ initPlay = do
                                            , yAxis = L.V3 0 1 0
                                            , zAxis = L.V3 0 0 (-1) } }
     , Position3D $ L.V3 0 0 0 )
+  -- move up, tilt down to look at cube
   cmap $ \(c :: CameraEntity) ->
-      runCameraAction (Camera'Rotation Tilt (Degrees (-30)))
-    . runCameraAction (Camera'Dolly (L.V3 0 2 0)) $ c
+      runCameraAction (
+        Camera'Compose
+          (Camera'Rotation Tilt (Degrees (-30)))
+          (Camera'Dolly (L.V3 0 2 0))) c
 
-  return ()
-
-cleanUpPlay :: (Apecs m, MonadIO m) => m ()
-cleanUpPlay = do
-  liftIO $ putStrLn "Clean Up Play"
+cleanUp :: ECS ()
+cleanUp = do
   -- destroy the cube
-  cmapM_ $ \(_ :: Model, _ :: Position3D, ety) ->
-    destroy ety (proxy :: (Model, Position3D))
+  cmap $ \(_ :: Model, _ :: Position3D) -> Not :: Not (Model, Position3D)
   -- destroy the camera
-  cmapM_ $ \(_ :: (CameraEntity, Maybe HasCameraEvent), ety) ->
-    destroy ety (proxy :: (CameraEntity, Maybe HasCameraEvent))
-  return ()
+  cmap $ \(_ :: CameraEntity  ) -> Not :: Not CameraEntity
+  cmap $ \(_ :: HasCameraEvent) -> Not :: Not HasCameraEvent
 
-stepPlay :: ( Apecs m
-            , Input m
-            , SceneManager m
-            , MonadIO m
-            ) => m ()
-stepPlay = do
-  -- ensure inputs are continually updated
-  updateInputs
+step :: ECS ()
+step = do
   -- if escape pressed, transition to quit
-  iMap <- getInputs
-  when (isPressed $ inputs iMap ! SDL.KeycodeEscape) $ do
-    setNextScene Scene'Quit
+  ipts <- getInputs
+  let m = inputs . _keyboardInput $ ipts
+  when (isPressed $ m ! SDL.KeycodeEscape) $ do
+    sc <- get global :: ECS SceneControl
+    set global $ sc { _nextScene = Scene'Quit }
   -- send camera events based on WASD presses
   cmap $ \( c :: Camera
           , _ :: Not HasCameraEvent ) ->
-    let leftPress    = isTouched $ inputs iMap ! SDL.KeycodeA
-        rightPress   = isTouched $ inputs iMap ! SDL.KeycodeD
-        forwardPress = isTouched $ inputs iMap ! SDL.KeycodeW
-        backPress    = isTouched $ inputs iMap ! SDL.KeycodeS
+    let leftPress    = isTouched $ m ! SDL.KeycodeA
+        rightPress   = isTouched $ m ! SDL.KeycodeD
+        forwardPress = isTouched $ m ! SDL.KeycodeW
+        backPress    = isTouched $ m ! SDL.KeycodeS
         t            = realToFrac frameDeltaSeconds :: Float
         toDolly v    = Camera'Dolly $ v L.^* t
         toRotat r    = Camera'Rotation Pan (Degrees $ r * t)
@@ -172,13 +151,13 @@ stepPlay = do
   -- resolve camera movement based on camera events
   cmap $ \(HasCameraEvent e, (c :: CameraEntity)) ->
     ( runCameraAction e c
-    , proxy :: Not HasCameraEvent )
+    , Not :: Not HasCameraEvent )
 
-renderPlay :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
-renderPlay = do
+render :: ECS ()
+render = do
   -- render cube
-  window <- _Window <$> getVideoConfig
-  (L.V2 width' height') <- SDL.get $ SDL.windowSize window
+  vc <- get global :: ECS VideoConfig
+  (L.V2 width' height') <- liftIO $ getWindowDims vc
   t <- getGlobalTime
   cmapM_ $ \(camera :: Camera, Position3D cPos) -> do
     cmapM_ $ \(model :: Model, Position3D mPos) -> do
@@ -241,22 +220,19 @@ renderPlay = do
       liftIO $ mapM_ (\k -> do
           GL.vertexAttribArray (U.getAttrib sProgram k) $= GL.Disabled
         ) attribKeys
-    return ()
-
-
-  -- renderer  <- vcRenderer <$> getVideoConfig
-  -- cmapM_ $ \(Font font) -> do
-  --   -- render title
-  --   liftIO $ renderText renderer font (V2 2 3) "Let Sleeping Gods Lie"
-  --   --render options menu
-  --   cmapM_ $ \(OptionList options, Position (V2 px py)) -> do
-  --     -- render each option descending vertically
-  --     mapM_ (\(option, yMod) -> do
-  --         let newY = py + Unit yMod
-  --         liftIO $ renderText renderer font (V2 px newY) (text option)
-  --         -- draw arrow next to selected option
-  --         when (selected option) $ do
-  --           liftIO $ renderText renderer font (V2 (px - Unit 1) newY) ">"
-  --       ) (zip options ( [x | x <- [0.0, 1.0..(fromIntegral $ length options)] ] ))
-  --     return ()
+  -- -- renderer  <- vcRenderer <$> getVideoConfig
+  -- -- cmapM_ $ \(Font font) -> do
+  -- --   -- render title
+  -- --   liftIO $ renderText renderer font (V2 2 3) "Let Sleeping Gods Lie"
+  -- --   --render options menu
+  -- --   cmapM_ $ \(OptionList options, Position (V2 px py)) -> do
+  -- --     -- render each option descending vertically
+  -- --     mapM_ (\(option, yMod) -> do
+  -- --         let newY = py + Unit yMod
+  -- --         liftIO $ renderText renderer font (V2 px newY) (text option)
+  -- --         -- draw arrow next to selected option
+  -- --         when (selected option) $ do
+  -- --           liftIO $ renderText renderer font (V2 (px - Unit 1) newY) ">"
+  -- --       ) (zip options ( [x | x <- [0.0, 1.0..(fromIntegral $ length options)] ] ))
+  -- --     return ()
   return ()

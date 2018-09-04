@@ -1,42 +1,44 @@
 module Game.Effect.Clock where
 
-import Game.Types (GameState(..), PhysicsTime(..), GlobalTime(..))
-import Game.Wrapper.SDLTime (SDLTime(..))
-import Game.Effect.HasGameState (HasGameState(..))
+import SDL.Time (ticks)
+import Apecs (get, set, global)
+import Control.Monad.IO.Class (liftIO)
+
+import Game.Types (Clock(..), PhysicsTime(..), GlobalTime(..))
 import Game.Util.Constants (dT)
+import Game.World.TH (ECS)
 
-class Monad m => Clock m where
-  getFixedTime        :: m (Double, Double)
-  getGlobalTime       :: m Double
-  accumulateFixedTime :: m ()
-  clearFixedTime      :: m ()
+getAccumulatedTime :: ECS Double
+getAccumulatedTime = do
+  clock <- (get global :: ECS Clock)
+  return $ accum $ _physicsTime clock
 
-getFixedTime' :: HasGameState m => m (Double, Double)
-getFixedTime' = do
-  PhysicsTime t acc <- _PhysicsClock <$> getGameState
-  return (t, acc)
+getGlobalTime :: ECS Double
+getGlobalTime = do
+  clock <- get global :: ECS Clock
+  let GlobalTime t = _globalTime clock
+  return t
 
-getGlobalTime' :: HasGameState m => m Double
-getGlobalTime' = do
-  GlobalTime gt <- _GlobalClock <$> getGameState
-  return gt
+clearFixedTime :: ECS ()
+clearFixedTime = do
+  clock <- get global :: ECS Clock
+  set global $ stepFixedTime clock
 
-accumulateFixedTime' :: (HasGameState m, SDLTime m) => m ()
-accumulateFixedTime' = do
+accumulateFixedTime :: ECS ()
+accumulateFixedTime = do
   -- get next time tick from SDL
-  nextTime <- nextTick
+  nextTime <- liftIO (fromIntegral <$> ticks :: IO Double)
   -- pull game state
-  setGameState $ \gs ->
-    let GlobalTime cTime = _GlobalClock gs
-        pt               = _PhysicsClock gs
-    in gs { _GlobalClock  = GlobalTime nextTime
-          -- clamp frameTime at 25ms
-          , _PhysicsClock = pt { accum = (accum pt) + (min 25 $ nextTime - cTime) } }
+  clock    <- get global :: ECS Clock
+  let GlobalTime cTime = _globalTime  clock
+      pt               = _physicsTime clock
+      accum'           = min 25 $ nextTime - cTime
+  -- clamp frameTime at 25ms
+  set global (clock { _globalTime  = GlobalTime nextTime
+                    , _physicsTime = pt { accum = (accum pt) + accum' } })
 
-stepFixedTime :: PhysicsTime -> PhysicsTime
-stepFixedTime pt = PhysicsTime { time  = (time  pt + dT)
-                               , accum = (accum pt - dT) }
-
-clearFixedTime' :: HasGameState m => m ()
-clearFixedTime' = setGameState $ \gs ->
-  gs { _PhysicsClock = stepFixedTime $ _PhysicsClock gs }
+stepFixedTime :: Clock -> Clock
+stepFixedTime clock =
+  let pt = _physicsTime clock
+  in clock { _physicsTime = PhysicsTime { time  = (time  pt + dT)
+                                        , accum = (accum pt - dT) } }
