@@ -26,6 +26,7 @@ import           Game.Effect.Clock (getGlobalTime)
 --                                         , cleanUpOptionsMenu
 --                                         , renderOptionMenu
 --                                         , stepOptionMenu )
+import           Game.World.TH (ECS)
 import           Game.Types
   ( VideoConfig(..)
 
@@ -41,21 +42,21 @@ import           Game.Types
   , Unit(..)
   , Scene(..) )
 
-initTitle :: MonadIO m => m ()
-initTitle = do
+initialize :: ECS ()
+initialize = do
   liftIO $ putStrLn "Initialize Title"
   -- options menu
   -- initOptionsMenu
 
-cleanUpTitle :: MonadIO m => m ()
-cleanUpTitle = do
+cleanUp :: ECS ()
+cleanUp = do
   liftIO $ putStrLn "Clean Up Title"
   -- delete the options menu
   -- cleanUpOptionsMenu
 
 
-stepTitle :: IO ()
-stepTitle = do
+step :: ECS ()
+step = do
   return ()
   -- ensure inputs are continually updated
   -- updateInputs
@@ -63,8 +64,8 @@ stepTitle = do
   -- stepOptionMenu
 
 
-renderTitle :: (MonadIO m) => m ()
-renderTitle = do
+render :: ECS ()
+render = do
   return ()
   -- render option menu
   -- renderOptionMenu

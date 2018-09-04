@@ -19,7 +19,7 @@ data Scene =
   | Scene'Title
   | Scene'Play
   | Scene'Quit
-  deriving (Eq, Show)
+  deriving Eq
 
 data SceneControl = SceneControl { _scene     :: Scene
                                  , _nextScene :: Scene }

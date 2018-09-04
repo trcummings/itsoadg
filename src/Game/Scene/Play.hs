@@ -27,6 +27,7 @@ import           Game.Util.Constants (frameDeltaSeconds)
 import           Game.Util.Camera
   ( runCameraAction
   , CameraEntity )
+import           Game.World.TH (ECS)
 import           Game.Types
   ( VideoConfig(..)
   , PlayerInput(..)
@@ -50,8 +51,8 @@ import           Game.Types
 shaderPath :: FilePath
 shaderPath = "assets" </> "glsl"
 
-initPlay :: MonadIO m => m ()
-initPlay = do
+initialize :: ECS ()
+initialize = do
   liftIO $ putStrLn "Init Play"
   --  -- cube
   -- let v = shaderPath </> "cube.v.glsl"
@@ -97,8 +98,8 @@ initPlay = do
   --       (Camera'Rotation Tilt (Degrees (-30)))
   --       (Camera'Dolly (L.V3 0 2 0)) $ c
 
-cleanUpPlay :: MonadIO m => m ()
-cleanUpPlay = do
+cleanUp :: ECS ()
+cleanUp = do
   liftIO $ putStrLn "Clean Up Play"
   -- -- destroy the cube
   -- cmapM_ $ \(_ :: Model, _ :: Position3D, ety) ->
@@ -109,9 +110,8 @@ cleanUpPlay = do
   -- return ()
 
 
-stepPlay :: ( MonadIO m
-            ) => m ()
-stepPlay = do
+step :: ECS ()
+step = do
   -- ensure inputs are continually updated
   -- updateInputs
   return ()
@@ -154,9 +154,8 @@ stepPlay = do
   --   ( runCameraAction e c
   --   , proxy :: Not HasCameraEvent )
 
--- renderPlay :: (Apecs m, Clock m, HasVideoConfig m, MonadIO m) => m ()
-renderPlay :: (MonadIO m) => m ()
-renderPlay = do
+render :: ECS ()
+render = do
   -- render cube
   -- window <- _window <$> getVideoConfig
   -- (L.V2 width' height') <- SDL.get $ SDL.windowSize window

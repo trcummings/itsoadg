@@ -8,10 +8,10 @@ import Game.Types (Clock(..), PhysicsTime(..), GlobalTime(..))
 import Game.Util.Constants (dT)
 import Game.World.TH (ECS)
 
-getFixedTime :: ECS (Double, Double)
-getFixedTime = do
-  c <- (get global :: ECS Clock)
-  return (time $ _physicsTime c, accum $ _physicsTime c)
+getAccumulatedTime :: ECS Double
+getAccumulatedTime = do
+  clock <- (get global :: ECS Clock)
+  return $ accum $ _physicsTime clock
 
 getGlobalTime :: ECS Double
 getGlobalTime = do
