@@ -22,7 +22,7 @@ data SceneAction =
   | Step
   | Render
   | CleanUp
-  deriving Show
+  deriving (Eq, Show)
 
 currentSceneAction :: SceneAction -> ECS ()
 currentSceneAction action = do
@@ -52,7 +52,8 @@ transitionScene s1          s2          = do
 
 runSceneAction :: SceneAction -> Scene -> ECS ()
 runSceneAction action scene = do
-  liftIO $ putStrLn $ show action ++ " scene " ++ show scene
+  when (action /= Step && action /= Render) $ do
+    liftIO $ putStrLn $ show action ++ " scene " ++ show scene
   case action of
     Initialize -> case scene of Scene'Init  -> Init.initialize
                                 Scene'Title -> Title.initialize

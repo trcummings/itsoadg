@@ -22,10 +22,11 @@ import           Control.Applicative
 import           System.FilePath ((</>))
 
 import           Game.Effect.Clock (getGlobalTime)
--- import           Game.System.OptionMenu ( initOptionsMenu
---                                         , cleanUpOptionsMenu
---                                         , renderOptionMenu
---                                         , stepOptionMenu )
+import           Game.System.OptionMenu
+  ( initOptionsMenu
+  , cleanUpOptionsMenu
+  , renderOptionMenu
+  , stepOptionMenu )
 import           Game.World.TH (ECS)
 import           Game.Types
   ( VideoConfig(..)
@@ -44,31 +45,25 @@ import           Game.Types
 
 initialize :: ECS ()
 initialize = do
-  liftIO $ putStrLn "Initialize Title"
   -- options menu
-  -- initOptionsMenu
+  initOptionsMenu
 
 cleanUp :: ECS ()
 cleanUp = do
-  liftIO $ putStrLn "Clean Up Title"
   -- delete the options menu
-  -- cleanUpOptionsMenu
+  cleanUpOptionsMenu
 
 
 step :: ECS ()
 step = do
-  return ()
-  -- ensure inputs are continually updated
-  -- updateInputs
-  -- -- step option menu
-  -- stepOptionMenu
+  -- step option menu
+  stepOptionMenu
 
 
 render :: ECS ()
 render = do
-  return ()
   -- render option menu
-  -- renderOptionMenu
+  renderOptionMenu
   -- renderer  <- vcRenderer <$> getVideoConfig
   -- cmapM_ $ \(Font font) -> do
   --   -- render title

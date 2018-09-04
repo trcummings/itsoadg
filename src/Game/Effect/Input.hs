@@ -75,6 +75,11 @@ handleSDLInput event ipts = case SDL.eventPayload event of
   -- otherwise
   _ -> ipts
 
+getInputs :: ECS Inputs
+getInputs = do
+  inputs <- get global :: ECS Inputs
+  return inputs
+
 maintainInputs :: PlayerInput -> PlayerInput
 maintainInputs m =
   m { inputs       = mapWithKey maintainIfNotNew (inputs m)

@@ -3,7 +3,7 @@ module Game.Effect.Renderer where
 import qualified SDL
 import qualified Graphics.Rendering.OpenGL as GL
 import           SDL (($=))
-import           Apecs (exists, Proxy(..), cmapM_, global)
+import           Apecs (exists, Proxy(..), cmapM_, getAll)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe (maybe)
 import           Data.Int (Int32)
@@ -20,10 +20,12 @@ drawScreen = withVC swapBuffer
 
 withVC :: (VideoConfig -> IO ()) -> ECS ()
 withVC f = do
-  vcExists <- exists global (Proxy :: Proxy VideoConfig)
-  if not vcExists
+  vcs <- getAll :: ECS [VideoConfig]
+  if (length vcs == 0)
   then return ()
-  else cmapM_ $ \(vc :: VideoConfig) -> liftIO $ f vc
+  else do
+    let (vc:_) = vcs
+    cmapM_ $ \(vc :: VideoConfig) -> liftIO $ f vc
 
 
 getWindowDims :: VideoConfig -> IO (V2 Int32)
