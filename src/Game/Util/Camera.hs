@@ -1,4 +1,8 @@
-module Game.Util.Camera where
+module Game.Util.Camera
+  ( CameraEntity
+  , cameraViewMatrix
+  , cameraProjectionMatrix
+  , runCameraAction ) where
 
 import qualified Graphics.GLUtil as U
 import qualified Graphics.GLUtil.Camera3D as U
