@@ -11,7 +11,7 @@ import Game.World.TH (ECS)
 getAccumulatedTime :: ECS Double
 getAccumulatedTime = do
   clock <- (get global :: ECS Clock)
-  return $ accum $ _physicsTime clock
+  return $ _accum $ _physicsTime clock
 
 getGlobalTime :: ECS Double
 getGlobalTime = do
@@ -35,10 +35,10 @@ accumulateFixedTime = do
       accum'           = min 25 $ nextTime - cTime
   -- clamp frameTime at 25ms
   set global (clock { _globalTime  = GlobalTime nextTime
-                    , _physicsTime = pt { accum = (accum pt) + accum' } })
+                    , _physicsTime = pt { _accum = (_accum pt) + accum' } })
 
 stepFixedTime :: Clock -> Clock
 stepFixedTime clock =
   let pt = _physicsTime clock
-  in clock { _physicsTime = PhysicsTime { time  = (time  pt + dT)
-                                        , accum = (accum pt - dT) } }
+  in clock { _physicsTime = PhysicsTime { _time  = (_time  pt + dT)
+                                        , _accum = (_accum pt - dT) } }

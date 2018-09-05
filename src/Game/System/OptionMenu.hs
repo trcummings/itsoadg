@@ -34,18 +34,18 @@ oIdAction oId = do
       _                    -> sc
 
 titleOptions :: [Option]
-titleOptions = [  Option { oId      = "ToScene_Play"
-                         , text     = "New Game"
-                         , selected = True }
-                -- , Option { oId      = "ToScene_SelectFile"
-                --          , text     = "Load Game"
-                --          , selected = False }
-                -- , Option { oId      = "ToScene_Options"
-                --          , text     = "Options"
-                --          , selected = False }
-                , Option { oId      = "ToScene_Quit"
-                         , text     = "Quit Game"
-                         , selected = False }
+titleOptions = [  Option { _oId      = "ToScene_Play"
+                         , _text     = "New Game"
+                         , _selected = True }
+                -- , Option { _oId      = "ToScene_SelectFile"
+                --          , _text     = "Load Game"
+                --          , _selected = False }
+                -- , Option { _oId      = "ToScene_Options"
+                --          , _text     = "Options"
+                --          , _selected = False }
+                , Option { _oId      = "ToScene_Quit"
+                         , _text     = "Quit Game"
+                         , _selected = False }
                 ]
 
 type OptionMenu = ( Maybe ActiveOptionList
@@ -73,7 +73,7 @@ updateOption :: OptionMenuCommand -> OptionList -> OptionList
 updateOption SelectOption ol = ol
 updateOption move (OptionList options) =
   let op      = if move == MoveUp then (-) else (+)
-      idx     = findIndex selected options
+      idx     = findIndex _selected options
       -- next index in cyclical list
       nextIdx = flip mod (length options) <$> (flip op 1 <$> idx)
   in case (idx, nextIdx) of
@@ -82,15 +82,15 @@ updateOption move (OptionList options) =
       (Just idx1, Just idx2) ->
           OptionList
         $ options
-        & element idx1 %~ (\opt -> opt { selected = not $ selected opt })
-        & element idx2 %~ (\opt -> opt { selected = not $ selected opt })
+        & element idx1 %~ (\opt -> opt { _selected = not $ _selected opt })
+        & element idx2 %~ (\opt -> opt { _selected = not $ _selected opt })
 
 stepOptionMenu :: ECS ()
 stepOptionMenu = do
   -- when up or down key pressed, shift the selected option up or down
   -- when enter key pressed, use the selected oId to an event fn
   ipts <- getInputs
-  let m          = inputs . _keyboardInput $ ipts
+  let m          = _inputs . _keyboardInput $ ipts
       upPress    = isPressed $ m ! SDL.KeycodeW
       downPress  = isPressed $ m ! SDL.KeycodeS
       enterPress = isPressed $ m ! SDL.KeycodeReturn
@@ -116,7 +116,7 @@ stepOptionMenu = do
     case command of
       -- find the selected oId, run its oIdAction, remove its event
       SelectOption -> do
-        case oId <$> find selected options of
+        case _oId <$> find _selected options of
           Just selectedId -> oIdAction selectedId
           Nothing         -> return ()
         return $ Left  $ ( Not :: Not HasOptionMenuEvent )

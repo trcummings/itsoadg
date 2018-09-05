@@ -29,14 +29,14 @@ import           Game.Types
 processInputs :: ECS ()
 processInputs = do
   events <- SDL.pollEvents
-  ipts   <- get global :: ECS Inputs
-  set global $ consumeInputs events ipts
+  inputs <- get global :: ECS Inputs
+  set global $ consumeInputs events inputs
 
 -- update each fixed step cycle
 updateInputs :: ECS ()
 updateInputs = do
-  ipts <- get global :: ECS Inputs
-  set global $ ipts { _keyboardInput = maintainInputs $ _keyboardInput ipts }
+  inputs <- get global :: ECS Inputs
+  set global $ inputs { _keyboardInput = maintainInputs $ _keyboardInput inputs }
 
 -- helper functions
 updateKey :: KeyState Double -> SDL.InputMotion -> KeyState Double
@@ -47,33 +47,33 @@ maintainKey :: KeyState Double -> KeyState Double
 maintainKey ks = maintainKeyState frameDeltaSeconds ks
 
 handleKeyboardEvent :: SDL.KeyboardEventData -> Inputs -> Inputs
-handleKeyboardEvent keyboardEvent ipts =
+handleKeyboardEvent keyboardEvent inputs =
   let keyCode = SDL.keysymKeycode $ SDL.keyboardEventKeysym keyboardEvent
       motion  = SDL.keyboardEventKeyMotion keyboardEvent
-      m       = _keyboardInput ipts
+      m       = _keyboardInput inputs
   -- NB: Int keys work best performance-wise for maps,
   --     if performance is slow here, change to Int map
-  in case (Map.lookup keyCode $ inputs m) of
+  in case (Map.lookup keyCode $ _inputs m) of
       -- add to inputs & newly updated
-      Just ks -> ipts { _keyboardInput =
-        m { inputs       = insert keyCode (updateKey ks motion) (inputs m)
-          , justModified = insert keyCode True (justModified m) }
+      Just ks -> inputs { _keyboardInput =
+        m { _inputs       = insert keyCode (updateKey ks motion) (_inputs m)
+          , _justModified = insert keyCode True (_justModified m) }
       }
-      Nothing -> ipts
+      Nothing -> inputs
 
 handleMousePosEvent :: SDL.MouseMotionEventData -> Inputs -> Inputs
-handleMousePosEvent mouseMotionEvent ipts =
+handleMousePosEvent mouseMotionEvent inputs =
   let (SDL.P pos) = SDL.mouseMotionEventPos mouseMotionEvent
-  in ipts { _mousePosition = MousePosition pos }
+  in inputs { _mousePosition = MousePosition pos }
 
 handleSDLInput :: SDL.Event -> Inputs -> Inputs
-handleSDLInput event ipts = case SDL.eventPayload event of
+handleSDLInput event inputs = case SDL.eventPayload event of
   -- keyboard presses
-  SDL.KeyboardEvent    e -> handleKeyboardEvent e ipts
+  SDL.KeyboardEvent    e -> handleKeyboardEvent e inputs
   -- mouse movements
-  SDL.MouseMotionEvent e -> handleMousePosEvent e ipts
+  SDL.MouseMotionEvent e -> handleMousePosEvent e inputs
   -- otherwise
-  _ -> ipts
+  _ -> inputs
 
 getInputs :: ECS Inputs
 getInputs = do
@@ -82,11 +82,11 @@ getInputs = do
 
 maintainInputs :: PlayerInput -> PlayerInput
 maintainInputs m =
-  m { inputs       = mapWithKey maintainIfNotNew (inputs m)
-    , justModified = empty }
+  m { _inputs       = mapWithKey maintainIfNotNew (_inputs m)
+    , _justModified = empty }
   where maintainIfNotNew k v =
-          case (justModified m !? k) of Nothing -> maintainKey v
-                                        Just _  -> v
+          case (_justModified m !? k) of Nothing -> maintainKey v
+                                         Just _  -> v
 
 consumeInputs :: [SDL.Event] -> Inputs -> Inputs
-consumeInputs events ipts = foldr handleSDLInput ipts events
+consumeInputs events inputs = foldr handleSDLInput inputs events

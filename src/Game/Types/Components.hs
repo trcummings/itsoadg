@@ -75,9 +75,9 @@ newtype HasOptionMenuEvent =
 data ActiveOptionList = ActiveOptionList
 
 data Option =
-  Option { oId      :: String
-         , text     :: String
-         , selected :: Bool   }
+  Option { _oId      :: String
+         , _text     :: String
+         , _selected :: Bool   }
 
 data OptionList = OptionList [Option]
 
@@ -99,34 +99,34 @@ data CameraAction =
 
 newtype HasCameraEvent = HasCameraEvent CameraAction
 
-data ClippingPlanes = ClippingPlanes { near :: Float
-                                     , far  :: Float }
+data ClippingPlanes = ClippingPlanes { _near :: Float
+                                     , _far  :: Float }
 
 newtype FieldOfView = FieldOfView Float
 
-data CameraAxes = CameraAxes { xAxis :: L.V3 Float
-                             , yAxis :: L.V3 Float
-                             , zAxis :: L.V3 Float }
+data CameraAxes = CameraAxes { _xAxis :: L.V3 Float
+                             , _yAxis :: L.V3 Float
+                             , _zAxis :: L.V3 Float }
 
 newtype Orientation = Orientation (L.Quaternion Float)
 
-data Camera = Camera { clippingPlanes :: ClippingPlanes
-                     , fieldOfView    :: FieldOfView
-                     , orientation    :: Orientation
-                     , cameraAxes     :: CameraAxes }
+data Camera = Camera { _clippingPlanes :: ClippingPlanes
+                     , _fieldOfView    :: FieldOfView
+                     , _orientation    :: Orientation
+                     , _cameraAxes     :: CameraAxes }
 
 -- OpenGL types
-data Resource = Resource { shaderProgram :: U.ShaderProgram
-                         , vertBuffer    :: GL.BufferObject
-                         , colorBuffer   :: GL.BufferObject
-                         , elementBuffer :: GL.BufferObject }
+data Resource = Resource { _shaderProgram :: U.ShaderProgram
+                         , _vertBuffer    :: GL.BufferObject
+                         , _colorBuffer   :: GL.BufferObject
+                         , _elementBuffer :: GL.BufferObject }
 
-data Model = Model { resource  :: Resource
-                   , vertices  :: [L.V3 Float]
-                   , colors    :: [L.V3 Float]
-                   , elements  :: [L.V3 GL.GLuint] }
+data Model = Model { _resource  :: Resource
+                   , _vertices  :: [L.V3 Float]
+                   , _colors    :: [L.V3 Float]
+                   , _elements  :: [L.V3 GL.GLuint] }
 
-data Player = Player
+newtype Player = Player (Maybe GL.TextureObject)
 
 -- data CameraTarget =
 --   CameraTarget Entity

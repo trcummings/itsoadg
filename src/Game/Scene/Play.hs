@@ -27,6 +27,7 @@ import           Game.Effect.Renderer (getWindowDims)
 import           Game.Util.Constants  (frameDeltaSeconds)
 
 import           Game.World.TH (ECS)
+import           Game.Util.Billboard (renderBillboard)
 import           Game.Util.Texture (getAndCreateTexture)
 import           Game.Util.Camera
   ( cameraViewMatrix
@@ -62,6 +63,8 @@ shaderPath = "assets" </> "glsl"
 texturePath :: FilePath
 texturePath = "assets" </> "sprites"
 
+cubeVertices = L.V3 <$> [1, -1] <*> [1, -1] <*> [1, -1]
+
 initialize :: ECS ()
 initialize = do
    -- cube
@@ -87,34 +90,35 @@ initialize = do
                               <*> U.fromSource GL.ArrayBuffer cols
                               <*> U.fromSource GL.ElementArrayBuffer elems
   newEntity (
-      Model { resource = resrce
-            , vertices = verts
-            , colors   = cols
-            , elements = elems }
+      Model { _resource = resrce
+            , _vertices = verts
+            , _colors   = cols
+            , _elements = elems }
     , Position3D $ L.V3 0 0 (-4) )
 
   -- player character
   let p = texturePath </> "player_char.tga"
   playerTexture <- liftIO $ getAndCreateTexture p
   newEntity (
-      Player
+      Player playerTexture
     , Position3D $ L.V3 0 0 (-2) )
 
   -- camera
   newEntity (
-      Camera { clippingPlanes = ClippingPlanes { near = 0.1, far = 10 }
-             , fieldOfView    = FieldOfView (pi / 4)
-             , orientation    = Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-             , cameraAxes     = CameraAxes { xAxis = L.V3 1 0 0
-                                           , yAxis = L.V3 0 1 0
-                                           , zAxis = L.V3 0 0 (-1) } }
+      Camera { _clippingPlanes = ClippingPlanes { _near = 0.1, _far = 10 }
+             , _fieldOfView    = FieldOfView (pi / 4)
+             , _orientation    = Orientation $ L.Quaternion 1 (L.V3 0 0 0)
+             , _cameraAxes     = CameraAxes { _xAxis = L.V3 1 0 0
+                                            , _yAxis = L.V3 0 1 0
+                                            , _zAxis = L.V3 0 0 (-1) } }
     , Position3D $ L.V3 0 0 0 )
   -- move up, tilt down to look at cube
-  cmap $ \(c :: CameraEntity) ->
-      runCameraAction (
-        Camera'Compose
-          (Camera'Rotation Tilt (Degrees (-30)))
-          (Camera'Dolly (L.V3 0 2 0))) c
+  -- cmap $ \(c :: CameraEntity) ->
+  --     runCameraAction (
+  --       Camera'Compose
+  --         (Camera'Rotation Tilt (Degrees (-30)))
+  --         (Camera'Dolly (L.V3 0 2 0))) c
+  return ()
 
 cleanUp :: ECS ()
 cleanUp = do
@@ -129,8 +133,8 @@ cleanUp = do
 step :: ECS ()
 step = do
   -- if escape pressed, transition to quit
-  ipts <- getInputs
-  let m = inputs . _keyboardInput $ ipts
+  inputs <- getInputs
+  let m = _inputs . _keyboardInput $ inputs
   when (isPressed $ m ! SDL.KeycodeEscape) $ do
     sc <- get global :: ECS SceneControl
     set global $ sc { _nextScene = Scene'Quit }
@@ -177,49 +181,54 @@ render = do
   t <- getGlobalTime
   cmapM_ $ \(camera :: CameraEntity) -> do
     cmapM_ $ \(model :: Model, Position3D mPos) -> do
-      let r = resource model
-          v = vertices model
-          c = colors   model
-          e = elements model
-          dgt = t / 1000
-          sProgram    = shaderProgram r
+      let dgt       = t / 1000
+          cubeModel = L.mkTransformationMat L.identity mPos
+          -- the cube
+          -- cubeAnim  = L.mkTransformation (L.axisAngle
+          --                                   (L.V3 0 1 0)
+          --                                   (realToFrac dgt * pi / 4))
+          --                                L.zero
+          cubeTrans = (cameraProjectionMatrix dims camera)
+                  !*! (cameraViewMatrix camera)
+                  !*! cubeModel
+                      -- !*! cubeAnim
+
+
+      let r = _resource model
+          v = _vertices model
+          c = _colors   model
+          e = _elements model
+          sProgram    = _shaderProgram r
           attribKeys  = keys $ U.attribs  sProgram
           uniformKeys = keys $ U.uniforms sProgram
-          -- the cube
-          cubeModel = L.mkTransformationMat L.identity mPos
-          cubeAnim  = L.mkTransformation (L.axisAngle
-                                            (L.V3 0 1 0)
-                                            (realToFrac dgt * pi / 4))
-                                         L.zero
-          cubeTrans =     (cameraProjectionMatrix dims camera)
-                      !*! (cameraViewMatrix camera)
-                      !*! cubeModel
-                      !*! cubeAnim
-
       -- set current program to shaderProgram
       liftIO $ GL.currentProgram $= (Just $ U.program sProgram)
-
       -- enable all attributes
       liftIO $ mapM_ (\k -> liftIO $ U.enableAttrib sProgram k) attribKeys
-
       -- bind all buffers & set all attributes
-      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (vertBuffer r)
-      liftIO $ U.setAttrib sProgram "coord3d"
-          GL.ToFloat $ GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
-
-      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (colorBuffer r)
-      liftIO $ U.setAttrib sProgram "v_color"
-          GL.ToFloat $ GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
-
+      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (_vertBuffer r)
+      liftIO $ U.setAttrib
+          sProgram
+          "coord3d"
+          GL.ToFloat $
+          GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
+      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (_colorBuffer r)
+      liftIO $ U.setAttrib
+          sProgram
+          "v_color"
+          GL.ToFloat $
+          GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
       -- transform all uniforms
       liftIO $ mapM_ (\k -> do
             U.asUniform $ cubeTrans
           $ U.getUniform sProgram k
         ) uniformKeys
-
+      -- -- draw player
+      -- cmapM_ $ \(Player pt, pPos :: Position3D) -> do
+      --   -- liftIO $ GL.clear [GL.DepthBuffer]
+      --   liftIO $ renderBillboard pPos pt
       -- bind element buffer
-      liftIO $ GL.bindBuffer GL.ElementArrayBuffer $= Just (elementBuffer r)
-
+      liftIO $ GL.bindBuffer GL.ElementArrayBuffer $= Just (_elementBuffer r)
       -- draw indexed triangles
       liftIO $ U.drawIndexedTris (fromIntegral $ length e)
 
@@ -227,6 +236,11 @@ render = do
       liftIO $ mapM_ (\k -> do
           GL.vertexAttribArray (U.getAttrib sProgram k) $= GL.Disabled
         ) attribKeys
+
+    -- cmapM_ $ \(Player pt) -> do
+    --   liftIO $ GL.clear [GL.DepthBuffer]
+    --   liftIO $ renderBillboard pt
+
   -- -- renderer  <- vcRenderer <$> getVideoConfig
   -- -- cmapM_ $ \(Font font) -> do
   -- --   -- render title
