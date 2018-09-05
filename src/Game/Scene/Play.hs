@@ -27,8 +27,11 @@ import           Game.Effect.Renderer (getWindowDims)
 import           Game.Util.Constants  (frameDeltaSeconds)
 
 import           Game.World.TH (ECS)
+import           Game.Util.Texture (getAndCreateTexture)
 import           Game.Util.Camera
-  ( runCameraAction
+  ( cameraViewMatrix
+  , cameraProjectionMatrix
+  , runCameraAction
   , CameraEntity )
 import           Game.Types
   ( VideoConfig(..)
@@ -46,6 +49,7 @@ import           Game.Types
   , Orientation(..)
   , CameraAxes(..)
 
+  , Player(..)
   , Position3D(..)
   , Model(..)
   , Resource(..)
@@ -54,6 +58,9 @@ import           Game.Types
 
 shaderPath :: FilePath
 shaderPath = "assets" </> "glsl"
+
+texturePath :: FilePath
+texturePath = "assets" </> "sprites"
 
 initialize :: ECS ()
 initialize = do
@@ -86,6 +93,13 @@ initialize = do
             , elements = elems }
     , Position3D $ L.V3 0 0 (-4) )
 
+  -- player character
+  let p = texturePath </> "player_char.tga"
+  playerTexture <- liftIO $ getAndCreateTexture p
+  newEntity (
+      Player
+    , Position3D $ L.V3 0 0 (-2) )
+
   -- camera
   newEntity (
       Camera { clippingPlanes = ClippingPlanes { near = 0.1, far = 10 }
@@ -105,10 +119,12 @@ initialize = do
 cleanUp :: ECS ()
 cleanUp = do
   -- destroy the cube
+  -- FIXME: need to free the Model resources
   cmap $ \(_ :: Model, _ :: Position3D) -> Not :: Not (Model, Position3D)
   -- destroy the camera
   cmap $ \(_ :: CameraEntity  ) -> Not :: Not CameraEntity
   cmap $ \(_ :: HasCameraEvent) -> Not :: Not HasCameraEvent
+  -- destroy the player
 
 step :: ECS ()
 step = do
@@ -157,9 +173,9 @@ render :: ECS ()
 render = do
   -- render cube
   vc <- get global :: ECS VideoConfig
-  (L.V2 width' height') <- liftIO $ getWindowDims vc
+  dims <- liftIO $ getWindowDims vc
   t <- getGlobalTime
-  cmapM_ $ \(camera :: Camera, Position3D cPos) -> do
+  cmapM_ $ \(camera :: CameraEntity) -> do
     cmapM_ $ \(model :: Model, Position3D mPos) -> do
       let r = resource model
           v = vertices model
@@ -169,23 +185,14 @@ render = do
           sProgram    = shaderProgram r
           attribKeys  = keys $ U.attribs  sProgram
           uniformKeys = keys $ U.uniforms sProgram
-          height = fromIntegral height'
-          width  = fromIntegral width'
-          -- camera stuff
-          Orientation ore   = orientation camera
-          FieldOfView fov   = fieldOfView camera
-          projectionMatrix  = U.projectionMatrix
-                                fov
-                                (width / height)
-                                (near . clippingPlanes $ camera)
-                                (far  . clippingPlanes $ camera)
-          cameraViewMatrix  = L.mkTransformation q (L.rotate q $ negate cPos)
-            where q = L.conjugate $ ore
           -- the cube
           cubeModel = L.mkTransformationMat L.identity mPos
-          cubeAnim  = L.mkTransformation (L.axisAngle (L.V3 0 1 0) (realToFrac dgt * pi / 4)) L.zero
-          cubeTrans =     projectionMatrix
-                      !*! cameraViewMatrix
+          cubeAnim  = L.mkTransformation (L.axisAngle
+                                            (L.V3 0 1 0)
+                                            (realToFrac dgt * pi / 4))
+                                         L.zero
+          cubeTrans =     (cameraProjectionMatrix dims camera)
+                      !*! (cameraViewMatrix camera)
                       !*! cubeModel
                       !*! cubeAnim
 

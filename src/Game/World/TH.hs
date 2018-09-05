@@ -23,6 +23,8 @@ import Game.Types
 
   , Model
 
+  , Player
+
   , Camera
   , HasCameraEvent
 
@@ -54,7 +56,11 @@ instance Component Position3D where
 instance Component Model where
   type Storage Model = Map Model
 
+instance Component Player where
+  type Storage Player = Unique Player
 
+
+-- Camera Components
 instance Component Camera where
   type Storage Camera = Unique Camera
 
@@ -62,6 +68,7 @@ instance Component HasCameraEvent where
   type Storage HasCameraEvent = Unique HasCameraEvent
 
 
+-- Option Menu Components
 instance Component OptionList where
   type Storage OptionList = Map OptionList
 
@@ -81,6 +88,8 @@ makeWorld "World" [
   , ''Position3D
 
   , ''Model
+
+  , ''Player
 
   , ''Camera
   , ''HasCameraEvent

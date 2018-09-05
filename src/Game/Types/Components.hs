@@ -1,26 +1,26 @@
 module Game.Types.Components where
 
-import qualified SDL (Texture, Keycode)
-import qualified SDL.Mixer as Mixer (Chunk, Channel)
-import qualified Data.Map as Map (Map)
-import qualified Animate
+-- import qualified SDL (Texture, Keycode)
+-- import qualified SDL.Mixer as Mixer (Chunk, Channel)
+-- import qualified Data.Map as Map (Map)
+-- import qualified Animate
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.GLUtil as U
 import qualified Linear as L
-import           Foreign.C.Types (CInt, CDouble)
-import           GHC.Int (Int32(..))
-import           Linear (V2, V3)
-import           Apecs (Entity)
-import           KeyState
+-- import           Foreign.C.Types (CInt, CDouble)
+-- import           GHC.Int (Int32(..))
+-- import           Linear (V2, V3)
+-- import           Apecs (Entity)
+-- import           KeyState
 
-import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
-import           Game.Types.Physics (CollisionLayer, AABB, RaycastHit)
-import           Game.Types.TileMap (TileType)
-import           Game.Types.Audio (Audio'Command)
-import           Game.Types.Player
-  ( PlayerAction(..)
-  , PlayerKey(..)
-  , Player'SFX'Key(..) )
+-- import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
+-- import           Game.Types.Physics (CollisionLayer, AABB, RaycastHit)
+-- import           Game.Types.TileMap (TileType)
+-- import           Game.Types.Audio (Audio'Command)
+-- import           Game.Types.Player
+--   ( PlayerAction(..)
+--   , PlayerKey(..)
+--   , Player'SFX'Key(..) )
 
 -- Aliases
 -- type BoxEntity = (CollisionModule, BoundingBox, Position, Entity)
@@ -58,7 +58,7 @@ import           Game.Types.Player
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
 --   deriving Show
 
-data Position3D = Position3D (V3 Float)
+data Position3D = Position3D (L.V3 Float)
 
 -- data Velocity3D = Velocity3D (V3 Unit)
 
@@ -92,7 +92,7 @@ data Rotation =
   deriving Show
 
 data CameraAction =
-    Camera'Dolly (V3 Float)
+    Camera'Dolly (L.V3 Float)
   | Camera'Rotation Rotation Degrees
   | Camera'Compose CameraAction CameraAction
   deriving Show
@@ -125,6 +125,8 @@ data Model = Model { resource  :: Resource
                    , vertices  :: [L.V3 Float]
                    , colors    :: [L.V3 Float]
                    , elements  :: [L.V3 GL.GLuint] }
+
+data Player = Player
 
 -- data CameraTarget =
 --   CameraTarget Entity

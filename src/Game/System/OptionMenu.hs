@@ -9,8 +9,6 @@ import           Control.Lens ((&), (%~), element)
 import           Control.Monad.IO.Class (liftIO)
 import           KeyState (isPressed)
 
--- import           Game.Effect.SceneManager (SceneManager, setNextScene)
-
 import           Game.World.TH (ECS)
 import           Game.Effect.Input (getInputs)
 import           Game.Types

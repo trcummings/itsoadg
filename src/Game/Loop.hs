@@ -1,6 +1,6 @@
 module Game.Loop where
 
-import Apecs                (cmap, get, set, global, runGC, cmapM_)
+import Apecs                (runGC) 
 
 import Game.World.TH        (ECS)
 import Game.Util.Constants  (dT)
@@ -57,6 +57,3 @@ mainLoop = do
   stepSceneControl
   -- loop if game still running
   ifNotQuitting mainLoop
-  -- case _scene sc of
-  --   Scene'Quit  -> return ()
-  --   _           -> mainLoop
