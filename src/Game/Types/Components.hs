@@ -117,7 +117,7 @@ data Camera = Camera { _clippingPlanes :: ClippingPlanes
 
 -- OpenGL types
 data Resource = Resource { _shaderProgram :: U.ShaderProgram
-                         , _vertBuffer    :: GL.BufferObject
+                         , _vertexBuffer  :: GL.BufferObject
                          , _colorBuffer   :: GL.BufferObject
                          , _elementBuffer :: GL.BufferObject }
 

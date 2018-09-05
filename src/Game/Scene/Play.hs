@@ -24,11 +24,14 @@ import           System.FilePath ((</>))
 import           Game.Effect.Clock    (getGlobalTime)
 import           Game.Effect.Input    (getInputs)
 import           Game.Effect.Renderer (getWindowDims)
-import           Game.Util.Constants  (frameDeltaSeconds)
 
-import           Game.World.TH (ECS)
-import           Game.Util.Billboard (renderBillboard)
-import           Game.Util.Texture (getAndCreateTexture)
+import           Game.World.TH        (ECS)
+import           Game.Util.Billboard  (renderBillboard)
+import           Game.Util.Texture    (getAndCreateTexture)
+import           Game.Util.Constants
+  ( frameDeltaSeconds
+  , shaderPath
+  , texturePath )
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -57,51 +60,47 @@ import           Game.Types
   , Unit(..)
   , Scene(..) )
 
-shaderPath :: FilePath
-shaderPath = "assets" </> "glsl"
-
-texturePath :: FilePath
-texturePath = "assets" </> "sprites"
-
-cubeVertices = L.V3 <$> [1, -1] <*> [1, -1] <*> [1, -1]
-
 initialize :: ECS ()
 initialize = do
-   -- cube
-  let v = shaderPath </> "cube.v.glsl"
-      f = shaderPath </> "cube.f.glsl"
-      verts = L.V3 <$> [1, -1] <*> [1, -1] <*> [1, -1]
-      cols  = verts
-      elems = [ L.V3 2 1 0 -- right
-              , L.V3 1 2 3
-              , L.V3 0 1 4 -- top
-              , L.V3 4 1 5
-              , L.V3 4 5 6 -- left
-              , L.V3 7 6 5
-              , L.V3 2 6 3 -- bottom
-              , L.V3 6 3 7
-              , L.V3 0 4 2 -- front
-              , L.V3 2 4 6
-              , L.V3 5 1 7 -- back
-              , L.V3 7 1 3
-              ]
-  resrce <- liftIO $ Resource <$> U.simpleShaderProgram v f
-                              <*> U.fromSource GL.ArrayBuffer verts
-                              <*> U.fromSource GL.ArrayBuffer cols
-                              <*> U.fromSource GL.ElementArrayBuffer elems
-  newEntity (
-      Model { _resource = resrce
-            , _vertices = verts
-            , _colors   = cols
-            , _elements = elems }
-    , Position3D $ L.V3 0 0 (-4) )
+  let vertexShader   = shaderPath </> "cube.v.glsl"
+      fragmentShader = shaderPath </> "cube.f.glsl"
+      vertices       = L.V3 <$> [1, -1] <*> [1, -1] <*> [1, -1]
+      colors         = vertices
+      elements       = [ L.V3 2 1 0 -- right
+                       , L.V3 1 2 3
+                       , L.V3 0 1 4 -- top
+                       , L.V3 4 1 5
+                       , L.V3 4 5 6 -- left
+                       , L.V3 7 6 5
+                       , L.V3 2 6 3 -- bottom
+                       , L.V3 6 3 7
+                       , L.V3 0 4 2 -- front
+                       , L.V3 2 4 6
+                       , L.V3 5 1 7 -- back
+                       , L.V3 7 1 3
+                       ]
+  shaderProgram <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
+  vertexBuffer  <- liftIO $ U.fromSource GL.ArrayBuffer vertices
+  colorBuffer   <- liftIO $ U.fromSource GL.ArrayBuffer colors
+  elementBuffer <- liftIO $ U.fromSource GL.ElementArrayBuffer elements
+  let resource = Resource { _shaderProgram = shaderProgram
+                          , _vertexBuffer  = vertexBuffer
+                          , _colorBuffer   = colorBuffer
+                          , _elementBuffer = elementBuffer }
 
-  -- player character
-  let p = texturePath </> "player_char.tga"
-  playerTexture <- liftIO $ getAndCreateTexture p
   newEntity (
-      Player playerTexture
-    , Position3D $ L.V3 0 0 (-2) )
+      Model { _resource = resource
+            , _vertices = vertices
+            , _colors   = colors
+            , _elements = elements }
+    , Position3D $ L.V3 0 0 (-4) )
+  --
+  -- -- player character
+  -- let p = texturePath </> "player_char.tga"
+  -- playerTexture <- liftIO $ getAndCreateTexture p
+  -- newEntity (
+  --     Player playerTexture
+  --   , Position3D $ L.V3 0 0 (-2) )
 
   -- camera
   newEntity (
@@ -124,7 +123,7 @@ cleanUp :: ECS ()
 cleanUp = do
   -- destroy the cube
   -- FIXME: need to free the Model resources
-  cmap $ \(_ :: Model, _ :: Position3D) -> Not :: Not (Model, Position3D)
+  -- cmap $ \(_ :: Model, _ :: Position3D) -> Not :: Not (Model, Position3D)
   -- destroy the camera
   cmap $ \(_ :: CameraEntity  ) -> Not :: Not CameraEntity
   cmap $ \(_ :: HasCameraEvent) -> Not :: Not HasCameraEvent
@@ -180,80 +179,60 @@ render = do
   dims <- liftIO $ getWindowDims vc
   t <- getGlobalTime
   cmapM_ $ \(camera :: CameraEntity) -> do
+    let camProjMatrix = cameraProjectionMatrix dims camera
+        camViewMatrix = cameraViewMatrix camera
+
     cmapM_ $ \(model :: Model, Position3D mPos) -> do
-      let dgt       = t / 1000
-          cubeModel = L.mkTransformationMat L.identity mPos
-          -- the cube
-          -- cubeAnim  = L.mkTransformation (L.axisAngle
-          --                                   (L.V3 0 1 0)
-          --                                   (realToFrac dgt * pi / 4))
-          --                                L.zero
-          cubeTrans = (cameraProjectionMatrix dims camera)
-                  !*! (cameraViewMatrix camera)
-                  !*! cubeModel
-                      -- !*! cubeAnim
-
-
-      let r = _resource model
-          v = _vertices model
-          c = _colors   model
-          e = _elements model
-          sProgram    = _shaderProgram r
-          attribKeys  = keys $ U.attribs  sProgram
-          uniformKeys = keys $ U.uniforms sProgram
+      let modelMatrix   = L.mkTransformationMat L.identity mPos
+          trans         = camProjMatrix
+                      !*! camViewMatrix
+                      !*! modelMatrix
+          resource      = _resource model
+          vertices      = _vertices model
+          colors        = _colors   model
+          elements      = _elements model
+          shaderProgram = _shaderProgram resource
+          attribKeys    = keys $ U.attribs  shaderProgram
+          uniformKeys   = keys $ U.uniforms shaderProgram
       -- set current program to shaderProgram
-      liftIO $ GL.currentProgram $= (Just $ U.program sProgram)
+      liftIO $ GL.currentProgram $= (Just $ U.program shaderProgram)
       -- enable all attributes
-      liftIO $ mapM_ (\k -> liftIO $ U.enableAttrib sProgram k) attribKeys
+      liftIO $ mapM_ (\key -> do
+          liftIO $ U.enableAttrib shaderProgram key
+        ) attribKeys
       -- bind all buffers & set all attributes
-      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (_vertBuffer r)
+      liftIO $ GL.bindBuffer
+          GL.ArrayBuffer $= Just (_vertexBuffer resource)
+
       liftIO $ U.setAttrib
-          sProgram
+          shaderProgram
           "coord3d"
           GL.ToFloat $
           GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
-      liftIO $ GL.bindBuffer GL.ArrayBuffer $= Just (_colorBuffer r)
+
+      liftIO $ GL.bindBuffer
+          GL.ArrayBuffer $= Just (_colorBuffer resource)
+
       liftIO $ U.setAttrib
-          sProgram
+          shaderProgram
           "v_color"
           GL.ToFloat $
           GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
+
       -- transform all uniforms
-      liftIO $ mapM_ (\k -> do
-            U.asUniform $ cubeTrans
-          $ U.getUniform sProgram k
+      liftIO $ mapM_ (\keys -> do
+            U.asUniform $ trans
+          $ U.getUniform shaderProgram keys
         ) uniformKeys
-      -- -- draw player
-      -- cmapM_ $ \(Player pt, pPos :: Position3D) -> do
-      --   -- liftIO $ GL.clear [GL.DepthBuffer]
-      --   liftIO $ renderBillboard pPos pt
+
       -- bind element buffer
-      liftIO $ GL.bindBuffer GL.ElementArrayBuffer $= Just (_elementBuffer r)
+      liftIO $ GL.bindBuffer
+          GL.ElementArrayBuffer $= Just (_elementBuffer resource)
+
       -- draw indexed triangles
-      liftIO $ U.drawIndexedTris (fromIntegral $ length e)
+      liftIO $ U.drawIndexedTris (fromIntegral $ length elements)
 
       -- disable all attributes
-      liftIO $ mapM_ (\k -> do
-          GL.vertexAttribArray (U.getAttrib sProgram k) $= GL.Disabled
+      liftIO $ mapM_ (\key -> do
+          GL.vertexAttribArray (U.getAttrib shaderProgram key) $= GL.Disabled
         ) attribKeys
-
-    -- cmapM_ $ \(Player pt) -> do
-    --   liftIO $ GL.clear [GL.DepthBuffer]
-    --   liftIO $ renderBillboard pt
-
-  -- -- renderer  <- vcRenderer <$> getVideoConfig
-  -- -- cmapM_ $ \(Font font) -> do
-  -- --   -- render title
-  -- --   liftIO $ renderText renderer font (V2 2 3) "Let Sleeping Gods Lie"
-  -- --   --render options menu
-  -- --   cmapM_ $ \(OptionList options, Position (V2 px py)) -> do
-  -- --     -- render each option descending vertically
-  -- --     mapM_ (\(option, yMod) -> do
-  -- --         let newY = py + Unit yMod
-  -- --         liftIO $ renderText renderer font (V2 px newY) (text option)
-  -- --         -- draw arrow next to selected option
-  -- --         when (selected option) $ do
-  -- --           liftIO $ renderText renderer font (V2 (px - Unit 1) newY) ">"
-  -- --       ) (zip options ( [x | x <- [0.0, 1.0..(fromIntegral $ length options)] ] ))
-  -- --     return ()
-  return ()

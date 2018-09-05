@@ -5,10 +5,11 @@ module Game.Util.Constants where
 import qualified SDL
 import           Linear (V2(..))
 import           Foreign.C.Types (CInt)
+import           System.FilePath ((</>))
 
 import           Game.Types (Unit(..), Seconds(..))
 
-
+-- Window/World constants
 pixelsPerUnit :: Double
 pixelsPerUnit = 32
 
@@ -23,6 +24,16 @@ screenWidth, screenHeight :: Unit
 
 initialSize :: V2 CInt
 initialSize = V2 (toPixels screenWidth) (toPixels screenHeight)
+
+-- Loader constants
+
+shaderPath :: FilePath
+shaderPath = "assets" </> "glsl"
+
+texturePath :: FilePath
+texturePath = "assets" </> "sprites"
+
+-- Physics constants
 
 maxSpeed :: Unit
 maxSpeed = 17
@@ -73,12 +84,6 @@ makeRunningAccel topSpeed = topSpeed / Unit timeToTopSpeed
 playerTopSpeed :: Unit
 playerTopSpeed = 10
 
-playerBurningTopSpeed :: Unit
-playerBurningTopSpeed = 2.5
-
-playerAbsorbingTopSpeed :: Unit
-playerAbsorbingTopSpeed = 20
-
 timeToTopSpeed :: Double
 timeToTopSpeed = 1 -- in seconds
 
@@ -90,15 +95,3 @@ runningAccel = makeRunningAccel playerTopSpeed
 
 stoppingAccel :: Unit
 stoppingAccel = makeStoppingAccel playerTopSpeed
-
-bRunningAccel :: Unit
-bRunningAccel = makeRunningAccel playerBurningTopSpeed
-
-bStoppingAccel :: Unit
-bStoppingAccel = makeStoppingAccel playerBurningTopSpeed
-
-aRunningAccel :: Unit
-aRunningAccel = makeRunningAccel playerAbsorbingTopSpeed
-
-aStoppingAccel :: Unit
-aStoppingAccel = makeStoppingAccel playerAbsorbingTopSpeed

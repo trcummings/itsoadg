@@ -28,20 +28,6 @@ import           Game.System.OptionMenu
   , renderOptionMenu
   , stepOptionMenu )
 import           Game.World.TH (ECS)
-import           Game.Types
-  ( VideoConfig(..)
-
-  , Camera(..)
-  , ClippingPlanes(..)
-  , FieldOfView(..)
-  , Orientation(..)
-  , CameraAxes(..)
-
-  , Position3D(..)
-  , Model(..)
-  , Resource(..)
-  , Unit(..)
-  , Scene(..) )
 
 initialize :: ECS ()
 initialize = do
