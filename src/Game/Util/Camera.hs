@@ -21,18 +21,19 @@ import Game.Types
   , CameraAxes(..)
   , Position3D(..) )
 
-type CameraEntity = (Camera, Position3D)
+type CameraEntity = (Camera, Position3D, Orientation)
 
 -- transformations to camera perspective
 cameraViewMatrix :: CameraEntity -> L.M44 Float
-cameraViewMatrix (camera :: Camera, Position3D cPos) =
-  let Orientation ore   = _orientation camera
-      q                 = L.conjugate $ ore
+cameraViewMatrix (camera :: Camera, Position3D cPos, Orientation o) =
+  let q = L.conjugate $ o
   in L.mkTransformation q (L.rotate q $ negate cPos)
 
 cameraProjectionMatrix :: L.V2 Int32 -> CameraEntity -> L.M44 Float
 cameraProjectionMatrix (L.V2 width' height')
-                       (camera :: Camera, Position3D cPos) =
+                       ( camera :: Camera
+                       , Position3D cPos
+                       , _ :: Orientation) =
   let height = fromIntegral height'
       width  = fromIntegral width'
       FieldOfView fov   = _fieldOfView camera
@@ -51,17 +52,14 @@ runCameraAction (Camera'Compose a1 a2) = runCameraAction a2 .
                                          runCameraAction a1
 
 dollyCamera :: L.V3 Float -> (CameraEntity -> CameraEntity)
-dollyCamera tr (c, Position3D pos) = (c, Position3D $ pos + tr')
-  where Orientation q = _orientation c
-        tr'           = L.rotate q tr
+dollyCamera tr (c, Position3D pos, o@(Orientation q)) =
+  (c, Position3D $ pos + L.rotate q tr, o)
 
 rotateCamera :: Rotation -> Degrees -> (CameraEntity -> CameraEntity)
-rotateCamera r (Degrees d) c =
-  c & _1 %~ (\cam ->
-    let Orientation q = _orientation cam
-        rot           = (axis . _cameraAxes $ cam)
-        rad           = U.deg2rad d
-    in cam { _orientation = Orientation $ q * L.axisAngle rot rad })
+rotateCamera r (Degrees d) (c, p, Orientation q) =
+  let rot = axis . _cameraAxes $ c
+      rad = U.deg2rad d
+  in (c, p, Orientation $ q * L.axisAngle rot rad)
   where axis = case r of Pan  -> _yAxis
                          Tilt -> _xAxis
                          Roll -> _zAxis

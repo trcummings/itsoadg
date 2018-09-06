@@ -93,7 +93,8 @@ initialize = do
             , _vertices = vertices
             , _colors   = colors
             , _elements = elements }
-    , Position3D $ L.V3 0 0 (-4) )
+    , Position3D  $ L.V3 0 0 (-4)
+    , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   --
   -- -- player character
   -- let p = texturePath </> "player_char.tga"
@@ -106,11 +107,11 @@ initialize = do
   newEntity (
       Camera { _clippingPlanes = ClippingPlanes { _near = 0.1, _far = 10 }
              , _fieldOfView    = FieldOfView (pi / 4)
-             , _orientation    = Orientation $ L.Quaternion 1 (L.V3 0 0 0)
              , _cameraAxes     = CameraAxes { _xAxis = L.V3 1 0 0
                                             , _yAxis = L.V3 0 1 0
                                             , _zAxis = L.V3 0 0 (-1) } }
-    , Position3D $ L.V3 0 0 0 )
+    , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
+    , Position3D  $ L.V3 0 0 0 )
   -- move up, tilt down to look at cube
   -- cmap $ \(c :: CameraEntity) ->
   --     runCameraAction (

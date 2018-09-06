@@ -58,7 +58,9 @@ import qualified Linear as L
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
 --   deriving Show
 
-data Position3D = Position3D (L.V3 Float)
+newtype Position3D  = Position3D (L.V3 Float)
+
+newtype Orientation = Orientation (L.Quaternion Float)
 
 -- data Velocity3D = Velocity3D (V3 Unit)
 
@@ -108,11 +110,8 @@ data CameraAxes = CameraAxes { _xAxis :: L.V3 Float
                              , _yAxis :: L.V3 Float
                              , _zAxis :: L.V3 Float }
 
-newtype Orientation = Orientation (L.Quaternion Float)
-
 data Camera = Camera { _clippingPlanes :: ClippingPlanes
                      , _fieldOfView    :: FieldOfView
-                     , _orientation    :: Orientation
                      , _cameraAxes     :: CameraAxes }
 
 -- OpenGL types

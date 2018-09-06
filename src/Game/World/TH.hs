@@ -20,6 +20,7 @@ import Game.Types
   , Clock
 
   , Position3D
+  , Orientation
 
   , Model
 
@@ -51,6 +52,9 @@ instance Component Clock where
 -- Entity related Components
 instance Component Position3D where
   type Storage Position3D = Map Position3D
+
+instance Component Orientation where
+  type Storage Orientation = Map Orientation
 
 
 instance Component Model where
@@ -86,6 +90,7 @@ makeWorld "World" [
   , ''Clock
 
   , ''Position3D
+  , ''Orientation
 
   , ''Model
 
