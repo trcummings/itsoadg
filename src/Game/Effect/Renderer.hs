@@ -18,6 +18,36 @@ clearScreen = withVC prepNextRender
 drawScreen :: ECS ()
 drawScreen = withVC swapBuffer
 
+initScreen :: ECS ()
+initScreen = withVC initRenderer
+
+initRenderer :: VideoConfig -> IO ()
+initRenderer vc = do
+  -- clear background color to black
+  GL.clearColor $= GL.Color4 0 0 0 0
+  -- enable clearing of the depth buffer
+  GL.clearDepth $= 1
+  -- set depth function to sort by "Less" depth
+  -- allows for 3D depth testing & tells OpenGL how to deal with overlap
+  GL.depthFunc  $= Just GL.Less
+  -- set backface culling
+  GL.cullFace $= Just GL.Back
+  -- set viewport
+  setViewportToWindow vc
+
+prepNextRender :: VideoConfig -> IO ()
+prepNextRender vc = do
+  -- clear background color to black
+  GL.clearColor $= GL.Color4 0 0 0 0
+  -- clear buffers
+  GL.clear [GL.ColorBuffer, GL.DepthBuffer]
+  -- set viewport
+  setViewportToWindow vc
+
+-- helpers
+swapBuffer :: VideoConfig -> IO ()
+swapBuffer vc = SDL.glSwapWindow $ _window vc
+
 withVC :: (VideoConfig -> IO ()) -> ECS ()
 withVC f = do
   vcs <- getAll :: ECS [VideoConfig]
@@ -27,24 +57,13 @@ withVC f = do
     let (vc:_) = vcs
     cmapM_ $ \(vc :: VideoConfig) -> liftIO $ f vc
 
+setViewportToWindow :: VideoConfig -> IO ()
+setViewportToWindow vc = do
+  (V2 width height) <- getWindowDims vc
+  GL.viewport $= ( GL.Position 0 0
+                 , GL.Size width height )
 
 getWindowDims :: VideoConfig -> IO (V2 Int32)
 getWindowDims vc = do
   (V2 width height) <- SDL.get $ SDL.windowSize $ _window vc
   return $ V2 (fromIntegral width :: Int32) (fromIntegral height :: Int32)
-
-prepNextRender :: VideoConfig -> IO ()
-prepNextRender vc = do
-  -- clear background color to black
-  GL.clearColor $= GL.Color4 0 0 0 0
-  -- set depth function to sort by "Less" depth
-  GL.depthFunc  $= Just GL.Less
-  -- clear buffers
-  GL.clear [GL.ColorBuffer, GL.DepthBuffer]
-  -- set viewport
-  (V2 width height) <- getWindowDims vc
-  GL.viewport $= ( GL.Position 0 0
-                 , GL.Size width height )
-
-swapBuffer :: VideoConfig -> IO ()
-swapBuffer vc = SDL.glSwapWindow $ _window vc
