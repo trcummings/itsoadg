@@ -6,7 +6,7 @@ import Data.Monoid           ((<>))
 import Data.Sequence         (empty, index, fromList, (|>))
 import Linear                (V3(..))
 
-import Game.Loaders.Obj.Parser (runObjParser, fromJustSafe)
+import Game.Loaders.Obj.Parser (runObjParser)
 import Game.Loaders.Obj.Types
   ( ObjData(..)
   , ObjLine(..)
@@ -28,12 +28,16 @@ pieceTogether objLines =
                 , _diffuse   = [] }
 
 pieceTogether' :: [ObjLine] -> VertDataSeq -> VertDataSeq
+-- processing vertex
 pieceTogether' (LineVert vert : objLines) (VertDataSeq vAccum nAccum tAccum) =
     pieceTogether' objLines (VertDataSeq (vAccum |> vert) nAccum tAccum)
+-- processing vertex normal
 pieceTogether' (LineNorm norm : objLines) (VertDataSeq vAccum nAccum tAccum) =
     pieceTogether' objLines (VertDataSeq vAccum (nAccum |> norm) tAccum)
+-- processing vertex texture coordinate
 pieceTogether' (LineTex tex : objLines) (VertDataSeq vAccum nAccum tAccum) =
     pieceTogether' objLines (VertDataSeq vAccum nAccum (tAccum |> tex))
+-- processing face data (e.g. f 5/1/6)
 pieceTogether' (LineFace (V3 (V3 v1 vt1 vn1)
                              (V3 v2 vt2 vn2)
                              (V3 v3 vt3 vn3)) : objLines)
@@ -50,13 +54,14 @@ pieceTogether' (LineFace (V3 (V3 v1 vt1 vn1)
         tex3  = tAccum `index` (vt3 - 1)
         norm3 = nAccum `index` (vn3 - 1)
 
-        curVertData = VertDataSeq
+        currentVertData = VertDataSeq
             (fromList [vert1, vert2, vert3])
             (fromList [norm1, norm2, norm3])
             (fromList [tex1,  tex2,  tex3 ])
-        restVertData = pieceTogether' objLines $
+        restOfVertData = pieceTogether' objLines $
                 VertDataSeq vAccum nAccum tAccum
-    in curVertData <> restVertData
+    in currentVertData <> restOfVertData
+-- processing reference to material file
 pieceTogether' (MtlRef _ : objLines) accum =
     pieceTogether' objLines accum
 pieceTogether' (Invalid _ : objLines) accum =

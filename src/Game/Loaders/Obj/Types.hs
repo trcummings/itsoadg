@@ -4,15 +4,15 @@ module Game.Loaders.Obj.Types
   , ObjLine(..) ) where
 
 import Graphics.Rendering.OpenGL (GLfloat, TextureObject, GLint)
-import Data.ByteString.Char8 (ByteString)
-import Data.Sequence (empty, Seq, (|>), (><))
-import Data.Monoid (Monoid(..), (<>))
-import Linear (V2, V3)
+import Data.ByteString.Char8     (ByteString)
+import Data.Sequence             (empty, Seq, (|>), (><))
+import Data.Monoid               (Monoid(..), (<>))
+import Linear                    (V2, V3)
 
 data ObjData = ObjData
- { _verts     :: [V3 GLfloat]    -- Position
- , _norms     :: [V3 GLfloat]    -- Normal
- , _texCoords :: [V2 GLfloat]    -- Texture coords
+ { _verts     :: [V3 GLfloat]    -- Vertices
+ , _norms     :: [V3 GLfloat]    -- Normals
+ , _texCoords :: [V2 GLfloat]    -- U/V Texture coords
  , _texIds    :: [GLint]         -- Texture ID
  , _texObjs   :: [TextureObject] -- Texture Objects
  , _diffuse   :: [V3 GLfloat]  } -- Diffuse

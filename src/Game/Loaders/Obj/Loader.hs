@@ -1,7 +1,6 @@
 module Game.Loaders.Obj.Loader (loadObjFile) where
 
 import Data.ByteString.Char8 as B (readFile)
-import Control.Monad ((<=<))
 
 import Game.Loaders.Obj.Types     (ObjData)
 import Game.Loaders.Obj.Parser    (runObjParser)

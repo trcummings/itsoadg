@@ -1,6 +1,4 @@
-module Game.Loaders.Obj.Parser
-  ( runObjParser
-  , fromJustSafe ) where
+module Game.Loaders.Obj.Parser (runObjParser) where
 
 import           Graphics.Rendering.OpenGL (GLfloat)
 import           Control.Applicative       ((*>), (<|>), liftA2, many)
@@ -54,7 +52,7 @@ parseFaceDat = toV3 <$> timesSep 3 parseFaceGroup skipSpace
   where
     toV3 :: [V3 Int] -> V3 (V3 Int)
     toV3 [x, y, z] = V3 x y z
-    toV3 _ = error ("Engine.Model.ObjLoader." ++
+    toV3 _ = error ("Game.Loaders.Obj.Parser." ++
                     "parseFaceDat.toV3 - Bad list length!")
 
 parseFaceGroup :: Parser (V3 Int)
@@ -74,7 +72,7 @@ parseV3 = do
   return $ V3 x y z
 
 parseV2 :: Parser (V2 GLfloat)
-parseV2= do
+parseV2 = do
   x <- realToFrac <$> double
   skipSpace
   y <- realToFrac <$> double
@@ -85,9 +83,8 @@ parseInvalid = Invalid <$> A.takeWhile (/='\n')
 
 -- helper functions
 
--- | .obj files store texture coordinates in a
---   way that OpenGL doesn't understand. this
---   puts it in the right format.
+-- | .obj files store indices starting at 1, but our indexing starts at
+--   0, so we need to adjust them
 texCoordToGLFormat :: V2 GLfloat -> V2 GLfloat
 texCoordToGLFormat (V2 x y) = V2 x (1 - y)
 
@@ -102,6 +99,6 @@ timesSep = times' 0
       | i + 1 == total = liftA2 (:) parser (times' (i + 1) total parser sep)
       | otherwise = return []
 
-fromJustSafe :: Num a => Maybe a -> a
-fromJustSafe (Just x) = x
-fromJustSafe Nothing = 0
+-- fromJustSafe :: Num a => Maybe a -> a
+-- fromJustSafe (Just x) = x
+-- fromJustSafe Nothing = 0
