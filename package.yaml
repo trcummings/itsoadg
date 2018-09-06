@@ -39,6 +39,7 @@ dependencies:
 - mtl
 - transformers
 - lens
+- attoparsec >= 0.13.2.2
 - aeson
 - vector
 - text
@@ -83,3 +84,4 @@ tests:
 default-extensions: &extensions
   - GeneralizedNewtypeDeriving
   - ScopedTypeVariables
+  - OverloadedStrings

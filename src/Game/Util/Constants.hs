@@ -33,6 +33,9 @@ shaderPath = "assets" </> "glsl"
 texturePath :: FilePath
 texturePath = "assets" </> "sprites"
 
+objPath :: FilePath
+objPath = "assets" </> "obj"
+
 -- Physics constants
 
 maxSpeed :: Unit
