@@ -26,9 +26,11 @@ initRenderer vc = do
   -- clear background color to black
   GL.clearColor $= GL.Color4 0 0 0 0
   -- enable clearing of the depth buffer
-  -- GL.clearDepth $= 1
+  GL.clearDepth $= 1
   -- set depth function to sort by "Less" depth
   -- allows for 3D depth testing & tells OpenGL how to deal with overlap
+  -- which accepts the fragment if its closer to the camera than the
+  -- former one
   GL.depthFunc  $= Just GL.Less
   -- set backface culling
   -- GL.cullFace $= Just GL.Back

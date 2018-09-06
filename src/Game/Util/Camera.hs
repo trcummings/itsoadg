@@ -19,17 +19,19 @@ import Game.Types
   , FieldOfView(..)
   , Orientation(..)
   , CameraAxes(..)
-  , Position3D(..) )
+  , Position3D(..)
+  , ProjectionMatrix(..)
+  , ViewMatrix(..) )
 
 type CameraEntity = (Camera, Position3D, Orientation)
 
 -- transformations to camera perspective
-cameraViewMatrix :: CameraEntity -> L.M44 Float
+cameraViewMatrix :: CameraEntity -> ViewMatrix
 cameraViewMatrix (camera :: Camera, Position3D cPos, Orientation o) =
   let q = L.conjugate $ o
-  in L.mkTransformation q (L.rotate q $ negate cPos)
+  in ViewMatrix $ L.mkTransformation q (L.rotate q $ negate cPos)
 
-cameraProjectionMatrix :: L.V2 Int32 -> CameraEntity -> L.M44 Float
+cameraProjectionMatrix :: L.V2 Int32 -> CameraEntity -> ProjectionMatrix
 cameraProjectionMatrix (L.V2 width' height')
                        ( camera :: Camera
                        , Position3D cPos
@@ -37,11 +39,11 @@ cameraProjectionMatrix (L.V2 width' height')
   let height = fromIntegral height'
       width  = fromIntegral width'
       FieldOfView fov   = _fieldOfView camera
-  in U.projectionMatrix
-      fov
-      (width / height)
-      (_near . _clippingPlanes $ camera)
-      (_far  . _clippingPlanes $ camera)
+  in ProjectionMatrix $ U.projectionMatrix
+                          fov
+                          (width / height)
+                          (_near . _clippingPlanes $ camera)
+                          (_far  . _clippingPlanes $ camera)
 
 
 -- camera action commands

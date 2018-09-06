@@ -134,6 +134,9 @@ data Model = Model
   , _colors    :: [L.V3 Float]
   , _elements  :: [L.V3 GL.GLuint] }
 
+newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
+newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
+
 newtype Player = Player (Maybe GL.TextureObject)
 
 data RotatingCube = RotatingCube

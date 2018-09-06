@@ -25,13 +25,16 @@ import           Game.Effect.Clock    (getGlobalTime)
 import           Game.Effect.Input    (getInputs)
 import           Game.Effect.Renderer (getWindowDims)
 
+import           Game.Loaders.Obj.Loader (loadObjFile)
+
 import           Game.World.TH        (ECS)
 import           Game.Util.Billboard  (renderBillboard)
 import           Game.Util.Texture    (getAndCreateTexture)
 import           Game.Util.Constants
   ( frameDeltaSeconds
   , shaderPath
-  , texturePath )
+  , texturePath
+  , objPath )
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -60,55 +63,18 @@ import           Game.Types
   , Resource(..)
   , Unit(..)
   , Scene(..) )
+import Game.System.ColorCube
+  ( ColorCube
+  , initColorCube
+  , stepColorCube
+  , drawColorCube )
 
 initialize :: ECS ()
 initialize = do
-  let vertexShader   = shaderPath </> "cube.v.glsl"
-      fragmentShader = shaderPath </> "cube.f.glsl"
-      vertices       = L.V3 <$> [1, -1] <*> [1, -1] <*> [1, -1]
-      colors         = vertices
-      elements       = [ L.V3 2 1 0 -- right
-                       , L.V3 1 2 3
-                       , L.V3 0 1 4 -- top
-                       , L.V3 4 1 5
-                       , L.V3 4 5 6 -- left
-                       , L.V3 7 6 5
-                       , L.V3 2 6 3 -- bottom
-                       , L.V3 6 3 7
-                       , L.V3 0 4 2 -- front
-                       , L.V3 2 4 6
-                       , L.V3 5 1 7 -- back
-                       , L.V3 7 1 3
-                       ]
-  shaderProgram <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
-  vertexBuffer  <- liftIO $ U.fromSource GL.ArrayBuffer vertices
-  colorBuffer   <- liftIO $ U.fromSource GL.ArrayBuffer colors
-  elementBuffer <- liftIO $ U.fromSource GL.ElementArrayBuffer elements
-  let resource = Resource { _shaderProgram = shaderProgram
-                          , _vertexBuffer  = vertexBuffer
-                          , _colorBuffer   = colorBuffer
-                          , _elementBuffer = elementBuffer }
-      model = Model { _resource = resource
-                    , _vertices = vertices
-                    , _colors   = colors
-                    , _elements = elements }
+  initColorCube
 
-  -- cube 1
-  newEntity (
-      RotatingCube { _axis = L.V3 0 0 (-1)
-                   , _deg  = Degrees 4 }
-    , model
-    , Position3D  $ L.V3 0 0 (-4)
-    , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
-
-  -- cube 2
-  newEntity (
-      RotatingCube { _axis = L.V3 1 0 0
-                   , _deg  = Degrees (-2) }
-    , model
-    , Position3D  $ L.V3 2 1 (-3)
-    , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
-  --
+  obj <- liftIO $ loadObjFile $ objPath </> "cube.obj"
+  liftIO $ putStrLn $ show obj
   -- -- player character
   -- let p = texturePath </> "player_char.tga"
   -- playerTexture <- liftIO $ getAndCreateTexture p
@@ -146,9 +112,7 @@ cleanUp = do
 step :: ECS ()
 step = do
   -- rotate da cubes!!!
-  cmap $ \(rc :: RotatingCube, Orientation o) ->
-    let Degrees deg = _deg rc
-    in  Orientation $ o * L.axisAngle (_axis rc) (U.deg2rad deg)
+  cmap stepColorCube
 
   -- if escape pressed, transition to quit
   inputs <- getInputs
@@ -192,66 +156,6 @@ step = do
     ( runCameraAction e c
     , Not :: Not HasCameraEvent )
 
-newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
-newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
-type Cube3D = (RotatingCube, Model, Position3D, Orientation)
-
-renderProgram :: (ProjectionMatrix, ViewMatrix)
-              -> Cube3D
-              -> IO ()
-renderProgram (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-              (_, model, Position3D mPos, Orientation o) = do
-  let modelMatrix   = L.mkTransformation o mPos
-      trans         = projMatrix
-                  !*! viewMatrix
-                  !*! modelMatrix
-      resource      = _resource model
-      vertices      = _vertices model
-      colors        = _colors   model
-      elements      = _elements model
-      shaderProgram = _shaderProgram resource
-      attribKeys    = keys $ U.attribs  shaderProgram
-      uniformKeys   = keys $ U.uniforms shaderProgram
-  -- set current program to shaderProgram
-  GL.currentProgram $= (Just $ U.program shaderProgram)
-  -- enable all attributes
-  mapM_ (U.enableAttrib shaderProgram) attribKeys
-  -- bind all buffers & set all attributes
-  GL.bindBuffer GL.ArrayBuffer $= Just (_vertexBuffer resource)
-
-  U.setAttrib
-      shaderProgram
-      "coord3d"
-      GL.ToFloat $
-      GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
-
-  GL.bindBuffer GL.ArrayBuffer $= Just (_colorBuffer resource)
-
-  U.setAttrib
-      shaderProgram
-      "v_color"
-      GL.ToFloat $
-      GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
-
-  -- transform all uniforms
-  mapM_ (\keys -> do
-        U.asUniform $ trans
-      $ U.getUniform shaderProgram keys
-    ) uniformKeys
-
-  -- bind element buffer
-  GL.bindBuffer
-      GL.ElementArrayBuffer $= Just (_elementBuffer resource)
-
-  -- draw indexed triangles
-  U.drawIndexedTris (fromIntegral $ length elements)
-
-  -- disable all attributes
-  mapM_ (\key -> do
-      GL.vertexAttribArray (U.getAttrib shaderProgram key) $= GL.Disabled
-    ) attribKeys
-
-
 render :: ECS ()
 render = do
   -- render cube
@@ -259,7 +163,7 @@ render = do
   dims <- liftIO $ getWindowDims vc
   -- t <- getGlobalTime
   cmapM_ $ \(camera :: CameraEntity) -> do
-    let camProjMatrix = ProjectionMatrix $ cameraProjectionMatrix dims camera
-        camViewMatrix = ViewMatrix $ cameraViewMatrix camera
-    cmapM_ $ \(r :: Cube3D) -> do
-      liftIO $ renderProgram (camProjMatrix, camViewMatrix) r
+    let camProjMatrix = cameraProjectionMatrix dims camera
+        camViewMatrix = cameraViewMatrix camera
+    cmapM_ $ \(r :: ColorCube) -> do
+      liftIO $ drawColorCube (camProjMatrix, camViewMatrix) r
