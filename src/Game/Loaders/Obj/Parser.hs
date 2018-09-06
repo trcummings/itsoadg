@@ -14,7 +14,7 @@ import           Data.Attoparsec.ByteString.Char8
   , decimal
   , char )
 
-import           Game.Loaders.Obj.Types (ObjLine(..))
+import           Game.Types (ObjLine(..))
 
 
 runObjParser :: ByteString -> [ObjLine]

@@ -7,7 +7,7 @@ import Data.Sequence         (empty, index, fromList, (|>))
 import Linear                (V3(..))
 
 import Game.Loaders.Obj.Parser (runObjParser)
-import Game.Loaders.Obj.Types
+import Game.Types
   ( ObjData(..)
   , ObjLine(..)
   , VertDataSeq(..) )

@@ -1,4 +1,4 @@
-module Game.Loaders.Obj.Types
+module Game.Types.Loaders.Obj
   ( ObjData(..)
   , VertDataSeq(..)
   , ObjLine(..) ) where
@@ -10,13 +10,13 @@ import Data.Monoid               (Monoid(..), (<>))
 import Linear                    (V2, V3)
 
 data ObjData = ObjData
- { _verts     :: [V3 GLfloat]    -- Vertices
- , _norms     :: [V3 GLfloat]    -- Normals
- , _texCoords :: [V2 GLfloat]    -- U/V Texture coords
- , _texIds    :: [GLint]         -- Texture ID
- , _texObjs   :: [TextureObject] -- Texture Objects
- , _diffuse   :: [V3 GLfloat]  } -- Diffuse
- deriving Show
+  { _verts     :: [V3 GLfloat]    -- Vertices
+  , _norms     :: [V3 GLfloat]    -- Normals
+  , _texCoords :: [V2 GLfloat]    -- U/V Texture coords
+  , _texIds    :: [GLint]         -- Texture ID
+  , _texObjs   :: [TextureObject] -- Texture Objects
+  , _diffuse   :: [V3 GLfloat]  } -- Diffuse
+  deriving Show
 
 data VertDataSeq = VertDataSeq
   (Seq (V3 GLfloat))
