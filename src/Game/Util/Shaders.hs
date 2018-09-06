@@ -55,12 +55,3 @@ makeProgram shaders attributes = do
     printError
     exitFailure
   return program
-
-bindVBO :: GL.BufferObject
-        -> GL.VertexArrayDescriptor a
-        -> GL.AttribLocation
-        -> IO ()
-bindVBO vbo dsc loc = do
-  GL.bindBuffer GL.ArrayBuffer $= Just vbo
-  GL.vertexAttribPointer loc   $= (GL.ToFloat, dsc)
-  GL.vertexAttribArray loc     $= GL.Enabled

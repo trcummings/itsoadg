@@ -54,6 +54,7 @@ import           Game.Types
   , CameraAxes(..)
 
   , Player(..)
+  , RotatingCube(..)
   , Position3D(..)
   , Model(..)
   , Resource(..)
@@ -87,13 +88,25 @@ initialize = do
                           , _vertexBuffer  = vertexBuffer
                           , _colorBuffer   = colorBuffer
                           , _elementBuffer = elementBuffer }
+      model = Model { _resource = resource
+                    , _vertices = vertices
+                    , _colors   = colors
+                    , _elements = elements }
 
+  -- cube 1
   newEntity (
-      Model { _resource = resource
-            , _vertices = vertices
-            , _colors   = colors
-            , _elements = elements }
+      RotatingCube { _axis = L.V3 0 0 (-1)
+                   , _deg  = Degrees 4 }
+    , model
     , Position3D  $ L.V3 0 0 (-4)
+    , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
+
+  -- cube 2
+  newEntity (
+      RotatingCube { _axis = L.V3 1 0 0
+                   , _deg  = Degrees (-2) }
+    , model
+    , Position3D  $ L.V3 2 1 (-3)
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   --
   -- -- player character
@@ -110,8 +123,8 @@ initialize = do
              , _cameraAxes     = CameraAxes { _xAxis = L.V3 1 0 0
                                             , _yAxis = L.V3 0 1 0
                                             , _zAxis = L.V3 0 0 (-1) } }
-    , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-    , Position3D  $ L.V3 0 0 0 )
+    , Position3D  $ L.V3 0 0 0
+    , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   -- move up, tilt down to look at cube
   -- cmap $ \(c :: CameraEntity) ->
   --     runCameraAction (
@@ -132,12 +145,18 @@ cleanUp = do
 
 step :: ECS ()
 step = do
+  -- rotate da cubes!!!
+  cmap $ \(rc :: RotatingCube, Orientation o) ->
+    let Degrees deg = _deg rc
+    in  Orientation $ o * L.axisAngle (_axis rc) (U.deg2rad deg)
+
   -- if escape pressed, transition to quit
   inputs <- getInputs
   let m = _inputs . _keyboardInput $ inputs
   when (isPressed $ m ! SDL.KeycodeEscape) $ do
     sc <- get global :: ECS SceneControl
     set global $ sc { _nextScene = Scene'Quit }
+
   -- send camera events based on WASD presses
   cmap $ \( c :: Camera
           , _ :: Not HasCameraEvent ) ->
@@ -173,67 +192,74 @@ step = do
     ( runCameraAction e c
     , Not :: Not HasCameraEvent )
 
+newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
+newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
+type Cube3D = (RotatingCube, Model, Position3D, Orientation)
+
+renderProgram :: (ProjectionMatrix, ViewMatrix)
+              -> Cube3D
+              -> IO ()
+renderProgram (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
+              (_, model, Position3D mPos, Orientation o) = do
+  let modelMatrix   = L.mkTransformation o mPos
+      trans         = projMatrix
+                  !*! viewMatrix
+                  !*! modelMatrix
+      resource      = _resource model
+      vertices      = _vertices model
+      colors        = _colors   model
+      elements      = _elements model
+      shaderProgram = _shaderProgram resource
+      attribKeys    = keys $ U.attribs  shaderProgram
+      uniformKeys   = keys $ U.uniforms shaderProgram
+  -- set current program to shaderProgram
+  GL.currentProgram $= (Just $ U.program shaderProgram)
+  -- enable all attributes
+  mapM_ (U.enableAttrib shaderProgram) attribKeys
+  -- bind all buffers & set all attributes
+  GL.bindBuffer GL.ArrayBuffer $= Just (_vertexBuffer resource)
+
+  U.setAttrib
+      shaderProgram
+      "coord3d"
+      GL.ToFloat $
+      GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
+
+  GL.bindBuffer GL.ArrayBuffer $= Just (_colorBuffer resource)
+
+  U.setAttrib
+      shaderProgram
+      "v_color"
+      GL.ToFloat $
+      GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
+
+  -- transform all uniforms
+  mapM_ (\keys -> do
+        U.asUniform $ trans
+      $ U.getUniform shaderProgram keys
+    ) uniformKeys
+
+  -- bind element buffer
+  GL.bindBuffer
+      GL.ElementArrayBuffer $= Just (_elementBuffer resource)
+
+  -- draw indexed triangles
+  U.drawIndexedTris (fromIntegral $ length elements)
+
+  -- disable all attributes
+  mapM_ (\key -> do
+      GL.vertexAttribArray (U.getAttrib shaderProgram key) $= GL.Disabled
+    ) attribKeys
+
+
 render :: ECS ()
 render = do
   -- render cube
   vc <- get global :: ECS VideoConfig
   dims <- liftIO $ getWindowDims vc
-  t <- getGlobalTime
+  -- t <- getGlobalTime
   cmapM_ $ \(camera :: CameraEntity) -> do
-    let camProjMatrix = cameraProjectionMatrix dims camera
-        camViewMatrix = cameraViewMatrix camera
-
-    cmapM_ $ \(model :: Model, Position3D mPos) -> do
-      let modelMatrix   = L.mkTransformationMat L.identity mPos
-          trans         = camProjMatrix
-                      !*! camViewMatrix
-                      !*! modelMatrix
-          resource      = _resource model
-          vertices      = _vertices model
-          colors        = _colors   model
-          elements      = _elements model
-          shaderProgram = _shaderProgram resource
-          attribKeys    = keys $ U.attribs  shaderProgram
-          uniformKeys   = keys $ U.uniforms shaderProgram
-      -- set current program to shaderProgram
-      liftIO $ GL.currentProgram $= (Just $ U.program shaderProgram)
-      -- enable all attributes
-      liftIO $ mapM_ (\key -> do
-          liftIO $ U.enableAttrib shaderProgram key
-        ) attribKeys
-      -- bind all buffers & set all attributes
-      liftIO $ GL.bindBuffer
-          GL.ArrayBuffer $= Just (_vertexBuffer resource)
-
-      liftIO $ U.setAttrib
-          shaderProgram
-          "coord3d"
-          GL.ToFloat $
-          GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
-
-      liftIO $ GL.bindBuffer
-          GL.ArrayBuffer $= Just (_colorBuffer resource)
-
-      liftIO $ U.setAttrib
-          shaderProgram
-          "v_color"
-          GL.ToFloat $
-          GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0
-
-      -- transform all uniforms
-      liftIO $ mapM_ (\keys -> do
-            U.asUniform $ trans
-          $ U.getUniform shaderProgram keys
-        ) uniformKeys
-
-      -- bind element buffer
-      liftIO $ GL.bindBuffer
-          GL.ElementArrayBuffer $= Just (_elementBuffer resource)
-
-      -- draw indexed triangles
-      liftIO $ U.drawIndexedTris (fromIntegral $ length elements)
-
-      -- disable all attributes
-      liftIO $ mapM_ (\key -> do
-          GL.vertexAttribArray (U.getAttrib shaderProgram key) $= GL.Disabled
-        ) attribKeys
+    let camProjMatrix = ProjectionMatrix $ cameraProjectionMatrix dims camera
+        camViewMatrix = ViewMatrix $ cameraViewMatrix camera
+    cmapM_ $ \(r :: Cube3D) -> do
+      liftIO $ renderProgram (camProjMatrix, camViewMatrix) r

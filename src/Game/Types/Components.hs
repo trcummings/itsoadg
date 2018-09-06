@@ -58,9 +58,13 @@ import qualified Linear as L
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
 --   deriving Show
 
-newtype Position3D  = Position3D (L.V3 Float)
+newtype Position3D =
+  Position3D (L.V3 Float)
+  deriving Show
 
-newtype Orientation = Orientation (L.Quaternion Float)
+newtype Orientation =
+  Orientation (L.Quaternion Float)
+  deriving Show
 
 -- data Velocity3D = Velocity3D (V3 Unit)
 
@@ -76,10 +80,10 @@ newtype HasOptionMenuEvent =
 
 data ActiveOptionList = ActiveOptionList
 
-data Option =
-  Option { _oId      :: String
-         , _text     :: String
-         , _selected :: Bool   }
+data Option = Option
+  { _oId      :: String
+  , _text     :: String
+  , _selected :: Bool   }
 
 data OptionList = OptionList [Option]
 
@@ -101,32 +105,41 @@ data CameraAction =
 
 newtype HasCameraEvent = HasCameraEvent CameraAction
 
-data ClippingPlanes = ClippingPlanes { _near :: Float
-                                     , _far  :: Float }
+data ClippingPlanes = ClippingPlanes
+  { _near :: Float
+  , _far  :: Float }
 
 newtype FieldOfView = FieldOfView Float
 
-data CameraAxes = CameraAxes { _xAxis :: L.V3 Float
-                             , _yAxis :: L.V3 Float
-                             , _zAxis :: L.V3 Float }
+data CameraAxes = CameraAxes
+  { _xAxis :: L.V3 Float
+  , _yAxis :: L.V3 Float
+  , _zAxis :: L.V3 Float }
 
-data Camera = Camera { _clippingPlanes :: ClippingPlanes
-                     , _fieldOfView    :: FieldOfView
-                     , _cameraAxes     :: CameraAxes }
+data Camera = Camera
+  { _clippingPlanes :: ClippingPlanes
+  , _fieldOfView    :: FieldOfView
+  , _cameraAxes     :: CameraAxes }
 
 -- OpenGL types
-data Resource = Resource { _shaderProgram :: U.ShaderProgram
-                         , _vertexBuffer  :: GL.BufferObject
-                         , _colorBuffer   :: GL.BufferObject
-                         , _elementBuffer :: GL.BufferObject }
+data Resource = Resource
+  { _shaderProgram :: U.ShaderProgram
+  , _vertexBuffer  :: GL.BufferObject
+  , _colorBuffer   :: GL.BufferObject
+  , _elementBuffer :: GL.BufferObject }
 
-data Model = Model { _resource  :: Resource
-                   , _vertices  :: [L.V3 Float]
-                   , _colors    :: [L.V3 Float]
-                   , _elements  :: [L.V3 GL.GLuint] }
+data Model = Model
+  { _resource  :: Resource
+  , _vertices  :: [L.V3 Float]
+  , _colors    :: [L.V3 Float]
+  , _elements  :: [L.V3 GL.GLuint] }
 
 newtype Player = Player (Maybe GL.TextureObject)
 
+data RotatingCube = RotatingCube
+  { _axis :: (L.V3 Float)
+  , _deg  :: Degrees }
+  deriving Show
 -- data CameraTarget =
 --   CameraTarget Entity
 --   deriving Show

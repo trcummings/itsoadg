@@ -25,6 +25,7 @@ import Game.Types
   , Model
 
   , Player
+  , RotatingCube
 
   , Camera
   , HasCameraEvent
@@ -64,6 +65,10 @@ instance Component Player where
   type Storage Player = Unique Player
 
 
+instance Component RotatingCube where
+  type Storage RotatingCube = Map RotatingCube
+
+
 -- Camera Components
 instance Component Camera where
   type Storage Camera = Unique Camera
@@ -95,6 +100,7 @@ makeWorld "World" [
   , ''Model
 
   , ''Player
+  , ''RotatingCube
 
   , ''Camera
   , ''HasCameraEvent
