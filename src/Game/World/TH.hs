@@ -23,8 +23,9 @@ import Game.Types
   , Orientation
 
   , Model
+  , VAO
 
-  , Player
+  , TexResource
   , RotatingCube
 
   , Camera
@@ -61,12 +62,15 @@ instance Component Orientation where
 instance Component Model where
   type Storage Model = Map Model
 
-instance Component Player where
-  type Storage Player = Unique Player
+instance Component TexResource where
+  type Storage TexResource = Map TexResource
 
 
 instance Component RotatingCube where
   type Storage RotatingCube = Map RotatingCube
+
+instance Component VAO where
+  type Storage VAO = Unique VAO
 
 
 -- Camera Components
@@ -98,9 +102,9 @@ makeWorld "World" [
   , ''Orientation
 
   , ''Model
-
-  , ''Player
+  , ''TexResource
   , ''RotatingCube
+  , ''VAO
 
   , ''Camera
   , ''HasCameraEvent

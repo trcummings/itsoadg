@@ -23,8 +23,8 @@ initScreen = withVC initRenderer
 
 initRenderer :: VideoConfig -> IO ()
 initRenderer vc = do
-  -- clear background color to black
-  GL.clearColor $= GL.Color4 0 0 0 0
+  -- clear background color to blue
+  GL.clearColor $= GL.Color4 0 0 0.4 0
   -- enable clearing of the depth buffer
   GL.clearDepth $= 1
   -- set depth function to sort by "Less" depth
@@ -33,14 +33,14 @@ initRenderer vc = do
   -- former one
   GL.depthFunc  $= Just GL.Less
   -- set backface culling
-  -- GL.cullFace $= Just GL.Back
+  GL.cullFace   $= Just GL.Back
   -- set viewport
   setViewportToWindow vc
 
 prepNextRender :: VideoConfig -> IO ()
 prepNextRender vc = do
-  -- clear background color to black
-  GL.clearColor $= GL.Color4 0 0 0 0
+  -- clear background color to blue
+  GL.clearColor $= GL.Color4 0 0 0.4 0
   -- clear buffers
   GL.clear [GL.ColorBuffer, GL.DepthBuffer]
   -- set viewport

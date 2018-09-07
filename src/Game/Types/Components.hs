@@ -7,6 +7,8 @@ module Game.Types.Components where
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.GLUtil as U
 import qualified Linear as L
+
+import           Game.Types.Loaders.Obj (ObjData)
 -- import           Foreign.C.Types (CInt, CDouble)
 -- import           GHC.Int (Int32(..))
 -- import           Linear (V2, V3)
@@ -122,22 +124,30 @@ data Camera = Camera
   , _cameraAxes     :: CameraAxes }
 
 -- OpenGL types
+newtype VAO = VAO GL.VertexArrayObject
+
 data Resource = Resource
   { _shaderProgram :: U.ShaderProgram
   , _vertexBuffer  :: GL.BufferObject
-  , _colorBuffer   :: GL.BufferObject
-  , _elementBuffer :: GL.BufferObject }
+  , _colorBuffer   :: GL.BufferObject }
 
 data Model = Model
   { _resource  :: Resource
   , _vertices  :: [L.V3 Float]
-  , _colors    :: [L.V3 Float]
-  , _elements  :: [L.V3 GL.GLuint] }
+  , _colors    :: [L.V3 Float] }
+  -- , _elements  :: [L.V3 GL.GLuint] }
 
 newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
 newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
 
-newtype Player = Player (Maybe GL.TextureObject)
+-- newtype Player = Player (Maybe GL.TextureObject)
+
+data TexResource = TexResource
+  { _sProgram   :: U.ShaderProgram
+  , _texObj     :: Maybe GL.TextureObject
+  , _vertBuffer :: GL.BufferObject
+  , _uvBuffer   :: GL.BufferObject
+  , _objData    :: ObjData }
 
 data RotatingCube = RotatingCube
   { _axis :: (L.V3 Float)

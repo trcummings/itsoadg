@@ -18,23 +18,14 @@ import           Control.Lens ((&), (%~), element)
 import           Control.Monad (when, mapM_)
 import           Control.Monad.IO.Class (liftIO)
 import           KeyState (isPressed, isTouched)
-import           Control.Applicative
-import           System.FilePath ((</>))
 
 import           Game.Effect.Clock    (getGlobalTime)
 import           Game.Effect.Input    (getInputs)
 import           Game.Effect.Renderer (getWindowDims)
 
-import           Game.Loaders.Obj.Loader (loadObjFile)
-
 import           Game.World.TH        (ECS)
 import           Game.Util.Billboard  (renderBillboard)
-import           Game.Util.Texture    (getAndCreateTexture)
-import           Game.Util.Constants
-  ( frameDeltaSeconds
-  , shaderPath
-  , texturePath
-  , objPath )
+import           Game.Util.Constants  (frameDeltaSeconds)
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -55,32 +46,29 @@ import           Game.Types
   , FieldOfView(..)
   , Orientation(..)
   , CameraAxes(..)
+  , VAO (..)
 
-  , Player(..)
-  , RotatingCube(..)
   , Position3D(..)
-  , Model(..)
-  , Resource(..)
-  , Unit(..)
   , Scene(..) )
 import Game.System.ColorCube
   ( ColorCube
   , initColorCube
   , stepColorCube
   , drawColorCube )
+import Game.System.TextureCube
+  ( TexCube
+  , initTextureCube
+  , drawTextureCube )
 
 initialize :: ECS ()
 initialize = do
-  initColorCube
+  -- create VAO & VAO entity
+  [vao] <- GL.genObjectNames 1
+  GL.bindVertexArrayObject $= Just vao
+  newEntity $ VAO vao
 
-  obj <- liftIO $ loadObjFile $ objPath </> "cube.obj"
-  liftIO $ putStrLn $ show obj
-  -- -- player character
-  -- let p = texturePath </> "player_char.tga"
-  -- playerTexture <- liftIO $ getAndCreateTexture p
-  -- newEntity (
-  --     Player playerTexture
-  --   , Position3D $ L.V3 0 0 (-2) )
+  initColorCube
+  initTextureCube
 
   -- camera
   newEntity (
@@ -92,11 +80,11 @@ initialize = do
     , Position3D  $ L.V3 0 0 0
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   -- move up, tilt down to look at cube
-  -- cmap $ \(c :: CameraEntity) ->
-  --     runCameraAction (
-  --       Camera'Compose
-  --         (Camera'Rotation Tilt (Degrees (-30)))
-  --         (Camera'Dolly (L.V3 0 2 0))) c
+  cmap $ \(c :: CameraEntity) ->
+      runCameraAction (
+        Camera'Compose
+          (Camera'Rotation Tilt (Degrees (-45)))
+          (Camera'Dolly (L.V3 0 2 4))) c
   return ()
 
 cleanUp :: ECS ()
@@ -107,7 +95,11 @@ cleanUp = do
   -- destroy the camera
   cmap $ \(_ :: CameraEntity  ) -> Not :: Not CameraEntity
   cmap $ \(_ :: HasCameraEvent) -> Not :: Not HasCameraEvent
-  -- destroy the player
+  -- unbind the VAO & destroy the entity
+  cmapM_ $ \(VAO vao, ety) -> do
+    liftIO $ U.deleteVAO vao
+    liftIO $ GL.bindVertexArrayObject $= Nothing
+    destroy ety (Proxy :: Proxy VAO)
 
 step :: ECS ()
 step = do
@@ -166,4 +158,6 @@ render = do
     let camProjMatrix = cameraProjectionMatrix dims camera
         camViewMatrix = cameraViewMatrix camera
     cmapM_ $ \(r :: ColorCube) -> do
-      liftIO $ drawColorCube (camProjMatrix, camViewMatrix) r
+      liftIO $ drawColorCube   (camProjMatrix, camViewMatrix) r
+    cmapM_ $ \(r :: TexCube)   -> do
+      liftIO $ drawTextureCube (camProjMatrix, camViewMatrix) r
