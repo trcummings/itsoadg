@@ -4,6 +4,7 @@ module Game.Util.Config where
 
 import qualified SDL
 import           SDL (($=))
+import           SDL.Video.OpenGL (Profile(..), Mode(..), defaultOpenGL)
 import           Control.Monad (when)
 
 import           Game.Types (VideoConfig(..))
@@ -21,10 +22,13 @@ initConfig = do
     -- joysticks <- SDL.availableJoysticks
     -- mapM_ SDL.openJoystick joysticks
     -- create window and renderer
+    -- with openGL profile set to core mode version 3.2
+    let openGLContext = Just $
+          defaultOpenGL { SDL.glProfile = Core Normal 3 2 }
     window <- SDL.createWindow
       "Let Sleeping Gods Lie"
       SDL.defaultWindow { SDL.windowInitialSize = initialSize
-                        , SDL.windowOpenGL      = Just SDL.defaultOpenGL }
+                        , SDL.windowOpenGL      = openGLContext }
     -- create OpenGL renderer context
     glContext <- SDL.glCreateContext window
 
