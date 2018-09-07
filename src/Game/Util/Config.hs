@@ -22,9 +22,9 @@ initConfig = do
     -- joysticks <- SDL.availableJoysticks
     -- mapM_ SDL.openJoystick joysticks
     -- create window and renderer
-    -- with openGL profile set to core mode version 3.2
+    -- with openGL profile set to core mode version 3.3
     let openGLContext = Just $
-          defaultOpenGL { SDL.glProfile = Core Normal 3 2 }
+          defaultOpenGL { SDL.glProfile = Core Normal 3 3 }
     window <- SDL.createWindow
       "Let Sleeping Gods Lie"
       SDL.defaultWindow { SDL.windowInitialSize = initialSize

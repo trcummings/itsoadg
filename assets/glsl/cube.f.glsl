@@ -1,5 +1,13 @@
-varying vec3 f_color;
+#version 330 core
 
-void main(void) {
-  gl_FragColor = vec4(f_color.x, f_color.y, f_color.z, 1.0);
+// Interpolated values from the vertex shaders
+in vec3 fragmentColor;
+
+// Ouput data
+out vec3 color;
+
+void main(){
+	// Output color = color specified in the vertex shader,
+	// interpolated between all 3 surrounding vertices
+	color = fragmentColor;
 }
