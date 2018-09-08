@@ -31,7 +31,7 @@ initPlayerBillboard :: ECS ()
 initPlayerBillboard = do
   let vertexShader   = shaderPath  </> "billboard.v.glsl"
       fragmentShader = shaderPath  </> "billboard.f.glsl"
-      texture        = texturePath </> "player_char.tga"
+      texture        = texturePath </> "player.tga"
       objFile        = objPath     </> "player.obj"
   -- load in shaders
   sp  <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
@@ -51,7 +51,7 @@ initPlayerBillboard = do
                   , _uvBuffer   = uvb
                   , _objData    = obj }
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-    , Position3D $ L.V3 1 0 (-2) )
+    , Position3D $ L.V3 0 1 (-1) )
   return ()
 
 drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> IO ()
@@ -63,10 +63,10 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       vertices      = _vertBuffer tr
       uvCoords      = _uvBuffer   tr
       numVerts      = fromIntegral $ length $ _verts . _objData $ tr
+      attribKeys    = keys $ U.attribs  shaderProgram
+      uniformKeys   = keys $ U.uniforms shaderProgram
       program       = U.program shaderProgram
       posLoc        = U.getAttrib  shaderProgram "squareVertices"
-      uvLoc         = U.getAttrib  shaderProgram "UV"
-
       mtsLoc        = U.getUniform shaderProgram "myTextureSampler"
       vpLoc         = U.getUniform shaderProgram "VP"
       crwLoc        = U.getUniform shaderProgram "CameraRight_worldspace"
@@ -77,7 +77,7 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.currentProgram              $= Just program
   -- enable all attributes
   GL.vertexAttribArray    posLoc $= GL.Enabled
-  GL.vertexAttribArray    uvLoc  $= GL.Enabled
+  -- GL.vertexAttribArray    uvLoc  $= GL.Enabled
   -- handle uniforms
   -- bind texture to TextureUnit 0
   -- set "myTextureSampler" sampler to use Texture Unit 0
@@ -105,14 +105,14 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
     , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
   -- bind uv coords VB
   GL.bindBuffer GL.ArrayBuffer   $= Just uvCoords
-  GL.vertexAttribPointer  uvLoc  $=
-    ( GL.ToFloat
-    , GL.VertexArrayDescriptor 2 GL.Float 0 U.offset0 )
+  -- GL.vertexAttribPointer  uvLoc  $=
+  --   ( GL.ToFloat
+  --   , GL.VertexArrayDescriptor 2 GL.Float 0 U.offset0 )
   -- draw indexed triangles
-  GL.drawArrays GL.Triangles 0 numVerts
+  GL.drawArrays GL.TriangleStrip 0 numVerts
   -- disable all attributes
   GL.vertexAttribArray    posLoc $= GL.Disabled
-  GL.vertexAttribArray    uvLoc  $= GL.Disabled
+  -- GL.vertexAttribArray    uvLoc  $= GL.Disabled
   -- unbind array buffer
   GL.bindBuffer GL.ArrayBuffer  $= Nothing
   -- unset current program

@@ -71,7 +71,7 @@ initialize = do
   GL.bindVertexArrayObject $= Just vao
   newEntity $ VAO vao
 
-  initColorCube
+  -- initColorCube
   initTextureCube
   -- initPlayerBillboard
 
@@ -163,6 +163,7 @@ render = do
     let camProjMatrix = cameraProjectionMatrix dims camera
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
-    cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
+    -- cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
     cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
     -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
+    return ()

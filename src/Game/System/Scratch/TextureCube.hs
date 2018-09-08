@@ -30,9 +30,9 @@ type TexCube = (TexResource, RotatingCube, Orientation, Position3D)
 
 initTextureCube :: ECS ()
 initTextureCube = do
-  let vertexShader   = shaderPath  </> "texCube.v.glsl"
-      fragmentShader = shaderPath  </> "texCube.f.glsl"
-      uvTexPath      = texturePath </> "uv_template.tga"
+  let vertexShader   = shaderPath  </> "texcube.v.glsl"
+      fragmentShader = shaderPath  </> "texcube.f.glsl"
+      uvTexPath      = texturePath </> "texcube.tga"
       cubeObjPath    = objPath     </> "cube.obj"
   -- load in shaders
   sp  <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
