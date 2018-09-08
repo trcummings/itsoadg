@@ -1,4 +1,4 @@
-module Game.System.TextureCube where
+module Game.System.Scratch.TextureCube where
 
 import qualified Graphics.GLUtil           as U
 import qualified Graphics.GLUtil.Camera3D  as U
@@ -22,9 +22,11 @@ import           Game.Types
   , Position3D(..)
   , Orientation(..)
   , ObjData(..)
-  , TexResource(..) )
+  , TexResource(..)
+  , RotatingCube(..)
+  , Degrees(..) )
 
-type TexCube = (TexResource, Orientation, Position3D)
+type TexCube = (TexResource, RotatingCube, Orientation, Position3D)
 
 initTextureCube :: ECS ()
 initTextureCube = do
@@ -48,13 +50,15 @@ initTextureCube = do
                   , _vertBuffer = vb
                   , _uvBuffer   = uvb
                   , _objData    = obj }
+    , RotatingCube { _axis = L.V3 1 0 (-1)
+                   , _deg  = Degrees 0.5 }
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
     , Position3D $ L.V3 1 0 (-2) )
   return ()
 
 drawTextureCube :: (ProjectionMatrix, ViewMatrix) -> TexCube -> IO ()
 drawTextureCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                (tr, Orientation o, Position3D cPos) = do
+                (tr, _, Orientation o, Position3D cPos) = do
   let modelMatrix   = L.mkTransformation o cPos
       trans         = projMatrix
                   !*! viewMatrix
@@ -63,7 +67,7 @@ drawTextureCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       texture       = _texObj     tr
       vertices      = _vertBuffer tr
       uvCoords      = _uvBuffer   tr
-      numVerts      =  fromIntegral $ length $ _verts . _objData $ tr
+      numVerts      = fromIntegral $ length $ _verts . _objData $ tr
       program       = U.program shaderProgram
       posLoc        = U.getAttrib  shaderProgram "vertexPosition_modelspace"
       uvvLoc        = U.getAttrib  shaderProgram "vertexUV"

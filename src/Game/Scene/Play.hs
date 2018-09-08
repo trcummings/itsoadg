@@ -50,15 +50,19 @@ import           Game.Types
 
   , Position3D(..)
   , Scene(..) )
-import Game.System.ColorCube
+import Game.System.Scratch.ColorCube
   ( ColorCube
   , initColorCube
   , stepColorCube
   , drawColorCube )
-import Game.System.TextureCube
+import Game.System.Scratch.TextureCube
   ( TexCube
   , initTextureCube
   , drawTextureCube )
+import Game.System.Scratch.PlayerBillboard
+  ( PlayerB
+  , initPlayerBillboard
+  , drawPlayerBillboard )
 
 initialize :: ECS ()
 initialize = do
@@ -69,6 +73,7 @@ initialize = do
 
   initColorCube
   initTextureCube
+  -- initPlayerBillboard
 
   -- camera
   newEntity (
@@ -157,7 +162,7 @@ render = do
   cmapM_ $ \(camera :: CameraEntity) -> do
     let camProjMatrix = cameraProjectionMatrix dims camera
         camViewMatrix = cameraViewMatrix camera
-    cmapM_ $ \(r :: ColorCube) -> do
-      liftIO $ drawColorCube   (camProjMatrix, camViewMatrix) r
-    cmapM_ $ \(r :: TexCube)   -> do
-      liftIO $ drawTextureCube (camProjMatrix, camViewMatrix) r
+        mats          = (camProjMatrix, camViewMatrix)
+    cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
+    cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
+    -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r

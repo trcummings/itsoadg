@@ -140,7 +140,7 @@ data Model = Model
 newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
 newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
 
--- newtype Player = Player (Maybe GL.TextureObject)
+data Player = Player
 
 data TexResource = TexResource
   { _sProgram   :: U.ShaderProgram

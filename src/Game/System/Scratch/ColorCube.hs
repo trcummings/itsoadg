@@ -1,4 +1,4 @@
-module Game.System.ColorCube where
+module Game.System.Scratch.ColorCube where
 
 
 import qualified Graphics.GLUtil           as U

@@ -24,6 +24,7 @@ import Game.Types
 
   , Model
   , VAO
+  , Player
 
   , TexResource
   , RotatingCube
@@ -73,6 +74,10 @@ instance Component VAO where
   type Storage VAO = Unique VAO
 
 
+instance Component Player where
+  type Storage Player = Unique Player
+
+
 -- Camera Components
 instance Component Camera where
   type Storage Camera = Unique Camera
@@ -105,6 +110,7 @@ makeWorld "World" [
   , ''TexResource
   , ''RotatingCube
   , ''VAO
+  , ''Player
 
   , ''Camera
   , ''HasCameraEvent
