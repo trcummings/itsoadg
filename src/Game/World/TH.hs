@@ -27,6 +27,7 @@ import Game.Types
   , Player
 
   , TexResource
+  , BBResource
   , RotatingCube
 
   , Camera
@@ -65,6 +66,9 @@ instance Component Model where
 
 instance Component TexResource where
   type Storage TexResource = Map TexResource
+
+instance Component BBResource where
+  type Storage BBResource = Map BBResource
 
 
 instance Component RotatingCube where
@@ -108,6 +112,7 @@ makeWorld "World" [
 
   , ''Model
   , ''TexResource
+  , ''BBResource
   , ''RotatingCube
   , ''VAO
   , ''Player

@@ -149,6 +149,11 @@ data TexResource = TexResource
   , _uvBuffer   :: GL.BufferObject
   , _objData    :: ObjData }
 
+data BBResource = BBResource
+  { _bbSProgram   :: U.ShaderProgram
+  , _bbTexObj     :: Maybe GL.TextureObject
+  , _bbVertBuffer :: GL.BufferObject }
+
 data RotatingCube = RotatingCube
   { _axis :: (L.V3 Float)
   , _deg  :: Degrees }

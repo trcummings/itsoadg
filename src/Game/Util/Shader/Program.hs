@@ -1,0 +1,136 @@
+module Game.Util.Shader.Program where
+
+import qualified Graphics.Rendering.OpenGL as GL
+import qualified Data.ByteString           as B
+
+import Game.Types (AttribGPU(..))
+
+--
+-- import qualified Graphics.Rendering.OpenGL as GL
+-- import qualified Data.ByteString           as B
+--
+-- import Game.Types.Shader
+--   ( ShaderTypeVal(..)
+--   , ShaderTypeProxy(..)
+--   , AttribGPU(..) )
+-- import Game.Util.Shader.GLSL
+--   ( In(..)
+--   , GLSLInfo(..) )
+--
+-- -- createProgram :: ShaderSequence t -> t -> IO (ShaderProgram t)
+-- -- createProgram shaderSequence global = do
+-- --   program <- compileAndLink shaderSequence
+-- --
+-- --   let info@(GLSLInfo ins uniforms _) = gatherInfo shaderSequence
+-- --
+-- --   attrs <- if   null ins
+-- --            then return []
+-- --            else createAttrList program global ins
+-- --
+-- --   unis  <- if   null uniforms
+-- --            then return []
+-- --            else createUniformList program uniforms
+-- --
+-- --     return $ ShaderProgram program info attrs unis
+-- --
+-- -- compileAndLink :: ShaderSequence t -> IO GL.Program
+-- -- compileAndLink shaderSeq = do
+-- --     shaders <- compileAll shaderSeq
+-- --     program <- GL.createProgram
+-- --     --mapM_ (GL.attachShader program) shaders
+-- --     mapM_ (\s -> GL.attachShader program s >> GL.deleteObjectName s) shaders
+-- --     GL.linkProgram program
+-- --     return program
+-- --
+-- -- compileAll :: ShaderSequence t -> IO [GL.Shader]
+-- -- compileAll (Wrapped current : rest) = do
+-- --     firstPrograms <- compile current
+-- --     otherPrograms <- compileAll rest
+-- --     return $ firstPrograms : otherPrograms
+-- -- compileAll [] = return []
+-- --
+-- -- compile :: ShaderTypeVal (ShaderTypeProxy p)
+-- --         => Shader p t -> IO GL.Shader
+-- -- compile (Shader proxy glsl) =
+-- --     let code = generateGLSL glsl
+-- --         shaderType = typeVal proxy
+-- --     in compileShader shaderType code
+-- -- compile (FromBS proxy _ code) =
+-- --     let shaderType = typeVal proxy
+-- --     in compileShader shaderType code
+-- -- compile (FromFile proxy _ file) =
+-- --     let shaderType = typeVal proxy
+-- --     in compileShader shaderType =<<
+-- --         B.readFile file
+-- --
+-- -- compileShader :: GL.ShaderType -> B.ByteString -> IO GL.Shader
+-- -- compileShader shaderType src = do
+-- --     -- Create GL.Shader
+-- --     shader <- GL.createShader shaderType
+-- --     GL.shaderSourceBS shader $= src
+-- --     -- Compile GL.Shader.
+-- --     GL.compileShader shader
+-- --     -- Check status.
+-- --     ok <- GL.get $ GL.compileStatus shader
+-- --     unless ok $
+-- --         print =<< GL.get (GL.shaderInfoLog shader)
+-- --
+-- --     return shader
+-- --
+-- -- gatherInfo :: ShaderSequence t -> GLSLInfo t
+-- -- gatherInfo (Wrapped (Shader proxy glsl) : shaders) =
+-- --     let GLSLInfo ins uniforms outs = evalShaderM glsl
+-- --         ins' = case typeVal proxy of
+-- --             GL.VertexShader -> ins
+-- --             _               -> []
+-- --         outs' = case typeVal proxy of
+-- --             GL.FragmentShader -> outs
+-- --             _                 -> []
+-- --     in GLSLInfo ins' uniforms outs' <> gatherInfo shaders
+-- -- gatherInfo (Wrapped (FromBS proxy info _) : shaders) =
+-- --     let GLSLInfo ins uniforms outs = info
+-- --         (ins', outs') = case typeVal proxy of
+-- --             GL.VertexShader -> (ins, outs)
+-- --             _               -> ([], [])
+-- --     in GLSLInfo ins' uniforms outs' <> gatherInfo shaders
+-- -- gatherInfo (Wrapped (FromFile proxy info _) : shaders) =
+-- --     let GLSLInfo ins uniforms outs = info
+-- --         (ins', outs') = case typeVal proxy of
+-- --             GL.VertexShader -> (ins, outs)
+-- --             _               -> ([], [])
+-- --     in GLSLInfo ins' uniforms outs' <> gatherInfo shaders
+-- -- gatherInfo [] = mempty
+-- --
+-- -- -- = Dealing with Ins
+-- --
+-- -- createAttrList :: GL.Program -> t -> [In t] -> IO [AttribGPU t]
+-- -- createAttrList progId global ins = do
+-- --     mapM (getInGPUInfo progId global) ins
+-- --
+-- -- getInGPUInfo :: GL.Program -> t -> In t -> IO (AttribGPU t)
+-- -- getInGPUInfo prog global i = do
+-- --     let name      = inName i
+-- --         lenValues = inLength i global
+-- --
+-- --     buffer <- inMkBuffer i global
+-- --
+-- --     let updateFunc g = do
+-- --             GL.bindBuffer GL.ArrayBuffer $= Just buffer
+-- --             inReplaceBuffer i g lenValues
+-- --
+-- --     location <- GL.get . GL.attribLocation prog $ C.unpack name
+-- --
+-- --     let (elemCount, glType) = inDescriptor i
+-- --         descriptor = GL.VertexArrayDescriptor elemCount glType 0 nullPtr
+-- --
+-- --     return $ AttribGPU buffer updateFunc location descriptor
+-- --                        (fromIntegral $ lenValues)
+-- --
+-- --
+-- --
+-- -- bindAttrib :: t -> AttribGPU t -> IO ()
+-- -- bindAttrib global (AttribGPU buffer updateFunc location descriptor _) = do
+-- --     updateFunc global
+-- --     GL.vertexAttribArray location $= GL.Enabled
+-- --     GL.bindBuffer GL.ArrayBuffer $= Just buffer
+-- --     GL.vertexAttribPointer location $= (GL.ToFloat, descriptor)

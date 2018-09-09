@@ -71,9 +71,9 @@ initialize = do
   GL.bindVertexArrayObject $= Just vao
   newEntity $ VAO vao
 
-  -- initColorCube
+  initColorCube
   initTextureCube
-  -- initPlayerBillboard
+  initPlayerBillboard
 
   -- camera
   newEntity (
@@ -85,11 +85,12 @@ initialize = do
     , Position3D  $ L.V3 0 0 0
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   -- move up, tilt down to look at cube
-  cmap $ \(c :: CameraEntity) ->
-      runCameraAction (
-        Camera'Compose
-          (Camera'Rotation Tilt (Degrees (-45)))
-          (Camera'Dolly (L.V3 0 2 4))) c
+  cmap $ (runCameraAction $ Camera'Dolly (L.V3 0 1 4))
+  -- cmap $ \(c :: CameraEntity) ->
+  --     runCameraAction (
+  --       Camera'Compose
+  --         (Camera'Rotation Tilt (Degrees (-45)))
+  --         (Camera'Dolly (L.V3 0 2 4))) c
   return ()
 
 cleanUp :: ECS ()
@@ -163,7 +164,7 @@ render = do
     let camProjMatrix = cameraProjectionMatrix dims camera
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
-    -- cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
+    cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
     cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
-    -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
+    cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
     return ()
