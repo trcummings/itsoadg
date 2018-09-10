@@ -18,14 +18,16 @@ import           Control.Lens ((&), (%~), element)
 import           Control.Monad (when, mapM_)
 import           Control.Monad.IO.Class (liftIO)
 import           KeyState (isPressed, isTouched)
+import           System.FilePath        ((</>))
 
 import           Game.Effect.Clock    (getGlobalTime)
 import           Game.Effect.Input    (getInputs)
 import           Game.Effect.Renderer (getWindowDims)
 
 import           Game.World.TH        (ECS)
+import           Game.Loaders.Save    (saveDataFile, loadDataFile)
 import           Game.Util.Billboard  (renderBillboard)
-import           Game.Util.Constants  (frameDeltaSeconds)
+import           Game.Util.Constants  (frameDeltaSeconds, assetPath)
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -63,25 +65,34 @@ import Game.System.Scratch.PlayerBillboard
   ( PlayerB
   , initPlayerBillboard
   , drawPlayerBillboard )
+import Game.Loaders.Cfg (readMapCfg, readMapMedia)
 
 initialize :: ECS ()
 initialize = do
+  -- init VAO
   initVAO
+  -- load config data
+  liftIO $ readMapCfg   $ assetPath </> "leveleg.cfg"
+  liftIO $ readMapMedia $ assetPath </> "leveleg.med"
+  -- entities
   initColorCube
   initTextureCube
   initPlayerBillboard
 
   -- camera
-  newEntity (
-      Camera { _clippingPlanes = ClippingPlanes { _near = 0.1, _far = 10 }
-             , _fieldOfView    = FieldOfView (pi / 4)
-             , _cameraAxes     = CameraAxes { _xAxis = L.V3 1 0 0
-                                            , _yAxis = L.V3 0 1 0
-                                            , _zAxis = L.V3 0 0 (-1) } }
-    , Position3D  $ L.V3 0 0 0
-    , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
+  cam :: CameraEntity <- liftIO $ loadDataFile "test.json"
+  -- let cam = (
+  --         Camera { _clippingPlanes = ClippingPlanes { _near = 0.1, _far = 10 }
+  --                , _fieldOfView    = FieldOfView (pi / 4)
+  --                , _cameraAxes     = CameraAxes { _xAxis = L.V3 1 0 0
+  --                                               , _yAxis = L.V3 0 1 0
+  --                                               , _zAxis = L.V3 0 0 (-1) } }
+  --       , Position3D  $ L.V3 0 1 4
+  --       , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
+  -- liftIO $ saveDataFile cam "test.json"
+  newEntity cam
   -- move up, tilt down to look at cube
-  cmap $ (runCameraAction $ Camera'Dolly (L.V3 0 1 4))
+  -- cmap $ (runCameraAction $ Camera'Dolly (L.V3 0 1 4))
   -- cmap $ \(c :: CameraEntity) ->
   --     runCameraAction (
   --       Camera'Compose

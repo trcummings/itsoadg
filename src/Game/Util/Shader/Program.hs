@@ -11,31 +11,20 @@ import           System.IO        (hPutStrLn, stderr)
 import           System.Exit      (exitFailure)
 import           Data.List        (isSuffixOf)
 import           Data.Map.Strict  (fromList)
-
-
 -- import           System.Directory (doesFileExist)
 
--- import           Game.Util.Shader.In      (createAttrList)
--- import           Game.Util.Shader.Uniform (createUniformList)
 import           Game.Types (ShaderInfo(..))
-  -- ( ShaderProgram(..)
-  -- , ShaderInfo(..) )
-  -- , GLSLInfo(..) )
 
 
 printError :: IO ()
 printError = GL.get GL.errors >>= mapM_ (hPutStrLn stderr . ("GL: "++) . show)
 
 createProgram :: [ShaderInfo] -> IO U.ShaderProgram
--- createProgram :: [Shader] -> GLSLInfo t -> t -> IO (ShaderProgram t)
--- createProgram shaders info@(GLSLInfo ins uniforms _) global = do
 createProgram shaderInfo = do
   shaders <- mapM loadShader $ shaderInfo
   program <- compileAndLink shaders
   -- get attributes, attach to the program
   (attribs, uniforms) <- getActives program
-  putStrLn $ show attribs
-  putStrLn $ show uniforms
   -- attach all attributes to the program
   mapM_ (\(name, (loc, _)) -> GL.attribLocation program name $= loc) attribs
   return $ U.ShaderProgram (fromList attribs) (fromList uniforms) program

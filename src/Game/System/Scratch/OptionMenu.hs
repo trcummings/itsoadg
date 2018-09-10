@@ -1,4 +1,4 @@
-module Game.System.OptionMenu where
+module Game.System.Scratch.OptionMenu where
 
 import qualified SDL
 import           Apecs
