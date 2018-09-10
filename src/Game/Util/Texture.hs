@@ -7,9 +7,9 @@ import Graphics.Rendering.OpenGL
   ( TextureObject(..)
   , Size(..)
   , PixelData(..)
-  , TextureTarget2D (Texture2D)
-  , TextureFilter   (Linear', Nearest)
-  , TextureFunction (Modulate)
+  , TextureTarget2D     (Texture2D)
+  , TextureFilter       (Linear', Nearest)
+  , TextureFunction     (Modulate)
   , PixelInternalFormat (RGBA')
   , textureFunction
   , build2DMipmaps
@@ -19,7 +19,6 @@ import Graphics.Rendering.OpenGL
   , ($=) )
 
 import Game.Util.TGA (readTga)
-
 
 -- read an image file, return a texture
 -- images are assumed to be in the TGA image format
@@ -31,10 +30,9 @@ getAndCreateTexture path = do
 
 -- read the image data
 readImageC :: FilePath -> IO (Maybe (Size, PixelData Word8))
-readImageC path =
-  catchIOError (readTga path) $ \_ -> do
-    putStrLn $ "Game.Util.Texture: Missing texture at " ++ path
-    return Nothing
+readImageC path = catchIOError (readTga path) $ \_ -> do
+  putStrLn $ "Game.Util.Texture: Missing texture at " ++ path
+  return Nothing
 
 -- creates the texture
 createTexture :: (Maybe (Size, PixelData a)) -> IO (Maybe TextureObject)

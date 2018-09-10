@@ -14,8 +14,8 @@ import           Data.Map               (keys)
 import           Control.Applicative
 import           Apecs
 
-import           Game.World.TH          (ECS)
-import           Game.Util.Constants    (shaderPath)
+import           Game.World.TH            (ECS)
+import           Game.Util.Constants      (shaderPath)
 import           Game.Util.Shader.Program (createProgram)
 import           Game.Types
   ( Degrees(..)
@@ -117,7 +117,7 @@ initColorCube = do
   -- shaderProgram <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
   vertexBuffer  <- liftIO $ U.fromSource GL.ArrayBuffer vs
   colorBuffer   <- liftIO $ U.fromSource GL.ArrayBuffer cs
-  program <- liftIO $ 
+  program <- liftIO $
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
                   , ShaderInfo GL.FragmentShader fragmentShader ]
 

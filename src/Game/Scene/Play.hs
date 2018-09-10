@@ -46,10 +46,10 @@ import           Game.Types
   , FieldOfView(..)
   , Orientation(..)
   , CameraAxes(..)
-  , VAO (..)
 
   , Position3D(..)
   , Scene(..) )
+import Game.System.Scratch.VAO (initVAO, cleanUpVAO)
 import Game.System.Scratch.ColorCube
   ( ColorCube
   , initColorCube
@@ -66,11 +66,7 @@ import Game.System.Scratch.PlayerBillboard
 
 initialize :: ECS ()
 initialize = do
-  -- create VAO & VAO entity
-  [vao] <- GL.genObjectNames 1
-  GL.bindVertexArrayObject $= Just vao
-  newEntity $ VAO vao
-
+  initVAO
   initColorCube
   initTextureCube
   initPlayerBillboard
@@ -101,58 +97,64 @@ cleanUp = do
   -- destroy the camera
   cmap $ \(_ :: CameraEntity  ) -> Not :: Not CameraEntity
   cmap $ \(_ :: HasCameraEvent) -> Not :: Not HasCameraEvent
-  -- unbind the VAO & destroy the entity
-  cmapM_ $ \(VAO vao, ety) -> do
-    liftIO $ U.deleteVAO vao
-    liftIO $ GL.bindVertexArrayObject $= Nothing
-    destroy ety (Proxy :: Proxy VAO)
+  cleanUpVAO
 
-step :: ECS ()
-step = do
-  -- rotate da cubes!!!
-  cmap stepColorCube
-
-  -- if escape pressed, transition to quit
-  inputs <- getInputs
+quitOnEsc :: Inputs -> ECS ()
+quitOnEsc inputs = do
   let m = _inputs . _keyboardInput $ inputs
   when (isPressed $ m ! SDL.KeycodeEscape) $ do
     sc <- get global :: ECS SceneControl
     set global $ sc { _nextScene = Scene'Quit }
 
-  -- send camera events based on WASD presses
-  cmap $ \( c :: Camera
-          , _ :: Not HasCameraEvent ) ->
-    let leftPress    = isTouched $ m ! SDL.KeycodeA
-        rightPress   = isTouched $ m ! SDL.KeycodeD
-        forwardPress = isTouched $ m ! SDL.KeycodeW
-        backPress    = isTouched $ m ! SDL.KeycodeS
-        t            = realToFrac frameDeltaSeconds :: Float
-        toDolly v    = Camera'Dolly $ v L.^* t
-        toRotat r    = Camera'Rotation Pan (Degrees $ r * t)
-        rt = if leftPress && rightPress
-             then Nothing
-             else if leftPress
-                  then Just $ toRotat 90
-                  else if rightPress
-                       then Just $ toRotat (-90)
-                       else Nothing
-        vx = if forwardPress && backPress
-             then Nothing
-             else if backPress
-                  then Just $ toDolly $ L.V3 0 0 1
-                  else if forwardPress
-                       then Just $ toDolly $ L.V3 0 0 (-1)
-                       else Nothing
-    in case (vx, rt) of
-        (Nothing , Nothing ) -> Left c
-        (Just vx', Just rt') -> Right (c, HasCameraEvent (Camera'Compose vx' rt'))
-        (Just vx', _       ) -> Right (c, HasCameraEvent vx')
-        (_       , Just rt') -> Right (c, HasCameraEvent rt')
+sendCameraMoveEvents :: Inputs
+                     -> (Camera, Not HasCameraEvent)
+                     -> Either Camera (Camera, HasCameraEvent)
+sendCameraMoveEvents inputs (c, _) =
+  let m            = _inputs . _keyboardInput $ inputs
+      leftPress    = isTouched $ m ! SDL.KeycodeA
+      rightPress   = isTouched $ m ! SDL.KeycodeD
+      forwardPress = isTouched $ m ! SDL.KeycodeW
+      backPress    = isTouched $ m ! SDL.KeycodeS
+      t            = realToFrac frameDeltaSeconds :: Float
+      toDolly v    = Camera'Dolly $ v L.^* t
+      toRotat r    = Camera'Rotation Pan (Degrees $ r * t)
+      rt = if leftPress && rightPress
+           then Nothing
+           else if leftPress
+                then Just $ toRotat 90
+                else if rightPress
+                     then Just $ toRotat (-90)
+                     else Nothing
+      vx = if forwardPress && backPress
+           then Nothing
+           else if backPress
+                then Just $ toDolly $ L.V3 0 0 1
+                else if forwardPress
+                     then Just $ toDolly $ L.V3 0 0 (-1)
+                     else Nothing
+  in case (vx, rt) of
+      (Nothing , Nothing ) -> Left c
+      (Just vx', Just rt') -> Right (c, HasCameraEvent (Camera'Compose vx' rt'))
+      (Just vx', _       ) -> Right (c, HasCameraEvent vx')
+      (_       , Just rt') -> Right (c, HasCameraEvent rt')
 
+runCameraActions :: (HasCameraEvent, CameraEntity)
+                 -> (CameraEntity, Not HasCameraEvent)
+runCameraActions (HasCameraEvent e, c) =
+  (runCameraAction e c, Not :: Not HasCameraEvent)
+
+step :: ECS ()
+step = do
+  -- rotate da cubes!!!
+  cmap stepColorCube
+  -- get inputs
+  inputs <- getInputs
+  -- if escape pressed, transition to quit
+  quitOnEsc inputs
+  -- send camera events based on WASD presses
+  cmap $ sendCameraMoveEvents inputs
   -- resolve camera movement based on camera events
-  cmap $ \(HasCameraEvent e, (c :: CameraEntity)) ->
-    ( runCameraAction e c
-    , Not :: Not HasCameraEvent )
+  cmap $ runCameraActions
 
 render :: ECS ()
 render = do
@@ -165,6 +167,6 @@ render = do
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
     cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
-    -- cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
-    -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
+    cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
+    cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
     return ()
