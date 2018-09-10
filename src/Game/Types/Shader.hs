@@ -1,11 +1,10 @@
--- {-# LANGUAGE TypeFamilies      #-}
--- {-# LANGUAGE DataKinds         #-}
--- {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE Rank2Types        #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Game.Types.Shader where
 
 import qualified Graphics.Rendering.OpenGL as GL
+import qualified Data.ByteString           as B
+import qualified Linear                    as L
 
 -- import           Game.Util.FBO (FBO(..))
 
@@ -18,12 +17,13 @@ import qualified Graphics.Rendering.OpenGL as GL
 --   { _galaxies    :: [ShaderGalaxy t]
 --   , _postShaders :: [ShaderProgram FBO] }
 
+data ShaderInfo = ShaderInfo GL.ShaderType FilePath
 
 data ShaderProgram t = ShaderProgram
-  { _program    :: GL.Program
-  , _attribs      :: [AttribGPU t]
-  , _uniforms     :: [UniformGPU t] }
-  -- , _shaderInfo :: (GLSLInfo t) -- used for logging
+  { _glProgram  :: GL.Program
+  , _attribs    :: [AttribGPU t]
+  , _uniforms   :: [UniformGPU t] }
+  -- , _shaderInfo :: GLSLInfo t }-- used for logging
 
 data UniformGPU t = UniformGPU
   { _uniformLocation :: GL.UniformLocation
@@ -36,25 +36,44 @@ data AttribGPU t = AttribGPU
   , _descriptor     :: forall a. GL.VertexArrayDescriptor a
   , _length         :: GL.NumArrayIndices }
 
+data GLSLInfo t = GLSLInfo [In t] [Uniform t] [Out]
 
--- data Shader (p :: GL.ShaderType) t =
---     Shader   (ShaderTypeProxy p) (forall a. ShaderM p t a ())
---     FromBS   (ShaderTypeProxy p) (GLSLInfo t) B.ByteString
---   | FromFile (ShaderTypeProxy p) (GLSLInfo t) FilePath
+instance Monoid (GLSLInfo t) where
+  mempty = GLSLInfo [] [] []
+  mappend (GLSLInfo in1 uni1 out1) (GLSLInfo in2 uni2 out2) =
+    GLSLInfo (in1 ++ in2) (uni1 ++ uni2) (out1 ++ out2)
 
--- data ShaderTypeProxy (t :: GL.ShaderType) = Proxy
---
--- class ShaderTypeVal a where
---     typeVal :: a -> GL.ShaderType
--- instance ShaderTypeVal (ShaderTypeProxy GL.VertexShader) where
---     typeVal = const GL.VertexShader
--- instance ShaderTypeVal (ShaderTypeProxy GL.TessControlShader) where
---     typeVal = const GL.TessControlShader
--- instance ShaderTypeVal (ShaderTypeProxy GL.TessEvaluationShader) where
---     typeVal = const GL.TessEvaluationShader
--- instance ShaderTypeVal (ShaderTypeProxy GL.GeometryShader) where
---     typeVal = const GL.GeometryShader
--- instance ShaderTypeVal (ShaderTypeProxy GL.FragmentShader) where
---     typeVal = const GL.FragmentShader
--- instance ShaderTypeVal (ShaderTypeProxy GL.ComputeShader) where
---     typeVal = const GL.ComputeShader
+type Name = B.ByteString
+
+data In t =
+    InFloat (t -> [GL.GLfloat])       Name
+  | InInt   (t -> [Int])              Name
+  | InVec2  (t -> [L.V2 GL.GLfloat])  Name
+  | InVec3  (t -> [L.V3 GL.GLfloat])  Name
+  | InVec4  (t -> [L.V4 GL.GLfloat])  Name
+  | InNone                            Name
+  -- Unlikely, but...
+  | InMat4  (t -> [L.M44 GL.GLfloat]) Name
+
+data Sampler2D = Sampler2DInfo GL.TextureObject GL.TextureUnit
+
+data Uniform t =
+    UniformFloat     (t -> GL.GLfloat)       Name
+  | UniformInt       (t -> Int)              Name
+  | UniformVec2      (t -> L.V2  GL.GLfloat) Name
+  | UniformVec3      (t -> L.V3  GL.GLfloat) Name
+  | UniformVec4      (t -> L.V4  GL.GLfloat) Name
+  | UniformMat4      (t -> L.M44 GL.GLfloat) Name
+  | UniformSampler2D (t -> Sampler2D)        Name
+
+data Out =
+    OutFloat     Name
+  | OutInt       Name
+  | OutBool      Name
+  | OutVec2      Name
+  | OutVec3      Name
+  | OutVec4      Name
+  | OutMat4      Name
+  | OutSampler2D Name
+  | OutNone      Name
+  deriving (Show, Eq)

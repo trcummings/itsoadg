@@ -165,6 +165,6 @@ render = do
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
     cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
-    cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
-    cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
+    -- cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
+    -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
     return ()

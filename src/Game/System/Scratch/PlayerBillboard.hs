@@ -12,10 +12,11 @@ import           Control.Monad.IO.Class  (liftIO)
 import           Data.Map                (keys)
 import           Apecs                   (newEntity)
 
-import           Game.World.TH           (ECS)
-import           Game.Util.Constants     (objPath, texturePath, shaderPath)
-import           Game.Loaders.Obj.Loader (loadObjFile)
-import           Game.Util.Texture       (getAndCreateTexture)
+import           Game.World.TH            (ECS)
+import           Game.Util.Constants      (objPath, texturePath, shaderPath)
+import           Game.Loaders.Obj.Loader  (loadObjFile)
+import           Game.Util.Shader.Program (createProgram) 
+import           Game.Util.Texture        (getAndCreateTexture)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
@@ -23,6 +24,7 @@ import           Game.Types
   , Orientation(..)
   , ObjData(..)
   , BBResource(..)
+  , ShaderInfo(..)
   , Player(..) )
 
 type PlayerB = (Player, BBResource, Orientation, Position3D)
@@ -41,7 +43,9 @@ initPlayerBillboard = do
       fragmentShader = shaderPath  </> "billboard.f.glsl"
       texture        = texturePath </> "player.tga"
   -- load in shaders
-  sp  <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
+  program <- liftIO $
+    createProgram [ ShaderInfo GL.VertexShader   vertexShader
+                  , ShaderInfo GL.FragmentShader fragmentShader ]
   -- load the image
   texObj  <- liftIO $ getAndCreateTexture texture
   -- create the buffer related data
@@ -49,7 +53,7 @@ initPlayerBillboard = do
   -- define the entity
   newEntity (
       Player
-    , BBResource { _bbSProgram   = sp
+    , BBResource { _bbSProgram   = program
                  , _bbTexObj     = texObj
                  , _bbVertBuffer = vb }
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)

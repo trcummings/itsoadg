@@ -16,107 +16,117 @@ import           Apecs
 
 import           Game.World.TH          (ECS)
 import           Game.Util.Constants    (shaderPath)
+import           Game.Util.Shader.Program (createProgram)
 import           Game.Types
   ( Degrees(..)
   , Orientation(..)
   , RotatingCube(..)
   , Position3D(..)
   , Model(..)
+  , ShaderInfo(..)
   , Resource(..)
   , ProjectionMatrix(..)
   , ViewMatrix(..) )
 
 type ColorCube = (RotatingCube, Model, Position3D, Orientation)
 
+vs :: [L.V3 Float]
+vs = [
+    L.V3 (-1) (-1) (-1)
+  , L.V3 (-1) (-1)  1
+  , L.V3 (-1)   1   1
+  , L.V3   1    1 (-1)
+  , L.V3 (-1) (-1) (-1)
+  , L.V3 (-1)   1  (-1)
+  , L.V3   1  (-1)   1
+  , L.V3 (-1) (-1) (-1)
+  , L.V3   1  (-1) (-1)
+  , L.V3   1    1  (-1)
+  , L.V3   1  (-1) (-1)
+  , L.V3 (-1) (-1) (-1)
+  , L.V3 (-1) (-1) (-1)
+  , L.V3 (-1)   1    1
+  , L.V3 (-1)   1  (-1)
+  , L.V3   1  (-1)   1
+  , L.V3 (-1) (-1)   1
+  , L.V3 (-1) (-1) (-1)
+  , L.V3 (-1)   1    1
+  , L.V3 (-1) (-1)   1
+  , L.V3   1  (-1)   1
+  , L.V3   1    1    1
+  , L.V3   1  (-1) (-1)
+  , L.V3   1    1  (-1)
+  , L.V3   1  (-1) (-1)
+  , L.V3   1    1    1
+  , L.V3   1  (-1)   1
+  , L.V3   1    1    1
+  , L.V3   1    1  (-1)
+  , L.V3 (-1)   1  (-1)
+  , L.V3   1    1    1
+  , L.V3 (-1)   1  (-1)
+  , L.V3 (-1)   1    1
+  , L.V3   1    1    1
+  , L.V3 (-1)   1    1
+  , L.V3   1  (-1)   1
+  ]
+
+cs :: [L.V3 Float]
+cs = [
+    L.V3 0.583 0.771 0.014
+  , L.V3 0.609 0.115 0.436
+  , L.V3 0.327 0.483 0.844
+  , L.V3 0.822 0.569 0.201
+  , L.V3 0.435 0.602 0.223
+  , L.V3 0.310 0.747 0.185
+  , L.V3 0.597 0.770 0.761
+  , L.V3 0.559 0.436 0.730
+  , L.V3 0.359 0.583 0.152
+  , L.V3 0.483 0.596 0.789
+  , L.V3 0.559 0.861 0.639
+  , L.V3 0.195 0.548 0.859
+  , L.V3 0.014 0.184 0.576
+  , L.V3 0.771 0.328 0.970
+  , L.V3 0.406 0.615 0.116
+  , L.V3 0.676 0.977 0.133
+  , L.V3 0.971 0.572 0.833
+  , L.V3 0.140 0.616 0.489
+  , L.V3 0.997 0.513 0.064
+  , L.V3 0.945 0.719 0.592
+  , L.V3 0.543 0.021 0.978
+  , L.V3 0.279 0.317 0.505
+  , L.V3 0.167 0.620 0.077
+  , L.V3 0.347 0.857 0.137
+  , L.V3 0.055 0.953 0.042
+  , L.V3 0.714 0.505 0.345
+  , L.V3 0.783 0.290 0.734
+  , L.V3 0.722 0.645 0.174
+  , L.V3 0.302 0.455 0.848
+  , L.V3 0.225 0.587 0.040
+  , L.V3 0.517 0.713 0.338
+  , L.V3 0.053 0.959 0.120
+  , L.V3 0.393 0.621 0.362
+  , L.V3 0.673 0.211 0.457
+  , L.V3 0.820 0.883 0.371
+  , L.V3 0.982 0.099 0.879
+  ]
+
 initColorCube :: ECS ()
 initColorCube = do
   let vertexShader   = shaderPath </> "cube.v.glsl"
       fragmentShader = shaderPath </> "cube.f.glsl"
-      vertices       = [
-          L.V3 (-1) (-1) (-1)
-        , L.V3 (-1) (-1)  1
-        , L.V3 (-1)   1   1
-        , L.V3   1    1 (-1)
-        , L.V3 (-1) (-1) (-1)
-        , L.V3 (-1)   1  (-1)
-        , L.V3   1  (-1)   1
-        , L.V3 (-1) (-1) (-1)
-        , L.V3   1  (-1) (-1)
-        , L.V3   1    1  (-1)
-        , L.V3   1  (-1) (-1)
-        , L.V3 (-1) (-1) (-1)
-        , L.V3 (-1) (-1) (-1)
-        , L.V3 (-1)   1    1
-        , L.V3 (-1)   1  (-1)
-        , L.V3   1  (-1)   1
-        , L.V3 (-1) (-1)   1
-        , L.V3 (-1) (-1) (-1)
-        , L.V3 (-1)   1    1
-        , L.V3 (-1) (-1)   1
-        , L.V3   1  (-1)   1
-        , L.V3   1    1    1
-        , L.V3   1  (-1) (-1)
-        , L.V3   1    1  (-1)
-        , L.V3   1  (-1) (-1)
-        , L.V3   1    1    1
-        , L.V3   1  (-1)   1
-        , L.V3   1    1    1
-        , L.V3   1    1  (-1)
-        , L.V3 (-1)   1  (-1)
-        , L.V3   1    1    1
-        , L.V3 (-1)   1  (-1)
-        , L.V3 (-1)   1    1
-        , L.V3   1    1    1
-        , L.V3 (-1)   1    1
-        , L.V3   1  (-1)   1
-        ]
-      colors = [
-          L.V3 0.583 0.771 0.014
-        , L.V3 0.609 0.115 0.436
-        , L.V3 0.327 0.483 0.844
-        , L.V3 0.822 0.569 0.201
-        , L.V3 0.435 0.602 0.223
-        , L.V3 0.310 0.747 0.185
-        , L.V3 0.597 0.770 0.761
-        , L.V3 0.559 0.436 0.730
-        , L.V3 0.359 0.583 0.152
-        , L.V3 0.483 0.596 0.789
-        , L.V3 0.559 0.861 0.639
-        , L.V3 0.195 0.548 0.859
-        , L.V3 0.014 0.184 0.576
-        , L.V3 0.771 0.328 0.970
-        , L.V3 0.406 0.615 0.116
-        , L.V3 0.676 0.977 0.133
-        , L.V3 0.971 0.572 0.833
-        , L.V3 0.140 0.616 0.489
-        , L.V3 0.997 0.513 0.064
-        , L.V3 0.945 0.719 0.592
-        , L.V3 0.543 0.021 0.978
-        , L.V3 0.279 0.317 0.505
-        , L.V3 0.167 0.620 0.077
-        , L.V3 0.347 0.857 0.137
-        , L.V3 0.055 0.953 0.042
-        , L.V3 0.714 0.505 0.345
-        , L.V3 0.783 0.290 0.734
-        , L.V3 0.722 0.645 0.174
-        , L.V3 0.302 0.455 0.848
-        , L.V3 0.225 0.587 0.040
-        , L.V3 0.517 0.713 0.338
-        , L.V3 0.053 0.959 0.120
-        , L.V3 0.393 0.621 0.362
-        , L.V3 0.673 0.211 0.457
-        , L.V3 0.820 0.883 0.371
-        , L.V3 0.982 0.099 0.879
-        ]
-  shaderProgram <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
-  vertexBuffer  <- liftIO $ U.fromSource GL.ArrayBuffer vertices
-  colorBuffer   <- liftIO $ U.fromSource GL.ArrayBuffer colors
-  let resource = Resource { _shaderProgram = shaderProgram
+  -- shaderProgram <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
+  vertexBuffer  <- liftIO $ U.fromSource GL.ArrayBuffer vs
+  colorBuffer   <- liftIO $ U.fromSource GL.ArrayBuffer cs
+  program <- liftIO $ 
+    createProgram [ ShaderInfo GL.VertexShader   vertexShader
+                  , ShaderInfo GL.FragmentShader fragmentShader ]
+
+  let resource = Resource { _shaderProgram = program
                           , _vertexBuffer  = vertexBuffer
                           , _colorBuffer   = colorBuffer }
       model    = Model { _resource = resource
-                       , _vertices = vertices
-                       , _colors   = colors }
+                       , _vertices = vs
+                       , _colors   = cs }
 
   -- cube 1
   newEntity (
@@ -161,14 +171,14 @@ drawColorCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       -- attribs & uniforms
       colLoc = U.getAttrib  shaderProgram "vertexColor"
       posLoc = U.getAttrib  shaderProgram "vertexPosition_modelspace"
-      mvpLoc = U.getUniform shaderProgram "MVP"
+      -- mvpLoc = U.getUniform shaderProgram "MVP"
   -- set current program to shaderProgram
   GL.currentProgram             $= Just program
   -- enable attribs
   GL.vertexAttribArray   posLoc $= GL.Enabled
   GL.vertexAttribArray   colLoc $= GL.Enabled
   -- transform mvp uniform
-  trans `U.asUniform` mvpLoc
+  trans `U.asUniform` (U.getUniform shaderProgram "MVP")
   -- bind to vertex buffer VB
   GL.bindBuffer GL.ArrayBuffer  $= Just vertexBuffer
   GL.vertexAttribPointer posLoc $=

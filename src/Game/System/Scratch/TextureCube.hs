@@ -12,10 +12,11 @@ import           Control.Monad.IO.Class  (liftIO)
 import           Data.Map                (keys)
 import           Apecs                   (newEntity)
 
-import           Game.World.TH           (ECS)
-import           Game.Util.Constants     (objPath, texturePath, shaderPath)
-import           Game.Loaders.Obj.Loader (loadObjFile)
-import           Game.Util.Texture       (getAndCreateTexture)
+import           Game.World.TH            (ECS)
+import           Game.Util.Constants      (objPath, texturePath, shaderPath)
+import           Game.Loaders.Obj.Loader  (loadObjFile)
+import           Game.Util.Shader.Program (createProgram)
+import           Game.Util.Texture        (getAndCreateTexture)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
@@ -24,6 +25,7 @@ import           Game.Types
   , ObjData(..)
   , TexResource(..)
   , RotatingCube(..)
+  , ShaderInfo(..)
   , Degrees(..) )
 
 type TexCube = (TexResource, RotatingCube, Orientation, Position3D)
@@ -35,7 +37,9 @@ initTextureCube = do
       uvTexPath      = texturePath </> "texcube.tga"
       cubeObjPath    = objPath     </> "cube.obj"
   -- load in shaders
-  sp  <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
+  program <- liftIO $
+    createProgram [ ShaderInfo GL.VertexShader   vertexShader
+                  , ShaderInfo GL.FragmentShader fragmentShader ]
   -- load the obj file
   obj <- liftIO $ loadObjFile cubeObjPath
   -- load the image
@@ -45,7 +49,7 @@ initTextureCube = do
   uvb <- liftIO $ U.fromSource GL.ArrayBuffer $ _texCoords obj
   -- define the entity
   newEntity (
-      TexResource { _sProgram   = sp
+      TexResource { _sProgram   = program
                   , _texObj     = uv
                   , _vertBuffer = vb
                   , _uvBuffer   = uvb
