@@ -20,6 +20,14 @@ import Graphics.Rendering.OpenGL
 
 import Game.Util.TGA (readTga)
 
+-- read a list of images and returns a list of textures
+-- all images are assumed to be in the TGA image format
+getAndCreateTextures :: [FilePath] -> IO [Maybe TextureObject]
+getAndCreateTextures fileNames = do
+   texData <- mapM readImageC    fileNames
+   texObjs <- mapM createTexture texData
+   return texObjs
+
 -- read an image file, return a texture
 -- images are assumed to be in the TGA image format
 getAndCreateTexture :: FilePath -> IO (Maybe TextureObject)
