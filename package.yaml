@@ -42,6 +42,7 @@ dependencies:
 - attoparsec >= 0.13.2.2
 - aeson
 - vector
+- array
 - text
 - text-conversions
 - containers
