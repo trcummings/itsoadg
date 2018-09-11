@@ -25,6 +25,7 @@ import Game.Types
   , Model
   , VAO
   , Player
+  , BSPMap
 
   , TexResource
   , BBResource
@@ -81,6 +82,9 @@ instance Component VAO where
 instance Component Player where
   type Storage Player = Unique Player
 
+instance Component BSPMap where
+  type Storage BSPMap = Unique BSPMap
+
 
 -- Camera Components
 instance Component Camera where
@@ -115,6 +119,7 @@ makeWorld "World" [
   , ''BBResource
   , ''RotatingCube
   , ''VAO
+  , ''BSPMap
   , ''Player
 
   , ''Camera

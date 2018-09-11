@@ -28,6 +28,7 @@ import           Game.World.TH        (ECS)
 import           Game.Loaders.Save    (saveDataFile, loadDataFile)
 import           Game.Util.Billboard  (renderBillboard)
 import           Game.Util.Constants  (frameDeltaSeconds, assetPath)
+import           Game.Util.BSP.Render (renderBSP)
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -49,6 +50,7 @@ import           Game.Types
   , Orientation(..)
   , CameraAxes(..)
 
+  , BSPMap
   , Position3D(..)
   , Scene(..) )
 import Game.System.Scratch.VAO (initVAO, cleanUpVAO)
@@ -73,7 +75,9 @@ initialize = do
   initVAO
   -- load config data
   liftIO $ readMapCfg   $ assetPath </> "leveleg.cfg"
-  liftIO $ readMapMedia $ assetPath </> "leveleg.med"
+  bsp <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
+  -- create BSP entity
+  newEntity bsp
   -- entities
   initColorCube
   initTextureCube
@@ -177,6 +181,8 @@ render = do
     let camProjMatrix = cameraProjectionMatrix dims camera
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
+        (_, Position3D cPos, _) = camera
+    cmapM_ $ \(r :: BSPMap)    -> liftIO $ renderBSP r cPos
     cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
     cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
     cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r

@@ -5,6 +5,7 @@ import System.FilePath ((</>))
 import Game.Util.File      (withBinaryFile, readLines)
 import Game.Util.Constants (assetPath)
 import Game.Util.BSP.Read  (readBSP)
+import Game.Types          (BSPMap)
 
 data LevelModel =
   MapModel String
@@ -17,14 +18,14 @@ readMapCfg path = withBinaryFile path $ \handle -> do
   print lines'
   return ()
 
-readMapMedia :: FilePath -> IO ()
+readMapMedia :: FilePath -> IO BSPMap
 readMapMedia path = withBinaryFile path $ \handle -> do
   lines' <- readLines handle
   print lines'
   let levelModels        = linesToLevelModels lines'
       (MapModel lvlName) = head levelModels
   bsp <- readBSP $ assetPath </> lvlName
-  return ()
+  return bsp
 
 linesToLevelModels :: [String] -> [LevelModel]
 linesToLevelModels []         = []
