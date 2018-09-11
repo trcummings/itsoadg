@@ -83,7 +83,7 @@ readHeader :: Handle -> IO BSPHeader
 readHeader handle = do
   buf <- mallocBytes 4
   hGetBuf handle buf 4
-  iD  <- mapM (peekByteOff buf)  [0..3] :: IO [CChar]
+  iD  <- mapM (peekByteOff buf) [0..3] :: IO [CChar]
   hGetBuf handle buf cIntSize
   ver <- peek (castPtr buf :: Ptr CInt) :: IO CInt
   free buf
@@ -102,7 +102,7 @@ readLump handle _ = do
   l    <- peek (castPtr buf :: Ptr CInt) :: IO CInt
   free buf
   return BSPLump { _offset = fromIntegral offs
-                , _len    = fromIntegral l }
+                 , _len    = fromIntegral l }
 
 getLumpData :: BSPLump -> IO (Int, Int)
 getLumpData lump = return (_offset lump, _len lump)
@@ -191,7 +191,7 @@ readLeaf :: Array Int Int
 readLeaf leafFaceArray faceArray leafBrushArray brushArray ptr = do
   [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12] <- getInts ptr 12
   let leafIndices  = map (leafFaceArray !) [ ((e9 + e10) - 1)
-                                          , ((e9 + e10) - 2)..e9 ]
+                                           , ((e9 + e10) - 2)..e9 ]
       brushIndices = map (leafBrushArray !) [e11..(e11 + e12 - 1)]
       faceList     = map (faceArray !) leafIndices
       brushList    = map (brushArray !) brushIndices
@@ -448,6 +448,20 @@ toVertexData (a, b, c, d, e) =
   , e)
 
 
+-- reads the indices to the vertex array
+readIndices :: Handle -> [BSPLump] -> IO [GL.GLint]
+readIndices handle lumps = do
+  (offst, lngth) <- getLumpData (lumps !! kIndices)
+  hSeek handle AbsoluteSeek (fromIntegral offst)
+  buf    <- mallocBytes lngth
+  hGetBuf handle buf lngth
+  indces <- mapM
+    (peekElemOff (castPtr buf :: Ptr CInt))
+        [0..((lngth `div` 4) - 1)] :: IO [CInt]
+  free buf
+  return $ map fromIntegral indces
+
+
 -- reads lightmaps
 readLightMaps :: Handle -> [BSPLump] -> IO [GL.TextureObject]
 readLightMaps handle lumps = do
@@ -526,17 +540,3 @@ readTexInfo handle offst = do
   return BSPTexInfo { _strName  = str
                     , _flags    = fromIntegral flgs
                     , _contents = fromIntegral cons }
-
-
--- reads the indices to the vertex array
-readIndices :: Handle -> [BSPLump] -> IO [GL.GLint]
-readIndices handle lumps = do
-  (offst, lngth) <- getLumpData (lumps !! kIndices)
-  hSeek handle AbsoluteSeek (fromIntegral offst)
-  buf    <- mallocBytes lngth
-  hGetBuf handle buf lngth
-  indces <- mapM
-    (peekElemOff (castPtr buf :: Ptr CInt))
-        [0..((lngth `div` 4) - 1)] :: IO [CInt]
-  free buf
-  return $ map fromIntegral indces

@@ -79,9 +79,9 @@ initialize = do
   -- create BSP entity
   newEntity bsp
   -- entities
-  initColorCube
-  initTextureCube
-  initPlayerBillboard
+  -- initColorCube
+  -- initTextureCube
+  -- initPlayerBillboard
 
   -- camera
   cam :: CameraEntity <- liftIO $ loadDataFile "test.json"
@@ -183,7 +183,7 @@ render = do
         mats          = (camProjMatrix, camViewMatrix)
         (_, cPos, _)  = camera
     cmapM_ $ \(r :: BSPMap)    -> liftIO $ renderBSP mats cPos r
-    cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
-    cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
-    cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
+    -- cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
+    -- cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
+    -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
     return ()

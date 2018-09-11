@@ -70,7 +70,7 @@ data BSPFace = BSPFace
   { _textureObj     :: Maybe GL.TextureObject
     -- The index for the effects (or -1 = n/a)
   , _effect         :: Int
-    -- 1=polygon, 2=patch, 3=mesh, 4=billboard
+    -- 1 = polygon, 2 = patch, 3 = mesh, 4 = billboard
   , _faceType       :: Int
     -- The starting index into this face's first vertex
   , _startVertIndex :: Int

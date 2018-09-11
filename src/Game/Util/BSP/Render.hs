@@ -4,14 +4,15 @@ import qualified Graphics.Rendering.OpenGL as GL
 import qualified Linear                    as L
 import qualified Data.Array.MArray         as Arr (readArray)
 import           SDL             (($=))
-import           Foreign.Ptr     (Ptr, plusPtr)
 import           Foreign.Marshal (advancePtr)
+import           Foreign.Ptr     (Ptr, plusPtr)
 import           Control.Monad   (when, unless)
 
 import           Game.Util.BSP.Frustum (Frustum, getFrustum, boxInFrustum)
 import           Game.Util.BSP.Indices
 import           Game.Util.BSP.BitSet
 import           Game.Util.BSP.Util
+import           Game.Util.GLError     (printGLErrors)
 import           Game.Types.BSP
 import           Game.Types
   ( ProjectionMatrix(..)
@@ -20,7 +21,6 @@ import           Game.Types
 
 
 --BSP rendering
--- NB: that L.V3 double is actually our "camera data"
 renderBSP :: (ProjectionMatrix, ViewMatrix)
           -> Position3D
           -> BSPMap
@@ -40,14 +40,25 @@ renderBSP mats (Position3D cPos) mapRef = do
   renderBSP' mats leaf mapRef
   return ()
 
+-- we have to reset the openGL state after rendering
+renderBSPCleanUp :: IO ()
+renderBSPCleanUp = do
+  GL.activeTexture $= GL.TextureUnit 1
+  GL.clientState GL.TextureCoordArray $= GL.Disabled
+  GL.texture GL.Texture2D $= GL.Disabled
+  GL.activeTexture $= GL.TextureUnit 0
+  GL.clientActiveTexture $= GL.TextureUnit 0
+  GL.clientState GL.TextureCoordArray $= GL.Disabled
+  GL.texture GL.Texture2D $= GL.Disabled
+
 
 -- given a position finds a in the tree where the position lies in
 findLeaf :: L.V3 Float -> Tree -> IO BSPLeaf
 findLeaf pos@(L.V3 x y z) (Branch node left right) =
-  let (L.V3 px py pz) :: L.V3 Float = realToFrac <$> _planeNormal node
-      d :: Float                    = realToFrac $ _dist node
-      dstnc                         = (px * x) + (py * y) + (pz * z) - d
-      branch                        = if dstnc >= 0 then left else right
+  let (L.V3 px py pz) = realToFrac <$> _planeNormal node
+      d               = realToFrac $ _dist node
+      dstnc           = (px * x) + (py * y) + (pz * z) - d
+      branch          = if dstnc >= 0 then left else right
   in findLeaf pos branch
 findLeaf (L.V3 _ _ _) (Leaf leaf) = return leaf
 
@@ -62,22 +73,9 @@ renderBSP' :: (ProjectionMatrix, ViewMatrix)
 renderBSP' vp leaf mp = do
   bsSize  <- sizeBS $ _bitset mp
   newBS   <- emptyBS bsSize
-  frustum <- getFrustum vp
-  mapM_ (renderLeaves frustum newBS visFunc mp) (_leaves mp)
+  mapM_ (renderLeaves (getFrustum vp) newBS visFunc mp) (_leaves mp)
   renderBSPCleanUp
     where visFunc = isClusterVisible (_visData mp) (_cluster leaf)
-
-
--- we have to reset the openGL state after rendering
-renderBSPCleanUp :: IO ()
-renderBSPCleanUp = do
-  GL.activeTexture $= GL.TextureUnit 1
-  GL.clientState GL.TextureCoordArray $= GL.Disabled
-  GL.texture GL.Texture2D $= GL.Disabled
-  GL.activeTexture $= GL.TextureUnit 0
-  GL.clientActiveTexture $= GL.TextureUnit 0
-  GL.clientState GL.TextureCoordArray $= GL.Disabled
-  GL.texture GL.Texture2D $= GL.Disabled
 
 
 -- renders a BSP leaf if it is visible
@@ -160,12 +158,12 @@ renderPolygonFace face (_, _, _, _, _) _ =  do
     (_numOfIndices face)
     GL.UnsignedInt
     d
-  --drawElements GL.Triangles (numOfIndices face) GL.UnsignedInt d
+  -- GL.drawElements GL.Triangles (_numOfIndices face) GL.UnsignedInt d
 
 
 -- renders a mesh face
 renderMeshFace :: BSPFace -> VertexArrays -> Ptr GL.GLint -> IO ()
-renderMeshFace face (vertexPtr, texturePtr, c, _, _) vIndex =  do
+renderMeshFace face (vertexPtr, texturePtr, c, _, _) vIndex = do
   let startVIndex = _startVertIndex face
   GL.arrayPointer GL.VertexArray $=
     GL.VertexArrayDescriptor 3 GL.Float 0
@@ -196,7 +194,7 @@ renderMeshFace face (vertexPtr, texturePtr, c, _, _) vIndex =  do
     (_numOfIndices face)
     GL.UnsignedInt
     (plusPtr vIndex (4 * _startIndex face))
-
+  -- GL.drawElements GL.Triangles (_numOfIndices face) GL.UnsignedInt d
 
 -- renders patch surfaces
 renderPatches :: BSPFace -> IO ()

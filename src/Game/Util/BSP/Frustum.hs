@@ -17,22 +17,22 @@ type Frustum = ( FPlane
 
 normalisePlane :: FPlane -> FPlane
 normalisePlane (L.V4 x y z d) =
-  let reciMag = (1 / (sqrt(x * x + y * y + z * z)))
+  let reciMag = 1 / (sqrt $ (x * x) + (y * y) + (z * z))
   in L.V4 (x * reciMag) (y * reciMag) (z * reciMag) (d * reciMag)
 
 
 -- gets the frustum from the current view
-getFrustum :: (ProjectionMatrix, ViewMatrix) -> IO Frustum
-getFrustum (ProjectionMatrix projMatrix, ViewMatrix viewMatrix) = do
-  let (L.V4 (L.V4 m00 m01 m02 m03 )
-            (L.V4 m10 m11 m12 m13 )
-            (L.V4 m20 m21 m22 m23 )
-            (L.V4 m30 m31 m32 m33 )) = viewMatrix
+getFrustum :: (ProjectionMatrix, ViewMatrix) -> Frustum
+getFrustum (ProjectionMatrix projMatrix, ViewMatrix viewMatrix) =
+  let (L.V4 (L.V4 m00 m01 m02 m03)
+            (L.V4 m10 m11 m12 m13)
+            (L.V4 m20 m21 m22 m23)
+            (L.V4 m30 m31 m32 m33)) = viewMatrix
 
-      (L.V4 (L.V4 p00 p01 p02 p03 )
-            (L.V4 p10 p11 p12 p13 )
-            (L.V4 p20 p21 p22 p23 )
-            (L.V4 p30 p31 p32 p33 )) = projMatrix
+      (L.V4 (L.V4 p00 p01 p02 p03)
+            (L.V4 p10 p11 p12 p13)
+            (L.V4 p20 p21 p22 p23)
+            (L.V4 p30 p31 p32 p33)) = projMatrix
 
       clip00  = m00*p00 + m01*p10 + m02*p20 + m03*p30
       clip01  = m00*p01 + m01*p11 + m02*p21 + m03*p31
@@ -84,18 +84,18 @@ getFrustum (ProjectionMatrix projMatrix, ViewMatrix viewMatrix) = do
       frontZ  = clip23 + clip22
       frontD  = clip33 + clip32
 
-         -- right plane
-  return ( normalisePlane (L.V4 rightX  rightY  rightZ  rightD)
-         -- left plane
-         , normalisePlane (L.V4 leftX   leftY   leftZ   leftD)
-         -- bottom plane
-         , normalisePlane (L.V4 bottomX bottomY bottomZ bottomD)
-         -- top plane
-         , normalisePlane (L.V4 topX    topY    topZ    topD)
-         -- back plane
-         , normalisePlane (L.V4 backX   backY   backZ   backD)
-         -- front plane
-         , normalisePlane (L.V4 frontX  frontY  frontZ  frontD) )
+     -- right plane
+  in ( normalisePlane (L.V4 rightX  rightY  rightZ  rightD)
+     -- left plane
+     , normalisePlane (L.V4 leftX   leftY   leftZ   leftD)
+     -- bottom plane
+     , normalisePlane (L.V4 bottomX bottomY bottomZ bottomD)
+     -- top plane
+     , normalisePlane (L.V4 topX    topY    topZ    topD)
+     -- back plane
+     , normalisePlane (L.V4 backX   backY   backZ   backD)
+     -- front plane
+     , normalisePlane (L.V4 frontX  frontY  frontZ  frontD) )
 
 
 -- tests if a box intersects a plane
@@ -114,7 +114,7 @@ testBox (L.V3 x y z) (L.V3 x2 y2 z2) (L.V4 a b c d)
 
 -- tests if an AABB lies within a frustum
 boxInFrustum :: Frustum -> L.V3 Float -> L.V3 Float -> Bool
-boxInFrustum (a,b,c,d,e,f) mn mx
+boxInFrustum (a, b, c, d, e, f) mn mx
    |     not(test a)
       || not(test b)
       || not(test c)
