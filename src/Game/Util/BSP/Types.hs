@@ -4,9 +4,10 @@ module Game.Util.BSP.Types where
 
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Data.Array.IO             as IOArr
-import           Linear      (V3, V2)
-import           Foreign.Ptr (Ptr)
-import           Data.Word   (Word8)
+import           Linear          (V3, V2)
+import           Foreign.C.Types (CFloat)
+import           Data.Word       (Word8)
+import           Foreign.Ptr     (Ptr)
 
 type VertexArrays =
   ( Ptr Float
@@ -14,6 +15,13 @@ type VertexArrays =
   , Ptr Float
   , Ptr Float
   , Ptr Word8 )
+
+type VertexArrayData =
+  ( [CFloat]
+  , [CFloat]
+  , [CFloat]
+  , [CFloat]
+  , [Word8] )
 
 type VertexData =
   ( [Float]

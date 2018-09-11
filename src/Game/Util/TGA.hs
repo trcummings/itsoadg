@@ -12,11 +12,12 @@ import Graphics.Rendering.OpenGL
   , DataType(UnsignedByte)
   , PixelFormat (RGBA, RGB) )
 
+import Game.Util.File (withBinaryFile)
 
 -- reads a *.tga file
 readTga :: FilePath -> IO (Maybe (Size, PixelData Word8))
 readTga filePath =
-   withBinaryFile' filePath $ \handle -> do
+   withBinaryFile filePath $ \handle -> do
    buf <- mallocBytes 6 :: IO (Ptr Word8)
    --the first 12 bytes of the header aren't used
    hGetBuf handle buf 6
@@ -40,9 +41,6 @@ readTga filePath =
    putStrLn ("loaded " ++ filePath)
    return $ Just ( Size (fromIntegral width) (fromIntegral height)
                  , PixelData pixelFormat UnsignedByte image )
-
-withBinaryFile' :: FilePath -> (Handle -> IO a) -> IO a
-withBinaryFile' filePath = bracket (openBinaryFile filePath ReadMode) hClose
 
 -- converts the image from bgr/bgra to rgb/rgba
 -- perhaps the opengl bgra extension could be
