@@ -31,8 +31,8 @@ import           Game.Util.Texture    (getAndCreateTextures)
 import           Game.Util.BSP.Curves (checkForPatch)
 import           Game.Util.BSP.Indices
 import           Game.Util.BSP.BitSet
-import           Game.Util.BSP.Types
 import           Game.Util.BSP.Util
+import           Game.Types.BSP
 
 -- reads a BSP file
 readBSP :: FilePath -> IO BSPMap

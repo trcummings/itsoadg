@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 
-module Game.Util.BSP.Types where
+module Game.Types.BSP where
 
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Data.Array.IO             as IOArr

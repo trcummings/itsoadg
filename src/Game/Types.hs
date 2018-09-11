@@ -9,6 +9,7 @@ module Game.Types
   , module Game.Types.EventQueue
   , module Game.Types.TileMap
   , module Game.Types.Shader
+  , module Game.Types.BSP
   , module Game.Types.Loaders ) where
 
 import Game.Types.Util
@@ -20,4 +21,5 @@ import Game.Types.GameState
 import Game.Types.EventQueue
 import Game.Types.TileMap
 import Game.Types.Shader
+import Game.Types.BSP
 import Game.Types.Loaders

@@ -6,7 +6,7 @@ import Data.Array.IArray
 import Data.Array.IO
 import Foreign.Storable
 
-import Game.Util.BSP.Types (BSPPatch(..), VertexArrays)
+import Game.Types (BSPPatch(..), VertexArrays)
 
 type VertTup = (Float, Float, Float, Float, Float, Float, Float)
 

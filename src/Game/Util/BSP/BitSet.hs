@@ -8,7 +8,7 @@ import Data.Array.IO
   , getBounds
   , rangeSize )
 
-import Game.Util.BSP.Types (BitSet(..))
+import Game.Types (BitSet(..))
 
 emptyBS :: Int -> IO BitSet
 emptyBS size = BitSet <$> newArray (0, size-1) False
