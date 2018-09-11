@@ -15,7 +15,6 @@ import           Foreign.C.String (peekCAString, castCCharToChar)
 import           Foreign.Ptr      (Ptr, castPtr, plusPtr)
 import           Foreign.C.Types  (CInt, CChar, CFloat)
 import           Data.Array       (Array, (!), listArray)
-import           Data.IORef       (IORef, newIORef)
 import           Data.Word        (Word8)
 import           Data.List        (unzip5)
 import           SDL              (($=))
@@ -34,7 +33,7 @@ import           Game.Util.BSP.Types
 import           Game.Util.BSP.Util
 
 -- reads a BSP file
-readBSP :: FilePath -> IO (IORef BSPMap)
+readBSP :: FilePath -> IO BSPMap
 readBSP filePath = withBinaryFile filePath $ \handle -> do
    readHeader handle
    lumps           <- mapM (readLump handle) [0 .. kMaxLumps - 1] :: IO [BSPLump]
@@ -47,14 +46,14 @@ readBSP filePath = withBinaryFile filePath $ \handle -> do
    newLeaves       <- readLeaves  handle lumps newVertexArrays indexPtr
    newVisData      <- readVisData handle lumps
    let leafArray = listArray (0, length newLeaves - 1) newLeaves
-   let nodeArray = listArray (0, length newNodes  - 1) newNodes
+       nodeArray = listArray (0, length newNodes  - 1) newNodes
    ntree <- constructTree nodeArray leafArray 0
-   newIORef BSPMap { _vertexData = newVertexArrays
-                   , _vindices   = indexPtr
-                   , _leaves     = reverse newLeaves
-                   , _tree       = ntree
-                   , _visData    = newVisData
-                   , _bitset     = newbitset }
+   return BSPMap { _vertexData = newVertexArrays
+                 , _vindices   = indexPtr
+                 , _leaves     = reverse newLeaves
+                 , _tree       = ntree
+                 , _visData    = newVisData
+                 , _bitset     = newbitset }
 
 
 constructTree :: Array Int BSPNode -> Array Int BSPLeaf -> Int -> IO Tree
@@ -82,7 +81,7 @@ readHeader :: Handle -> IO BSPHeader
 readHeader handle = do
    buf <- mallocBytes 4
    hGetBuf handle buf 4
-   iD <- mapM (peekByteOff buf) [ 0 ..  3] :: IO [CChar]
+   iD  <- mapM (peekByteOff buf)  [0..3] :: IO [CChar]
    hGetBuf handle buf cIntSize
    ver <- peek (castPtr buf :: Ptr CInt) :: IO CInt
    free buf

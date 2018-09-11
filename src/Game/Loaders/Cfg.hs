@@ -1,7 +1,10 @@
 module Game.Loaders.Cfg where
 
-import Game.Util.File     (withBinaryFile, readLines)
-import Game.Util.BSP.Read (readBSP)
+import System.FilePath ((</>))
+
+import Game.Util.File      (withBinaryFile, readLines)
+import Game.Util.Constants (assetPath)
+import Game.Util.BSP.Read  (readBSP)
 
 data LevelModel =
   MapModel String
@@ -20,7 +23,7 @@ readMapMedia path = withBinaryFile path $ \handle -> do
   print lines'
   let levelModels        = linesToLevelModels lines'
       (MapModel lvlName) = head levelModels
-  bsp <- readBSP lvlName
+  bsp <- readBSP $ assetPath </> lvlName
   return ()
 
 linesToLevelModels :: [String] -> [LevelModel]
