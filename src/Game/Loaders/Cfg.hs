@@ -1,13 +1,6 @@
 module Game.Loaders.Cfg where
 
-import Control.Exception (bracket)
-import System.IO
-  ( IOMode(ReadMode)
-  , Handle
-  , hClose
-  , hGetLine
-  , hIsEOF
-  , openBinaryFile )
+import Game.Util.File (withBinaryFile, readLines)
 
 data LevelModel =
   MapModel String
@@ -28,19 +21,6 @@ readMapMedia path = withBinaryFile path $ \handle -> do
       (MapModel lvlName) = head levelModels
   putStrLn lvlName
   return ()
-
-readLines :: Handle -> IO [String]
-readLines handle = do
-  eof <- hIsEOF handle
-  if eof
-  then return []
-  else do
-    line   <- hGetLine  handle
-    lines' <- readLines handle
-    return $ line : lines'
-
-withBinaryFile :: FilePath -> (Handle -> IO a) -> IO a
-withBinaryFile path = bracket (openBinaryFile path ReadMode) hClose
 
 linesToLevelModels :: [String] -> [LevelModel]
 linesToLevelModels []         = []
