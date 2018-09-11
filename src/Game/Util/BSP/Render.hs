@@ -8,16 +8,24 @@ import           Foreign.Ptr     (Ptr, plusPtr)
 import           Foreign.Marshal (advancePtr)
 import           Control.Monad   (when, unless)
 
+import           Game.Util.BSP.Frustum (Frustum, getFrustum, boxInFrustum)
 import           Game.Util.BSP.Indices
 import           Game.Util.BSP.BitSet
 import           Game.Util.BSP.Util
 import           Game.Types.BSP
+import           Game.Types
+  ( ProjectionMatrix(..)
+  , ViewMatrix(..)
+  , Position3D(..) )
 
 
 --BSP rendering
 -- NB: that L.V3 double is actually our "camera data"
-renderBSP :: BSPMap -> L.V3 Float -> IO()
-renderBSP mapRef pos@(L.V3 x y z) = do
+renderBSP :: (ProjectionMatrix, ViewMatrix)
+          -> Position3D
+          -> BSPMap
+          -> IO ()
+renderBSP mats (Position3D cPos) mapRef = do
   GL.activeTexture $= GL.TextureUnit 0
   GL.clientActiveTexture $= GL.TextureUnit 0
   GL.clientState GL.TextureCoordArray $= GL.Enabled
@@ -28,8 +36,8 @@ renderBSP mapRef pos@(L.V3 x y z) = do
   GL.clientState GL.TextureCoordArray $= GL.Enabled
   GL.texture GL.Texture2D $= GL.Enabled
 
-  leaf <- findLeaf pos (_tree mapRef)
-  renderBSP' leaf mapRef
+  leaf <- findLeaf cPos $ _tree mapRef
+  renderBSP' mats leaf mapRef
   return ()
 
 
@@ -47,12 +55,15 @@ findLeaf (L.V3 _ _ _) (Leaf leaf) = return leaf
 -- we are actually going across all the leaves in the tree
 -- instead of walking the tree and pushing the leaves that
 -- we want to render into a stack
-renderBSP' :: BSPLeaf -> BSPMap -> IO ()
-renderBSP' leaf mp = do
-  bsSize <- sizeBS $ _bitset mp
-  newBS  <- emptyBS bsSize
-  -- frstm <- getFrustum
-  mapM_ (renderLeaves () newBS visFunc mp) (_leaves mp)
+renderBSP' :: (ProjectionMatrix, ViewMatrix)
+           -> BSPLeaf
+           -> BSPMap
+           -> IO ()
+renderBSP' vp leaf mp = do
+  bsSize  <- sizeBS $ _bitset mp
+  newBS   <- emptyBS bsSize
+  frustum <- getFrustum vp
+  mapM_ (renderLeaves frustum newBS visFunc mp) (_leaves mp)
   renderBSPCleanUp
     where visFunc = isClusterVisible (_visData mp) (_cluster leaf)
 
@@ -70,19 +81,20 @@ renderBSPCleanUp = do
 
 
 -- renders a BSP leaf if it is visible
-renderLeaves :: () -- Frustum goes here
+renderLeaves :: Frustum
              -> BitSet
              -> (Int -> IO Bool)
              -> BSPMap
              -> BSPLeaf
              -> IO ()
-renderLeaves _ bitSet func mp leaf  = do
+renderLeaves frustum bitSet func mp leaf  = do
   clusterVisible <- func (_cluster leaf)
   when clusterVisible $ do
+    let lMin :: L.V3 Float = realToFrac <$> _leafMin leaf
+        lMax :: L.V3 Float = realToFrac <$> _leafMax leaf
     -- AABB in frustum test goes here
-    return ()
-    -- when (boxInFrustum frstm (_leafMin leaf) (_leafMax leaf)) $ do
-    --   renderFaces bitSet mp (_leafFaces leaf)
+    when (boxInFrustum frustum lMin lMax) $ do
+      renderFaces bitSet mp (_leafFaces leaf)
 
 
 -- is an object visible
@@ -105,7 +117,7 @@ isClusterVisible (Just visdata) current target
         ((_bytesPerCluster visdata * current * 8) + target)
 isClusterVisible _ _ _ = return False
 
-renderFaces :: BitSet -> BSPMap -> [BSPFace] -> IO()
+renderFaces :: BitSet -> BSPMap -> [BSPFace] -> IO ()
 renderFaces _ _ [] = return ()
 renderFaces bitSet mp (face : faces) = do
   isSet <- isSetBS bitSet (_faceNo face)

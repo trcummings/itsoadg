@@ -181,8 +181,8 @@ render = do
     let camProjMatrix = cameraProjectionMatrix dims camera
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
-        (_, Position3D cPos, _) = camera
-    cmapM_ $ \(r :: BSPMap)    -> liftIO $ renderBSP r cPos
+        (_, cPos, _)  = camera
+    cmapM_ $ \(r :: BSPMap)    -> liftIO $ renderBSP mats cPos r
     cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
     cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
     cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
