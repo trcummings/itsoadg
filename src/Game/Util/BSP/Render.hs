@@ -218,42 +218,42 @@ renderMeshFace :: BSPBuffers
                -> Ptr GL.GLint
                -> IO ()
 renderMeshFace bufs face vertexArrays vIndex = do
-  putStrLn "===============renderMeshFace==============="
+  -- putStrLn "===============renderMeshFace==============="
   let (vertexPtr, texturePtr, lightmapPtr, _, _) = vertexArrays
       startVIndex                                = _startVertIndex face
 
   GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition bufs)
-  printGLErrors "renderMeshFace buffer position"
+  -- printGLErrors "renderMeshFace buffer position"
   GL.vertexAttribPointer (getALoc "vertexPosition") $=
       ( GL.ToFloat
       , GL.VertexArrayDescriptor 3 GL.Float 0 (plusPtr vertexPtr (12 * startVIndex)) )
-  printGLErrors "renderMeshFace position pointer"
+  -- printGLErrors "renderMeshFace position pointer"
 
   GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords bufs)
-  printGLErrors "renderMeshFace buffer texture"
+  -- printGLErrors "renderMeshFace buffer texture"
   GL.activeTexture               $= GL.TextureUnit 0
-  printGLErrors "renderMeshFace active texture"
+  -- printGLErrors "renderMeshFace active texture"
   GL.textureBinding GL.Texture2D $= _textureObj face
-  printGLErrors "renderMeshFace binding texture"
+  -- printGLErrors "renderMeshFace binding texture"
   GL.vertexAttribPointer (getALoc "vertexUV") $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 2 GL.Float 0 (advancePtr texturePtr (2 * startVIndex)) )
-  printGLErrors "renderMeshFace texture pointer"
+  -- printGLErrors "renderMeshFace texture pointer"
 
   GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords bufs)
-  printGLErrors "renderMeshFace buffer lightmap"
+  -- printGLErrors "renderMeshFace buffer lightmap"
   GL.activeTexture               $= GL.TextureUnit 1
-  printGLErrors "renderMeshFace active lightmap"
+  -- printGLErrors "renderMeshFace active lightmap"
   GL.textureBinding GL.Texture2D $= _lightmapObj face
-  printGLErrors "renderMeshFace binding lightmap"
+  -- printGLErrors "renderMeshFace binding lightmap"
   GL.vertexAttribPointer (getALoc "lightmapUV") $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 2 GL.Float 0 (plusPtr lightmapPtr (8 * startVIndex)) )
-  printGLErrors "renderMeshFace lightmap pointer"
+  -- printGLErrors "renderMeshFace lightmap pointer"
 
   GL.drawArrays GL.Triangles 0 (_numOfIndices face)
-  printGLErrors "renderMeshFace draw"
-  putStrLn "===============renderMeshFace==============="
+  -- printGLErrors "renderMeshFace draw"
+  -- putStrLn "===============renderMeshFace==============="
 
 -- renders patch surfaces
 renderPatches :: BSPBuffers -> BSPFace -> IO ()
@@ -261,15 +261,29 @@ renderPatches bufs face = mapM_ (renderPatch bufs face) (_patch face)
 
 renderPatch :: BSPBuffers -> BSPFace -> BSPPatch -> IO ()
 renderPatch bufs face bsppatch = do
-  putStrLn "===============renderPatch==============="
+  -- putStrLn "===============renderPatch==============="
   let patchPtr = _patchPtr bsppatch -- pointer to patch vertices
   -- GL.arrayPointer GL.VertexArray $=
   --   -- stride of 28 -- why?
   --   GL.VertexArrayDescriptor 3 GL.Float 28 patchPtr
   -- GL.clientState GL.VertexArray $= GL.Enabled
+  GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition bufs)
+  -- printGLErrors "renderPatch buffer position"
+  GL.vertexAttribPointer (getALoc "vertexPosition") $=
+      ( GL.ToFloat
+      , GL.VertexArrayDescriptor 3 GL.Float 28 patchPtr )
+  -- printGLErrors "renderPatch position pointer"
 
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords bufs)
+  -- printGLErrors "renderPatch buffer texture"
   GL.activeTexture               $= GL.TextureUnit 0
+  -- printGLErrors "renderPatch active texture"
   GL.textureBinding GL.Texture2D $= _textureObj face
+  -- printGLErrors "renderPatch binding texture"
+  GL.vertexAttribPointer (getALoc "vertexUV") $=
+    ( GL.ToFloat
+    , GL.VertexArrayDescriptor 2 GL.Float 28 (plusPtr patchPtr 12) )
+  -- printGLErrors "renderPatch texture pointer"
   -- GL.clientActiveTexture $= GL.TextureUnit 0
   -- GL.arrayPointer GL.TextureCoordArray $=
   --   -- 12 pointers ahead of the patch pointer -- why?
@@ -278,8 +292,16 @@ renderPatch bufs face bsppatch = do
   -- GL.clientState GL.TextureCoordArray $= GL.Enabled
   -- GL.texture GL.Texture2D $= GL.Enabled
 
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords bufs)
+  -- printGLErrors "renderPatch buffer lightmap"
   GL.activeTexture               $= GL.TextureUnit 1
+  -- printGLErrors "renderPatch active lightmap"
   GL.textureBinding GL.Texture2D $= _lightmapObj face
+  -- printGLErrors "renderPatch binding lightmap"
+  GL.vertexAttribPointer (getALoc "lightmapUV") $=
+    ( GL.ToFloat
+    , GL.VertexArrayDescriptor 2 GL.Float 28 (plusPtr patchPtr 20) )
+  -- printGLErrors "renderPatch lightmap pointer"
   -- GL.clientActiveTexture $= GL.TextureUnit 1
   -- GL.arrayPointer GL.TextureCoordArray $=
   --   -- 20 pointers ahead of the patch pointer -- why?
@@ -288,10 +310,12 @@ renderPatch bufs face bsppatch = do
   -- GL.clientState GL.TextureCoordArray $= GL.Enabled
   -- GL.texture GL.Texture2D $= GL.Enabled
 
-  GL.multiDrawElements
-    GL.TriangleStrip -- we're drawing a "curved surface" here
-    (_numIndexPtr bsppatch) -- number of indices
-    GL.UnsignedInt
-    (_indexPtrPtr bsppatch) -- pointer to indices
-    (fromIntegral (_patchLOD bsppatch)) -- level of tesselation
-  putStrLn "===============renderPatch==============="
+  GL.drawArrays GL.TriangleStrip 0 (_numOfIndices face)
+  -- GL.multiDrawElements
+  --   GL.TriangleStrip -- we're drawing a "curved surface" here
+  --   (_numIndexPtr bsppatch) -- number of indices
+  --   GL.UnsignedInt
+  --   (_indexPtrPtr bsppatch) -- pointer to indices
+  --   (fromIntegral (_patchLOD bsppatch)) -- level of tesselation
+  -- printGLErrors "renderPatch draw"
+  -- putStrLn "===============renderPatch==============="

@@ -49,7 +49,7 @@ readBSP filePath = withBinaryFile filePath $ \handle -> do
   (a, b, c, d, e) <- readVertices handle lumps
   indices         <- readIndices  handle lumps
   newbitset       <- createBitset lumps
-  -- create memory pointers for our 4 vertex arrays
+  -- create memory pointers for our 5 vertex arrays
   newVertexArrays <- dataToPointers (a, b, c, d, e)
   indexPtr        <- newArray indices
   newNodes        <- readNodes   handle lumps
