@@ -1,4 +1,4 @@
-module Game.Util.Shader.Program
+module Game.Util.Program
   ( createProgram
   , getUniform
   , getAttrib ) where

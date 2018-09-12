@@ -15,7 +15,7 @@ import           Apecs                   (newEntity)
 import           Game.World.TH            (ECS)
 import           Game.Util.Constants      (objPath, texturePath, shaderPath)
 import           Game.Loaders.Obj.Loader  (loadObjFile)
-import           Game.Util.Shader.Program (createProgram, getAttrib, getUniform)
+import           Game.Util.Program (createProgram, getAttrib, getUniform)
 import           Game.Util.Texture        (getAndCreateTexture)
 import           Game.Types
   ( ProjectionMatrix(..)
