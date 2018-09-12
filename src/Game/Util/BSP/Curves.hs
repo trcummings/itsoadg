@@ -8,7 +8,14 @@ import Foreign.Storable
 
 import Game.Types (BSPPatch(..), VertexArrays)
 
-type VertTup = (Float, Float, Float, Float, Float, Float, Float)
+type VertTup =
+  ( Float
+  , Float
+  , Float
+  , Float
+  , Float
+  , Float
+  , Float )
 
 -- given a face type return a list of patches if the facetype is 2.
 -- Otherwise return an empty list.
@@ -23,21 +30,20 @@ checkForPatch faceType startVIndex (width, height) vertData
 -- Create control points for each patch.
 -- Each patch has 9 control points.
 getControlPointIndices :: Int -> Int -> Int -> [Int]
-getControlPointIndices  i width height =
-   concat [(create3x3ControlPoints x y)|
-                    y <-[0..(((height-1) `div` 2)-1)],
-                    x <-[0..(((width-1)  `div` 2)-1)]]
-   where
-         create3x3ControlPoints x y =
-            [(i+((y*2*width)+(x*2))+(row*width)+point) |
-                   row   <- [0..2],
-                   point <- [0..2]]
+getControlPointIndices i width height =
+   concat [ (create3x3ControlPoints x y) |
+              y <- [0..(((height - 1) `div` 2) - 1)]
+            , x <- [0..(((width - 1)  `div` 2) - 1)]]
+  where create3x3ControlPoints x y =
+          [(i + ((y * 2 * width) + (x * 2)) + (row * width) + point) |
+              row   <- [0..2]
+            , point <- [0..2] ]
 
 
 -- Take a list of control points and split them into lists of 9
 splitControlPoints :: [VertTup] -> [[VertTup]]
 splitControlPoints [] = []
-splitControlPoints tups = (take 9 tups):(splitControlPoints $ drop 9 tups)
+splitControlPoints tups = (take 9 tups) : (splitControlPoints $ drop 9 tups)
 
 
 -- gets the control points
@@ -48,19 +54,19 @@ getControlPoints vertexData startIndex width height = do
    -- get the vertices at those indices
    controlPoints <- mapM (readControlPoints vertexData) indcs
    -- divide the lists into arrays of 9 control points
-   return $ map (listArray (0,8)) (splitControlPoints controlPoints)
+   return $ map (listArray (0, 8)) (splitControlPoints controlPoints)
 
 -- reads the control point information from the vertex arrays
 readControlPoints :: VertexArrays -> Int -> IO VertTup
 readControlPoints  (vert, uv, lmuv, _, _) i = do
    x   <- peekElemOff vert  vertIndex     -- vertex coord
-   y   <- peekElemOff vert (vertIndex+1)
-   z   <- peekElemOff vert (vertIndex+2)
+   y   <- peekElemOff vert (vertIndex + 1)
+   z   <- peekElemOff vert (vertIndex + 2)
    u   <- peekElemOff uv    uvIndex       -- tex coord
-   v   <- peekElemOff uv   (uvIndex+1)
+   v   <- peekElemOff uv   (uvIndex + 1)
    lmu <- peekElemOff lmuv  lmIndex       -- lightmap coord
-   lmv <- peekElemOff lmuv (lmIndex+1)
-   return (x,y,z,u,v,lmu,lmv)
+   lmv <- peekElemOff lmuv (lmIndex + 1)
+   return (x, y, z, u, v, lmu, lmv)
    where
          vertIndex = i * 3
          uvIndex   = i * 2
@@ -70,17 +76,17 @@ readControlPoints  (vert, uv, lmuv, _, _) i = do
 -- write the coordinate, texture coordinate and lightmap coordinates
 -- for the cntrol points
 writeControlPointData :: [VertTup] -> Int -> Ptr Float -> IO ()
-writeControlPointData  [] _ _ = return()
+writeControlPointData  [] _ _ = return ()
 writeControlPointData  ((a,b,c,d,e,f,g):rest) indx ptr = do
-   let i = (indx*7)
+   let i = (indx * 7)
    pokeElemOff ptr i       a
-   pokeElemOff ptr (i+1) b
-   pokeElemOff ptr (i+2) c
-   pokeElemOff ptr (i+3) d
-   pokeElemOff ptr (i+4) e
-   pokeElemOff ptr (i+5) f
-   pokeElemOff ptr (i+6) g
-   writeControlPointData rest (indx+1) ptr
+   pokeElemOff ptr (i + 1) b
+   pokeElemOff ptr (i + 2) c
+   pokeElemOff ptr (i + 3) d
+   pokeElemOff ptr (i + 4) e
+   pokeElemOff ptr (i + 5) f
+   pokeElemOff ptr (i + 6) g
+   writeControlPointData rest (indx + 1) ptr
 
 -- multiplies a set of floats by n
 mul7 :: VertTup -> Float -> VertTup
@@ -106,29 +112,26 @@ createPatch tesselation controlPoints  = do
    ptr <- mallocBytes (((tesselation+1)*(tesselation+1))*28)
    createPatch' tesselation ptr controlPoints
    createPatch'' tesselation ptr controlPoints
-   (numiptr,iptrptr)<- generateIndices tesselation
+   (numiptr, iptrptr) <- generateIndices tesselation
    return BSPPatch { _patchLOD    = tesselation
                    , _patchPtr    = ptr
                    , _indexPtrPtr = iptrptr
                    , _numIndexPtr = numiptr }
 
 
-createPatch' :: Int ->  Ptr Float -> Array Int VertTup -> IO()
+createPatch' :: Int -> Ptr Float -> Array Int VertTup -> IO ()
 createPatch' tess ptr arr = do
-   let patchVerts = map (bezier tess (arr!0) (arr!3) (arr!6)) [0..tess]
-   writeControlPointData patchVerts 0 ptr
+  let patchVerts = map (bezier tess (arr!0) (arr!3) (arr!6)) [0..tess]
+  writeControlPointData patchVerts 0 ptr
 
-
-createPatch'' :: Int ->  Ptr Float -> Array Int VertTup -> IO ()
-createPatch'' tess ptr arr = do
-   mapM_ (createPatch''' tess ptr arr) [1..tess]
-
+createPatch'' :: Int -> Ptr Float -> Array Int VertTup -> IO ()
+createPatch'' tess ptr arr = mapM_ (createPatch''' tess ptr arr) [1..tess]
 
 createPatch''' :: Int -> Ptr Float -> Array Int VertTup -> Int -> IO ()
 createPatch''' tess ptr arr u = do
-   let tup1 = bezier tess (arr!0) (arr!1) (arr!2) u
-   let tup2 = bezier tess (arr!3) (arr!4) (arr!5) u
-   let tup3 = bezier tess (arr!6) (arr!7) (arr!8) u
+   let tup1 = bezier tess (arr ! 0) (arr ! 1) (arr ! 2) u
+   let tup2 = bezier tess (arr ! 3) (arr ! 4) (arr ! 5) u
+   let tup3 = bezier tess (arr ! 6) (arr ! 7) (arr ! 8) u
    let patchVerts = map (bezier tess tup1 tup2 tup3) [0..tess]
    writeControlPointData patchVerts 0 (plusPtr ptr (((tess+1)*u)*28))
 
@@ -166,5 +169,5 @@ generateIndices tess = do
 
 
 -- writes the indices to memory
-writeIndices :: IOUArray Int GL.GLint -> (Int,GL.GLint) -> IO ()
-writeIndices indcs (pos,content) = writeArray indcs pos content
+writeIndices :: IOUArray Int GL.GLint -> (Int, GL.GLint) -> IO ()
+writeIndices indcs (pos, content) = writeArray indcs pos content

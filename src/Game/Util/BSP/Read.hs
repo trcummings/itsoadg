@@ -37,11 +37,18 @@ import           Game.Types.BSP
 -- reads a BSP file
 readBSP :: FilePath -> IO BSPMap
 readBSP filePath = withBinaryFile filePath $ \handle -> do
+  -- read header from .bsp file. we don't need it at the moment, but we
+  -- need to move the file handle along to the lumps
   readHeader handle
+  -- read lumps from the .bsp file. the lumps will give us a list of
+  -- lumps, which give us memory length & offset for where each lump is
+  -- in memory. we use the kIndices from Game.Util.BSP.Indices to index
+  -- into the desired lump to read its data
   lumps           <- mapM (readLump handle) [0..(kMaxLumps - 1)] :: IO [BSPLump]
   (a, b, c, d, e) <- readVertices handle lumps
   indices         <- readIndices  handle lumps
   newbitset       <- createBitset lumps
+  -- create memory pointers for our 4 vertex arrays
   newVertexArrays <- dataToPointers (a, b, c, d, e)
   indexPtr        <- newArray indices
   newNodes        <- readNodes   handle lumps
@@ -49,26 +56,15 @@ readBSP filePath = withBinaryFile filePath $ \handle -> do
   newVisData      <- readVisData handle lumps
   let leafArray = listArray (0, length newLeaves - 1) newLeaves
       nodeArray = listArray (0, length newNodes  - 1) newNodes
-  ntree <- constructTree nodeArray leafArray 0
+  -- create the node tree to traverse later
+  ntree   <- constructTree nodeArray leafArray 0
+  -- return BSP map
   return BSPMap { _vertexData = newVertexArrays
                 , _vindices   = indexPtr
                 , _leaves     = reverse newLeaves
                 , _tree       = ntree
                 , _visData    = newVisData
-                , _bitset     = newbitset }
-
-
-constructTree :: Array Int BSPNode -> Array Int BSPLeaf -> Int -> IO Tree
-constructTree nodes lvs ind =
-  if ind >= 0
-  then do
-    let currentNode = nodes ! ind
-    leftNode  <- constructTree nodes lvs (_front currentNode)
-    rightNode <- constructTree nodes lvs (_back  currentNode)
-    return (Branch currentNode leftNode rightNode)
-  else do
-    let currentLeaf = lvs ! ((-1) * (ind + 1))
-    return (Leaf currentLeaf)
+                , _bitset     = newbitset  }
 
 
 createBitset :: [BSPLump] -> IO BitSet
@@ -164,10 +160,10 @@ readPlane ptr = do
 -- reads the leaves
 readLeaves :: Handle -> [BSPLump] -> VertexArrays -> Ptr GL.GLint -> IO [BSPLeaf]
 readLeaves handle lumps vertArrays indcs = do
-  faces              <- readFaces handle lumps vertArrays  indcs
+  faces              <- readFaces handle lumps vertArrays indcs
   let faceArray      =  listArray (0, length faces - 1)  faces
-  leaffaces          <- readLeafFaces handle lumps
-  let leafFaceArray  =  listArray (0, length leaffaces - 1) leaffaces
+  leafFaces          <- readLeafFaces handle lumps
+  let leafFaceArray  =  listArray (0, length leafFaces - 1) leafFaces
   brushes            <- readBrushes handle lumps
   let brushArray     =  listArray (0, length brushes - 1) brushes
   leafbrushes        <- readLeafBrushes handle lumps
@@ -254,50 +250,56 @@ readFace
         get3Floats = fmap get3t floats
         twoInts    = fmap toInts (getCInts 2)
         get2Ints   = fmap get2t twoInts
+    -- texture index, effect, face type, idx of first vertex
     (a, b, c, d)          <- get4Ints
+    -- num vertices, idx of first meshvert, num meshverts, lightmap index
     (e, f, g, h)          <- get4Ints
+    -- int[2] corner of face's lightmap, int[2] size of face's lightmap image
     (i, j, k, l)          <- get4Ints
+    -- world space origin of lightmap
     (lMPs1, lMPs2, lMPs3) <- get3Floats
+    -- world space lightmap s & t unit vectors
     (lMV11, lMV12, lMV13) <- get3Floats
     (lMV21, lMV22, lMV23) <- get3Floats
+    -- surface normals
     (n1, n2, n3)          <- get3Floats
+    -- patch dimensions
     (size1, size2)        <- get2Ints
     free buf
     bspPatch <- checkForPatch c d (size1, size2) vertArrays
     return BSPFace { _textureObj     = textures ! a
-                  , _effect         = b
-                  , _faceType       = c
-                  , _startVertIndex = d
-                  , _numOfVerts     = e
-                  , _startIndex     = f
-                  , _numOfIndices   = fromIntegral g
-                  , _lightmapObj    = fixLightmap h lightmaps
-                  , _lMapCorner     = L.V2 i j
-                  , _lMapSize       = L.V2 k l
-                  , _lMapPos        = L.V3 lMPs1 lMPs2 lMPs3
-                  , _lMapVecs       = [ L.V3 lMV11 lMV12 lMV13
-                                      , L.V3 lMV21 lMV22 lMV23 ]
-                  , _vNormal        = L.V3 n1 n2 n3
-                  , _size           = L.V2 size1 size2
-                  , _faceNo         = (offst - origin) `div` 104
-                  , _patch          = bspPatch
-                  , _arrayPtrs      = ( plusPtr a1    (12 * d)
-                                      , plusPtr b1    (8  * d)
-                                      , plusPtr c1    (8  * d)
-                                      , plusPtr indcs (4  * f) ) }
+                   , _effect         = b
+                   , _faceType       = c
+                   , _startVertIndex = d
+                   , _numOfVerts     = e
+                   , _startIndex     = f
+                   , _numOfIndices   = fromIntegral g
+                   , _lightmapObj    = fixLightmap h lightmaps
+                   , _lMapCorner     = L.V2 i j
+                   , _lMapSize       = L.V2 k l
+                   , _lMapPos        = L.V3 lMPs1 lMPs2 lMPs3
+                   , _lMapVecs       = [ L.V3 lMV11 lMV12 lMV13
+                                       , L.V3 lMV21 lMV22 lMV23 ]
+                   , _vNormal        = L.V3 n1 n2 n3
+                   , _size           = L.V2 size1 size2
+                   , _faceNo         = (offst - origin) `div` 104
+                   , _patch          = bspPatch
+                   , _arrayPtrs      = ( plusPtr a1    (12 * d)
+                                       , plusPtr b1    (8  * d)
+                                       , plusPtr c1    (8  * d)
+                                       , plusPtr indcs (4  * f) ) }
 
 
 -- reads the leaf faces that refer to the faces
-
 readLeafFaces :: Handle -> [BSPLump] -> IO [BSPLeafFace]
 readLeafFaces handle lumps = do
   (offst, lngth) <- getLumpData (lumps !! kLeafFaces)
   hSeek handle AbsoluteSeek (fromIntegral offst)
   buf <- mallocBytes lngth
   hGetBuf handle buf lngth
-  leaffaces <- getInts buf (lngth `div` 4)
+  leafFaces <- getInts buf (lngth `div` 4)
   free buf
-  return leaffaces
+  return leafFaces
 
 
 -- reads the brushes
@@ -332,7 +334,6 @@ readBrush brushSideArray texInfos ptr = do
 
 
 -- reads the brush sides in our brushes
-
 readBrushSides :: Handle -> [BSPLump] -> IO [BSPBrushSide]
 readBrushSides handle lumps = do
   planes          <- readPlanes handle lumps
@@ -351,9 +352,9 @@ readBrushSide planeArray ptr = do
   [e1, e2] <- getInts ptr 2
   let pln = planeArray ! fromIntegral e1
   return BSPBrushSide { _bsPlane     = e1
-                     , _bsPlaneNorm = _pNormal pln
-                     , _bsPlaneDist = _distance pln
-                     , _bsTextureID = e2 }
+                      , _bsPlaneNorm = _pNormal pln
+                      , _bsPlaneDist = _distance pln
+                      , _bsTextureID = e2 }
 
 
 -- reads the leaf brushes that refer to the brushes
@@ -392,7 +393,7 @@ readVisData handle lumps = do
 readVertices :: Handle -> [BSPLump] -> IO VertexData
 readVertices handle lumps = do
   (offst, lngth)  <- getLumpData (lumps !! kVertices)
-  offs            <- getOffsets lngth offst 44
+  offs            <- getOffsets lngth offst 44 -- why 44?
   verts           <- mapM (readVertex handle) offs
   (v, t, l, n, r) <- seperateArrays verts
   return $ toVertexData ( concat v
@@ -456,17 +457,19 @@ readIndices handle lumps = do
   buf    <- mallocBytes lngth
   hGetBuf handle buf lngth
   indces <- mapM
-    (peekElemOff (castPtr buf :: Ptr CInt))
-        [0..((lngth `div` 4) - 1)] :: IO [CInt]
+              (peekElemOff (castPtr buf :: Ptr CInt))
+              [0..((lngth `div` 4) - 1)] :: IO [CInt]
   free buf
   return $ map fromIntegral indces
 
 
 -- reads lightmaps
+-- NB: a lightmap is made of ubyte[128][128][3] map
+-- So the size of the entire lightmap lump is 49152, or 128 * 128 * 3
 readLightMaps :: Handle -> [BSPLump] -> IO [GL.TextureObject]
 readLightMaps handle lumps = do
-  (offst,lngth) <- getLumpData (lumps !! kLightmaps)
-  offs <- getOffsets lngth offst 49152
+  (offst, lngth) <- getLumpData (lumps !! kLightmaps)
+  offs           <- getOffsets lngth offst 49152
   mapM (readLightMap handle) offs
 
 readLightMap :: Handle -> Int -> IO GL.TextureObject
@@ -474,7 +477,7 @@ readLightMap handle offst = do
   hSeek handle AbsoluteSeek (fromIntegral offst)
   buf <- mallocBytes 49152 :: IO (Ptr Word8)
   hGetBuf handle buf 49152
-  mapM_ (adjustRGB buf 5.0) [0..(16384 - 1)]
+  mapM_ (adjustRGB buf 5.0) [0..(16384 - 1)] -- 128 * 128
   createLightmapTexture buf
 
 createLightmapTexture :: Ptr Word8 -> IO GL.TextureObject
@@ -540,3 +543,16 @@ readTexInfo handle offst = do
   return BSPTexInfo { _strName  = str
                     , _flags    = fromIntegral flgs
                     , _contents = fromIntegral cons }
+
+
+constructTree :: Array Int BSPNode -> Array Int BSPLeaf -> Int -> IO Tree
+constructTree nodes lvs ind =
+  if ind >= 0
+  then do
+    let currentNode = nodes ! ind
+    leftNode  <- constructTree nodes lvs (_front currentNode)
+    rightNode <- constructTree nodes lvs (_back  currentNode)
+    return (Branch currentNode leftNode rightNode)
+  else do
+    let currentLeaf = lvs ! ((-1) * (ind + 1))
+    return (Leaf currentLeaf)

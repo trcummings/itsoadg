@@ -151,10 +151,6 @@ stepColorCube (rc, Orientation o) =
   let Degrees deg = _deg rc
   in  Orientation $ o * L.axisAngle (_axis rc) (U.deg2rad deg)
 
--- printGLErrors :: String -> IO ()
--- printGLErrors whereAt = do
---   errors <- GL.errors
---   liftIO $ putStrLn $ "at " ++ whereAt ++ ": " ++ show errors
 
 drawColorCube :: (ProjectionMatrix, ViewMatrix) -> ColorCube -> IO ()
 drawColorCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)

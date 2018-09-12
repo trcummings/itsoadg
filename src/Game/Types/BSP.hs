@@ -31,10 +31,10 @@ type VertexData =
   , [Word8] )
 
 type VertexPointers =
-    ( Ptr GL.GLfloat
-    , Ptr GL.GLfloat
-    , Ptr GL.GLfloat
-    , Ptr GL.GLint )
+  ( Ptr GL.GLfloat
+  , Ptr GL.GLfloat
+  , Ptr GL.GLfloat
+  , Ptr GL.GLint )
 
 type BSPLeafFace = Int
 
@@ -86,7 +86,7 @@ data BSPFace = BSPFace
   , _lMapCorner     :: V2 Int
     -- The size of the lightmap section
   , _lMapSize       :: V2 Int
-    -- The 3D origin of lightmap.
+    -- The 3D origin of lightmap
   , _lMapPos        :: V3 Float
     -- The 3D space for s and t unit vectors
   , _lMapVecs       :: [V3 Float]

@@ -1,6 +1,10 @@
 module Game.Util.BSP.Indices where
 -- This file is for lump directory indices
 
+-- Stores game-related object descriptions. CURRENTLY UNUSED
+-- kEntities :: Int
+-- kEntities = 0
+
 -- Stores texture information
 kTextures :: Int
 kTextures = 1
@@ -25,6 +29,10 @@ kLeafFaces = 5
 kLeafBrushes :: Int
 kLeafBrushes = 6
 
+-- Stores rigid world geometry data. CURRENTLY UNUSED
+-- kModels :: Int
+-- kModels = 7
+
 -- Stores the brushes info (for collision)
 kBrushes :: Int
 kBrushes = 8
@@ -37,9 +45,13 @@ kBrushSides = 9
 kVertices :: Int
 kVertices = 10
 
--- Stores the level indices
+-- Stores the level indices (mesh vertexes)
 kIndices :: Int
 kIndices = 11
+
+-- Stores special map effects. CURRENTLY UNUSED
+-- kEffects :: Int
+-- kEffects = 12
 
 -- Stores the faces for the level
 kFaces :: Int
@@ -48,6 +60,10 @@ kFaces = 13
 -- Stores the lightmaps for the level
 kLightmaps :: Int
 kLightmaps = 14
+
+-- Stores local illumination data. CURRENTLY UNUSED
+-- kLightvols :: Int
+-- kLightvols = 15
 
 -- Stores PVS and cluster info (visibility)
 kVisData :: Int
