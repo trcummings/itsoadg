@@ -15,7 +15,7 @@ import           Apecs                   (newEntity)
 import           Game.World.TH            (ECS)
 import           Game.Util.Constants      (objPath, texturePath, shaderPath)
 import           Game.Loaders.Obj.Loader  (loadObjFile)
-import           Game.Util.Shader.Program (createProgram)
+import           Game.Util.Shader.Program (createProgram, getAttrib, getUniform)
 import           Game.Util.Texture        (getAndCreateTexture)
 import           Game.Types
   ( ProjectionMatrix(..)
@@ -23,12 +23,13 @@ import           Game.Types
   , Position3D(..)
   , Orientation(..)
   , ObjData(..)
+  , ShaderProgram(..)
   , TexResource(..)
   , RotatingCube(..)
   , ShaderInfo(..)
   , Degrees(..) )
 
-type TexCube = (TexResource, RotatingCube, Orientation, Position3D)
+type TexCube = (TexResource, ShaderProgram, RotatingCube, Orientation, Position3D)
 
 initTextureCube :: ECS ()
 initTextureCube = do
@@ -54,6 +55,7 @@ initTextureCube = do
                   , _vertBuffer = vb
                   , _uvBuffer   = uvb
                   , _objData    = obj }
+    , program
     , RotatingCube { _axis = L.V3 1 0 (-1)
                    , _deg  = Degrees 0.5 }
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
@@ -62,21 +64,20 @@ initTextureCube = do
 
 drawTextureCube :: (ProjectionMatrix, ViewMatrix) -> TexCube -> IO ()
 drawTextureCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                (tr, _, Orientation o, Position3D cPos) = do
+                (tr, shaderProgram, _, Orientation o, Position3D cPos) = do
   let modelMatrix   = L.mkTransformation o cPos
       trans         = projMatrix
                   !*! viewMatrix
                   !*! modelMatrix
-      shaderProgram = _sProgram   tr
       texture       = _texObj     tr
       vertices      = _vertBuffer tr
       uvCoords      = _uvBuffer   tr
       numVerts      = fromIntegral $ length $ _verts . _objData $ tr
-      program       = U.program shaderProgram
-      posLoc        = U.getAttrib  shaderProgram "vertexPosition_modelspace"
-      uvvLoc        = U.getAttrib  shaderProgram "vertexUV"
-      mtsLoc        = U.getUniform shaderProgram "myTextureSampler"
-      mvpLoc        = U.getUniform shaderProgram "MVP"
+      program       = _glProgram shaderProgram
+      posLoc        = getAttrib  shaderProgram "vertexPosition_modelspace"
+      uvvLoc        = getAttrib  shaderProgram "vertexUV"
+      mtsLoc        = getUniform shaderProgram "myTextureSampler"
+      mvpLoc        = getUniform shaderProgram "MVP"
   -- set current program to shaderProgram
   GL.currentProgram              $= Just program
   -- enable all attributes

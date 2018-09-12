@@ -5,10 +5,10 @@ module Game.Types.Components where
 -- import qualified Data.Map as Map (Map)
 -- import qualified Animate
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified Graphics.GLUtil as U
 import qualified Linear as L
 
 import           Game.Types.Loaders.Obj (ObjData)
+import           Game.Types.Shader      (ShaderProgram)
 -- import           Foreign.C.Types (CInt, CDouble)
 -- import           GHC.Int (Int32(..))
 -- import           Linear (V2, V3)
@@ -127,7 +127,7 @@ data Camera = Camera
 newtype VAO = VAO GL.VertexArrayObject
 
 data Resource = Resource
-  { _shaderProgram :: U.ShaderProgram
+  { _shaderProgram :: ShaderProgram
   , _vertexBuffer  :: GL.BufferObject
   , _colorBuffer   :: GL.BufferObject }
 
@@ -143,14 +143,14 @@ newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
 data Player = Player
 
 data TexResource = TexResource
-  { _sProgram   :: U.ShaderProgram
+  { _sProgram   :: ShaderProgram
   , _texObj     :: Maybe GL.TextureObject
   , _vertBuffer :: GL.BufferObject
   , _uvBuffer   :: GL.BufferObject
   , _objData    :: ObjData }
 
 data BBResource = BBResource
-  { _bbSProgram   :: U.ShaderProgram
+  { _bbSProgram   :: ShaderProgram
   , _bbTexObj     :: Maybe GL.TextureObject
   , _bbVertBuffer :: GL.BufferObject }
 

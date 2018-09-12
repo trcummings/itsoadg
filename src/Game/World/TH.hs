@@ -27,6 +27,7 @@ import Game.Types
   , Player
   , BSPMap
 
+  , ShaderProgram
   , TexResource
   , BBResource
   , RotatingCube
@@ -61,6 +62,9 @@ instance Component Position3D where
 instance Component Orientation where
   type Storage Orientation = Map Orientation
 
+
+instance Component ShaderProgram where
+  type Storage ShaderProgram = Map ShaderProgram
 
 instance Component Model where
   type Storage Model = Map Model
@@ -115,6 +119,7 @@ makeWorld "World" [
   , ''Orientation
 
   , ''Model
+  , ''ShaderProgram
   , ''TexResource
   , ''BBResource
   , ''RotatingCube

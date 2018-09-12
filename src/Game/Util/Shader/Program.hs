@@ -1,9 +1,12 @@
-module Game.Util.Shader.Program where
+module Game.Util.Shader.Program
+  ( createProgram
+  , getUniform
+  , getAttrib ) where
 
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Data.ByteString.Char8     as C
 import qualified Data.ByteString           as B
-import qualified Graphics.GLUtil           as U
+import qualified Data.Map                  as Map (lookup)
 
 import           SDL              (($=))
 import           Control.Monad    (unless, mapM_)
@@ -11,15 +14,16 @@ import           System.IO        (hPutStrLn, stderr)
 import           System.Exit      (exitFailure)
 import           Data.List        (isSuffixOf)
 import           Data.Map.Strict  (fromList)
+import           Data.Maybe       (maybe)
 -- import           System.Directory (doesFileExist)
 
-import           Game.Types (ShaderInfo(..))
+import           Game.Types (ShaderInfo(..), ShaderProgram(..))
 
 
 printError :: IO ()
 printError = GL.get GL.errors >>= mapM_ (hPutStrLn stderr . ("GL: "++) . show)
 
-createProgram :: [ShaderInfo] -> IO U.ShaderProgram
+createProgram :: [ShaderInfo] -> IO ShaderProgram
 createProgram shaderInfo = do
   shaders <- mapM loadShader $ shaderInfo
   program <- compileAndLink shaders
@@ -27,7 +31,7 @@ createProgram shaderInfo = do
   (attribs, uniforms) <- getActives program
   -- attach all attributes to the program
   mapM_ (\(name, (loc, _)) -> GL.attribLocation program name $= loc) attribs
-  return $ U.ShaderProgram (fromList attribs) (fromList uniforms) program
+  return $ ShaderProgram (fromList attribs) (fromList uniforms) program
   -- -- let info@(GLSLInfo ins uniforms _) = gatherInfo shaderSequence
   -- -- compile the shader from the given information (path, shaderType)
   -- program <- compileAndLink shaders
@@ -141,6 +145,14 @@ getActives p =
     trimArray n = if "[0]" `isSuffixOf` n
                   then take (length n - 3) n
                   else n
+
+getUniform :: ShaderProgram -> String -> GL.UniformLocation
+getUniform sp n = maybe (error msg) fst . Map.lookup n $ _uniforms sp
+  where msg = "Uniform " ++ show n ++ " is not active"
+
+getAttrib :: ShaderProgram -> String -> GL.AttribLocation
+getAttrib sp n = maybe (error msg) fst . Map.lookup n $ _attribs sp
+  where msg = "Attrib " ++ show n ++ " is not active"
 
 -- gatherInfo :: ShaderSequence t -> GLSLInfo t
 -- gatherInfo (Wrapped (Shader proxy glsl) : shaders) =

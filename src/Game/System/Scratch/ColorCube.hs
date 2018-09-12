@@ -16,7 +16,7 @@ import           Apecs
 
 import           Game.World.TH            (ECS)
 import           Game.Util.Constants      (shaderPath)
-import           Game.Util.Shader.Program (createProgram)
+import           Game.Util.Shader.Program (createProgram, getUniform, getAttrib)
 import           Game.Types
   ( Degrees(..)
   , Orientation(..)
@@ -24,11 +24,12 @@ import           Game.Types
   , Position3D(..)
   , Model(..)
   , ShaderInfo(..)
+  , ShaderProgram(..)
   , Resource(..)
   , ProjectionMatrix(..)
   , ViewMatrix(..) )
 
-type ColorCube = (RotatingCube, Model, Position3D, Orientation)
+type ColorCube = (RotatingCube, Model, ShaderProgram, Position3D, Orientation)
 
 vs :: [L.V3 Float]
 vs = [
@@ -117,7 +118,7 @@ initColorCube = do
   -- shaderProgram <- liftIO $ U.simpleShaderProgram vertexShader fragmentShader
   vertexBuffer  <- liftIO $ U.fromSource GL.ArrayBuffer vs
   colorBuffer   <- liftIO $ U.fromSource GL.ArrayBuffer cs
-  program <- liftIO $
+  program       <- liftIO $
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
                   , ShaderInfo GL.FragmentShader fragmentShader ]
 
@@ -133,6 +134,7 @@ initColorCube = do
       RotatingCube { _axis = L.V3 0 0 (-1)
                    , _deg  = Degrees 4 }
     , model
+    , program
     , Position3D  $ L.V3 0 0 (-4)
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
 
@@ -141,6 +143,7 @@ initColorCube = do
       RotatingCube { _axis = L.V3 1 0 0
                    , _deg  = Degrees (-2) }
     , model
+    , program
     , Position3D  $ L.V3 2 1 (-3)
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   return ()
@@ -154,19 +157,18 @@ stepColorCube (rc, Orientation o) =
 
 drawColorCube :: (ProjectionMatrix, ViewMatrix) -> ColorCube -> IO ()
 drawColorCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-              (_, model, Position3D mPos, Orientation o) = do
+              (_, model, shaderProgram, Position3D mPos, Orientation o) = do
   let modelMatrix   = L.mkTransformation o mPos
       trans         = projMatrix
                   !*! viewMatrix
                   !*! modelMatrix
       vertexBuffer  = _vertexBuffer  . _resource $ model
       colorBuffer   = _colorBuffer   . _resource $ model
-      shaderProgram = _shaderProgram . _resource $ model
-      program       = U.program shaderProgram
+      program       = _glProgram shaderProgram
       numVerts      = fromIntegral $ length $ _vertices model
       -- attribs & uniforms
-      colLoc = U.getAttrib  shaderProgram "vertexColor"
-      posLoc = U.getAttrib  shaderProgram "vertexPosition_modelspace"
+      colLoc = getAttrib  shaderProgram "vertexColor"
+      posLoc = getAttrib  shaderProgram "vertexPosition_modelspace"
       -- mvpLoc = U.getUniform shaderProgram "MVP"
   -- set current program to shaderProgram
   GL.currentProgram             $= Just program
@@ -174,7 +176,7 @@ drawColorCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.vertexAttribArray   posLoc $= GL.Enabled
   GL.vertexAttribArray   colLoc $= GL.Enabled
   -- transform mvp uniform
-  trans `U.asUniform` (U.getUniform shaderProgram "MVP")
+  trans `U.asUniform` (getUniform shaderProgram "MVP")
   -- bind to vertex buffer VB
   GL.bindBuffer GL.ArrayBuffer  $= Just vertexBuffer
   GL.vertexAttribPointer posLoc $=

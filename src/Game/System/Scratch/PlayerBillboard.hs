@@ -15,7 +15,7 @@ import           Apecs                   (newEntity)
 import           Game.World.TH            (ECS)
 import           Game.Util.Constants      (objPath, texturePath, shaderPath)
 import           Game.Loaders.Obj.Loader  (loadObjFile)
-import           Game.Util.Shader.Program (createProgram) 
+import           Game.Util.Shader.Program (createProgram, getAttrib, getUniform)
 import           Game.Util.Texture        (getAndCreateTexture)
 import           Game.Types
   ( ProjectionMatrix(..)
@@ -23,11 +23,12 @@ import           Game.Types
   , Position3D(..)
   , Orientation(..)
   , ObjData(..)
+  , ShaderProgram(..)
   , BBResource(..)
   , ShaderInfo(..)
   , Player(..) )
 
-type PlayerB = (Player, BBResource, Orientation, Position3D)
+type PlayerB = (Player, ShaderProgram, BBResource, Orientation, Position3D)
 
 verts :: [L.V3 Float]
 verts = [
@@ -53,6 +54,7 @@ initPlayerBillboard = do
   -- define the entity
   newEntity (
       Player
+    , program
     , BBResource { _bbSProgram   = program
                  , _bbTexObj     = texObj
                  , _bbVertBuffer = vb }
@@ -62,23 +64,22 @@ initPlayerBillboard = do
 
 drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> IO ()
 drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                    (_, tr, Orientation o, Position3D mPos) = do
+                    (_, shaderProgram, tr, Orientation o, Position3D mPos) = do
   let modelMatrix   = L.mkTransformationMat L.identity mPos
       trans         = projMatrix !*! viewMatrix !*! modelMatrix
-      shaderProgram = _bbSProgram   tr
       texture       = _bbTexObj     tr
       vertices      = _bbVertBuffer tr
       numVerts      = fromIntegral $ length verts
-      attribKeys    = keys $ U.attribs  shaderProgram
-      uniformKeys   = keys $ U.uniforms shaderProgram
-      program       = U.program shaderProgram
-      posLoc        = U.getAttrib  shaderProgram "squareVertices"
-      mtsLoc        = U.getUniform shaderProgram "myTextureSampler"
-      vpLoc         = U.getUniform shaderProgram "VP"
-      crwLoc        = U.getUniform shaderProgram "CameraRight_worldspace"
-      cuwLoc        = U.getUniform shaderProgram "CameraUp_worldspace"
-      bpLoc         = U.getUniform shaderProgram "BillboardPos"
-      bsLoc         = U.getUniform shaderProgram "BillboardSize"
+      attribKeys    = keys $ _attribs  shaderProgram
+      uniformKeys   = keys $ _uniforms shaderProgram
+      program       = _glProgram shaderProgram
+      posLoc        = getAttrib  shaderProgram "squareVertices"
+      mtsLoc        = getUniform shaderProgram "myTextureSampler"
+      vpLoc         = getUniform shaderProgram "VP"
+      crwLoc        = getUniform shaderProgram "CameraRight_worldspace"
+      cuwLoc        = getUniform shaderProgram "CameraUp_worldspace"
+      bpLoc         = getUniform shaderProgram "BillboardPos"
+      bsLoc         = getUniform shaderProgram "BillboardSize"
   -- set current program to shaderProgram
   GL.currentProgram              $= Just program
   -- enable all attributes
