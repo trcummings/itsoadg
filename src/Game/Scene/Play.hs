@@ -27,8 +27,9 @@ import           Game.Effect.Renderer (getWindowDims)
 import           Game.World.TH        (ECS)
 import           Game.Loaders.Save    (saveDataFile, loadDataFile)
 import           Game.Util.Billboard  (renderBillboard)
-import           Game.Util.Constants  (frameDeltaSeconds, assetPath)
-import           Game.Util.BSP.Render (renderBSP)
+import           Game.Util.Constants  (frameDeltaSeconds, assetPath, shaderPath)
+import           Game.Util.Program    (createProgram)
+import           Game.Util.BSP.Render (BSPRenderData, renderBSP)
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -51,6 +52,7 @@ import           Game.Types
   , CameraAxes(..)
 
   , BSPMap
+  , ShaderInfo(..)
   , Position3D(..)
   , Scene(..) )
 import Game.System.Scratch.VAO (initVAO, cleanUpVAO)
@@ -76,10 +78,13 @@ initialize = do
   -- load config data
   liftIO $ readMapCfg   $ assetPath </> "leveleg.cfg"
   bsp <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
+  program <- liftIO $ createProgram
+                [ ShaderInfo GL.VertexShader   (shaderPath </> "bsp.v.glsl")
+                , ShaderInfo GL.FragmentShader (shaderPath </> "bsp.f.glsl") ]
   -- create BSP entity
-  newEntity bsp
+  newEntity (bsp, program)
   -- entities
-  -- initColorCube
+  initColorCube
   -- initTextureCube
   -- initPlayerBillboard
 
@@ -182,8 +187,8 @@ render = do
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
         (_, cPos, _)  = camera
-    cmapM_ $ \(r :: BSPMap)    -> liftIO $ renderBSP mats cPos r
-    -- cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
+    cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
+    cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
     -- cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
     -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
     return ()

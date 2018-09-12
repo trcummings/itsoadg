@@ -1,6 +1,7 @@
 module Game.Util.BSP.Read where
 
 import qualified Graphics.Rendering.OpenGL as GL
+import qualified Graphics.GLUtil           as U
 import qualified Data.Array.MArray         as Arr (readArray, newListArray)
 import qualified Linear                    as L
 import           Foreign.Marshal
@@ -58,13 +59,18 @@ readBSP filePath = withBinaryFile filePath $ \handle -> do
       nodeArray = listArray (0, length newNodes  - 1) newNodes
   -- create the node tree to traverse later
   ntree   <- constructTree nodeArray leafArray 0
+  -- make buffers
+  buffers <- BSPBuffers <$> U.fromSource GL.ArrayBuffer a
+                        <*> U.fromSource GL.ArrayBuffer b
+                        <*> U.fromSource GL.ArrayBuffer c
   -- return BSP map
   return BSPMap { _vertexData = newVertexArrays
                 , _vindices   = indexPtr
                 , _leaves     = reverse newLeaves
                 , _tree       = ntree
                 , _visData    = newVisData
-                , _bitset     = newbitset  }
+                , _bitset     = newbitset
+                , _buffers    = buffers }
 
 
 createBitset :: [BSPLump] -> IO BitSet

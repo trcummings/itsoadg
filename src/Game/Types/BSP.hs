@@ -50,7 +50,8 @@ data BSPMap = BSPMap
   , _leaves     :: ![BSPLeaf]
   , _tree       :: !Tree
   , _visData    :: !(Maybe BSPVisData)
-  , _bitset     :: !BitSet }
+  , _bitset     :: !BitSet
+  , _buffers    :: BSPBuffers }
 
 data BSPLeaf = BSPLeaf
   { _cluster          :: !Int
@@ -159,3 +160,8 @@ data BSPPatch = BSPPatch
   -- the number of indices
   , _numIndexPtr :: Ptr GL.GLsizei }
   deriving Show
+
+data BSPBuffers = BSPBuffers
+  { _bspPosition  :: GL.BufferObject
+  , _bspTexCoords :: GL.BufferObject
+  , _bspLmpCoords :: GL.BufferObject }
