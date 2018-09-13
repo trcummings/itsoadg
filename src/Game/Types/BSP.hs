@@ -46,7 +46,7 @@ data Tree =
 
 data BSPMap = BSPMap
   { _vertexData :: !VertexArrays
-  , _vindices   :: !(Ptr GL.GLint)
+  , _vIndices   :: !(Ptr GL.GLint)
   , _leaves     :: ![BSPLeaf]
   , _tree       :: !Tree
   , _visData    :: !(Maybe BSPVisData)
@@ -66,6 +66,7 @@ data BSPLeaf = BSPLeaf
   , _leafBrushes      :: [BSPBrush] }
   deriving Show
 
+-- for rendering
 data BSPFace = BSPFace
     -- The index into the texture array
   { _textureObj     :: Maybe GL.TextureObject
@@ -76,7 +77,7 @@ data BSPFace = BSPFace
     -- The starting index into this face's first vertex
   , _startVertIndex :: Int
     -- The number of vertices for this face
-  , _numOfVerts     :: Int
+  , _numOfVerts     :: GL.GLint
     -- The starting index into the indices array for this face
   , _startIndex     :: Int
     -- The number of indices for this face
@@ -100,6 +101,7 @@ data BSPFace = BSPFace
   , _arrayPtrs      :: VertexPointers }
   deriving Show
 
+-- for collision detection
 data BSPBrush = BSPBrush
   { _brushSide       :: Int
   , _numOfBrushSides :: Int
@@ -164,4 +166,6 @@ data BSPPatch = BSPPatch
 data BSPBuffers = BSPBuffers
   { _bspPosition  :: GL.BufferObject
   , _bspTexCoords :: GL.BufferObject
-  , _bspLmpCoords :: GL.BufferObject }
+  , _bspLmpCoords :: GL.BufferObject
+  , _bspNrmCoords :: GL.BufferObject
+  , _bspIndices   :: GL.BufferObject }

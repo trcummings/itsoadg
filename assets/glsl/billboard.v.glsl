@@ -15,10 +15,10 @@ uniform vec2 BillboardSize; // Size of the billboard, in world units (probably m
 
 void main()
 {
-	vec3 particleCenter_wordspace = BillboardPos;
+	vec3 particleCenter_worldspace = BillboardPos;
 
 	vec3 vertexPosition_worldspace =
-		particleCenter_wordspace
+		particleCenter_worldspace
 		+ CameraRight_worldspace * squareVertices.x * BillboardSize.x
 		+ CameraUp_worldspace * squareVertices.y * BillboardSize.y;
 

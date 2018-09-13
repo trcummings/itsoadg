@@ -70,17 +70,20 @@ import Game.System.Scratch.PlayerBillboard
   , initPlayerBillboard
   , drawPlayerBillboard )
 import Game.Loaders.Cfg (readMapCfg, readMapMedia)
+import Game.Util.GLError (printGLErrors)
 
 initialize :: ECS ()
 initialize = do
   -- init VAO
   initVAO
   -- load config data
-  liftIO $ readMapCfg   $ assetPath </> "leveleg.cfg"
-  bsp <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
+  liftIO $ readMapCfg $ assetPath </> "leveleg.cfg"
+  bsp     <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
+  liftIO $ printGLErrors "initialize make bsp"
   program <- liftIO $ createProgram
                 [ ShaderInfo GL.VertexShader   (shaderPath </> "bsp.v.glsl")
                 , ShaderInfo GL.FragmentShader (shaderPath </> "bsp.f.glsl") ]
+  liftIO $ printGLErrors "initialize make bsp program"
   -- create BSP entity
   newEntity (bsp, program)
   -- entities
@@ -188,7 +191,7 @@ render = do
         mats          = (camProjMatrix, camViewMatrix)
         (_, cPos, _)  = camera
     cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
-    cmapM_ $ \(r :: ColorCube) -> liftIO $ drawColorCube       mats r
+    cmapM_ $ \(r :: ColorCube)     -> liftIO $ drawColorCube       mats r
     -- cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
     -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
     return ()

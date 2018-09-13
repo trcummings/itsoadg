@@ -15,8 +15,15 @@ data-files:
 - assets/sprites/*.json
 - assets/sprites/*.png
 - assets/sfx/*.wav
-- assets/glsl/*.glsl
 - assets/gamecontrollerdb.txt
+- assets/glsl/*.glsl
+- assets/*.cfg
+- assets/*.med
+- assets/*.bsp
+- assets/models/**/*.jpg
+- assets/models/**/*.tga
+- assets/textures/**/*.jpg
+- assets/textures/**/*.tga
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package

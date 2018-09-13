@@ -25,8 +25,8 @@ getAndPeeks handle buf be i =
    mapM (\_ -> getAndPeek handle buf be) [1..i]
 
 getOffsets :: Int -> Int -> Int -> IO [Int]
-getOffsets lngth off sze = return $
-  map ((off+) . (sze*)) [0.. ((lngth `div` sze)-1)]
+getOffsets length' offset size = return $
+  map ((offset+) . (size*)) [0..((length' `div` size) - 1)]
 
 toInts :: Integral a => [a] -> [Int]
 toInts = map fromIntegral
@@ -60,5 +60,5 @@ cIntSize :: Int
 cIntSize = sizeOf (undefined :: CInt)
 
 getPtrs :: Ptr a -> Int -> Int -> [Ptr a]
-getPtrs ptr lngth sze =
-  map (plusPtr ptr . (sze *)) [0.. ((lngth `div` sze) - 1)]
+getPtrs ptr length' sze =
+  map (plusPtr ptr . (sze *)) [0.. ((length' `div` sze) - 1)]

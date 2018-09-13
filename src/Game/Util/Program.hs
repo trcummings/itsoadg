@@ -17,7 +17,8 @@ import           Data.Map.Strict  (fromList)
 import           Data.Maybe       (maybe)
 -- import           System.Directory (doesFileExist)
 
-import           Game.Types (ShaderInfo(..), ShaderProgram(..))
+import           Game.Types        (ShaderInfo(..), ShaderProgram(..))
+import           Game.Util.GLError (printGLErrors)
 
 
 printError :: IO ()
@@ -25,12 +26,16 @@ printError = GL.get GL.errors >>= mapM_ (hPutStrLn stderr . ("GL: "++) . show)
 
 createProgram :: [ShaderInfo] -> IO ShaderProgram
 createProgram shaderInfo = do
+  printGLErrors "createProgram pre-anything"
   shaders <- mapM loadShader $ shaderInfo
+  printGLErrors "createProgram post-load"
   program <- compileAndLink shaders
+  printGLErrors "createProgram post-compile"
   -- get attributes, attach to the program
   (attribs, uniforms) <- getActives program
   -- attach all attributes to the program
   mapM_ (\(name, (loc, _)) -> GL.attribLocation program name $= loc) attribs
+  printGLErrors "createProgram post-attach attribs"
   return $ ShaderProgram (fromList attribs) (fromList uniforms) program
   -- -- let info@(GLSLInfo ins uniforms _) = gatherInfo shaderSequence
   -- -- compile the shader from the given information (path, shaderType)
@@ -112,10 +117,13 @@ compileShader :: GL.ShaderType -> B.ByteString -> IO GL.Shader
 compileShader shaderType source = do
   -- create the shader
   shader <- GL.createShader shaderType
+  printGLErrors "compileShader create shader"
   -- set shader source code byte string
   GL.shaderSourceBS shader $= source
+  printGLErrors "compileShader set source"
   -- compile the shader
   GL.compileShader shader
+  printGLErrors "compileShader compile shader"
   -- did the shader compile properly?
   ok <- GL.get $ GL.compileStatus shader
   -- if compilation failed, throw error, log failure, exit

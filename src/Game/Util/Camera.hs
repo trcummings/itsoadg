@@ -32,10 +32,7 @@ cameraViewMatrix (camera :: Camera, Position3D cPos, Orientation o) =
   in ViewMatrix $ L.mkTransformation q (L.rotate q $ negate cPos)
 
 cameraProjectionMatrix :: L.V2 Int32 -> CameraEntity -> ProjectionMatrix
-cameraProjectionMatrix (L.V2 width' height')
-                       ( camera :: Camera
-                       , Position3D cPos
-                       , _ :: Orientation) =
+cameraProjectionMatrix (L.V2 width' height') (camera, _, _) =
   let height = fromIntegral height'
       width  = fromIntegral width'
       FieldOfView fov   = _fieldOfView camera

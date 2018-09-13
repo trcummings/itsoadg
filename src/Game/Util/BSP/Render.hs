@@ -4,9 +4,10 @@ import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.GLUtil           as U
 import qualified Linear                    as L
 import qualified Data.Array.MArray         as Arr (readArray)
+import           Data.Array      ((!))
 import           Foreign.Marshal (advancePtr)
 import           Foreign.Ptr     (Ptr, plusPtr)
-import           Control.Monad   (when, unless)
+import           Control.Monad   (when, unless, (<=<))
 import           Linear          ((!*!))
 import           SDL             (($=))
 
@@ -34,17 +35,24 @@ renderBSP mats@(ProjectionMatrix p, ViewMatrix v)
           (Position3D cPos)
           (mapRef, sProgram) = do
   -- set up for the render
-  GL.currentProgram $= Just (_glProgram sProgram)
+  GL.currentProgram                   $= Just (_glProgram sProgram)
+  printGLErrors "renderBSP set program"
+  GL.bindBuffer GL.ElementArrayBuffer $= Just (_bspIndices . _buffers $ mapRef)
+  printGLErrors "renderBSP bind elem buffer"
   -- attribs
   GL.vertexAttribArray (getALoc "vertexPosition") $= GL.Enabled
-  GL.vertexAttribArray (getALoc "vertexUV")       $= GL.Enabled
+  GL.vertexAttribArray (getALoc "textureUV")      $= GL.Enabled
   GL.vertexAttribArray (getALoc "lightmapUV")     $= GL.Enabled
+  printGLErrors "renderBSP enable attribs"
   -- uniforms
-  let vp = getUniform sProgram "VP"
+  let view = getUniform sProgram "view"
+      proj = getUniform sProgram "proj"
       ts = getUniform sProgram "textureSampler"
       ls = getUniform sProgram "lightmapSampler"
   -- transform VP uniform
-  (p !*! v) `U.asUniform` vp
+  v `U.asUniform` view
+  p `U.asUniform` proj
+  printGLErrors "renderBSP set VP uniform"
   -- bind texture to TextureUnit 0
   -- set "textureSampler" sampler to use Texture Unit 0
   GL.activeTexture $= GL.TextureUnit 0
@@ -54,6 +62,8 @@ renderBSP mats@(ProjectionMatrix p, ViewMatrix v)
   GL.activeTexture $= GL.TextureUnit 1
   GL.uniform ls    $= GL.Index1 (1 :: GL.GLint)
 
+  -- find the leaf closest to the given position (in this case, the
+  -- camera position) in the BSP & start from there
   leaf <- findLeaf cPos $ _tree mapRef
   renderBSP' mats leaf mapRef
 
@@ -62,25 +72,30 @@ renderBSP mats@(ProjectionMatrix p, ViewMatrix v)
 renderBSPCleanUp :: IO ()
 renderBSPCleanUp = do
   GL.vertexAttribArray (getALoc "vertexPosition") $= GL.Disabled
-  GL.vertexAttribArray (getALoc "vertexUV")       $= GL.Disabled
+  GL.vertexAttribArray (getALoc "textureUV")      $= GL.Disabled
   GL.vertexAttribArray (getALoc "lightmapUV")     $= GL.Disabled
-  GL.bindBuffer GL.ArrayBuffer $= Nothing
-  GL.currentProgram            $= Nothing
+  printGLErrors "renderBSPCleanUp disable attribs"
+  GL.bindBuffer GL.ArrayBuffer        $= Nothing
+  printGLErrors "renderBSPCleanUp unset array buffer"
+  GL.bindBuffer GL.ElementArrayBuffer $= Nothing
+  printGLErrors "renderBSPCleanUp unset element buffer"
+  GL.currentProgram                   $= Nothing
+  printGLErrors "renderBSPCleanUp unset program"
 
 getALoc :: String -> GL.AttribLocation
 getALoc "vertexPosition" = GL.AttribLocation 0
-getALoc "vertexUV"       = GL.AttribLocation 1
+getALoc "textureUV"      = GL.AttribLocation 1
 getALoc "lightmapUV"     = GL.AttribLocation 2
 getALoc _                = error "Bad input in Game.Util.BSP.Render.getALoc"
 
 
--- given a position finds in the tree where the position lies in
+-- given a position, find in the tree where the position lies in
 findLeaf :: L.V3 Float -> Tree -> IO BSPLeaf
 findLeaf pos@(L.V3 x y z) (Branch node left right) =
   let (L.V3 px py pz) = realToFrac <$> _planeNormal node
-      d               = realToFrac $ _dist node
-      dstnc           = (px * x) + (py * y) + (pz * z) - d
-      branch          = if dstnc >= 0 then left else right
+      nodeDist        = realToFrac $ _dist node
+      distance        = (px * x) + (py * y) + (pz * z) - nodeDist
+      branch          = if distance >= 0 then left else right
   in findLeaf pos branch
 findLeaf (L.V3 _ _ _) (Leaf leaf) = return leaf
 
@@ -93,12 +108,15 @@ renderBSP' :: (ProjectionMatrix, ViewMatrix)
            -> BSPMap
            -> IO ()
 renderBSP' vp leaf mp = do
-  bsSize  <- sizeBS $ _bitset mp
-  newBS   <- emptyBS bsSize
+  -- create new bitset to traverse the BSP with
+  newBS  <- emptyBS <=< sizeBS $ _bitset mp
+  let frustum = getFrustum vp
   -- render each leaf
-  mapM_ (renderLeaves (getFrustum vp) newBS visFunc mp) (_leaves mp)
+  mapM_ (renderLeaves frustum newBS visFunc mp) (_leaves mp)
   -- clean up after the render
   renderBSPCleanUp
+    -- curry in the visData of the BSP, & the cluster data of
+    -- the current leaf
     where visFunc = isClusterVisible (_visData mp) (_cluster leaf)
 
 
@@ -109,13 +127,15 @@ renderLeaves :: Frustum
              -> BSPMap
              -> BSPLeaf
              -> IO ()
-renderLeaves frustum bitSet func mp leaf  = do
-  clusterVisible <- func (_cluster leaf)
+renderLeaves frustum bitSet visFunc mp leaf = do
+  -- run visibility test function
+  clusterVisible <- visFunc (_cluster leaf)
   when clusterVisible $ do
     let lMin :: L.V3 Float = realToFrac <$> _leafMin leaf
         lMax :: L.V3 Float = realToFrac <$> _leafMax leaf
-    -- AABB in frustum test goes here
+    -- test frustum against AABB of leaf min & max boundaries
     when (boxInFrustum frustum lMin lMax) $ do
+      -- if passes test, render faces of current leaf
       renderFaces bitSet mp (_leafFaces leaf)
 
 
@@ -143,16 +163,17 @@ isClusterVisible _ _ _ = return False
 renderFaces :: BitSet -> BSPMap -> [BSPFace] -> IO ()
 renderFaces _ _ [] = return ()
 renderFaces bitSet mp (face : faces) = do
+  -- have we already set this face in the bitset?
+  -- if the face has already been rendered, we know we don't need to
+  -- render it again
   isSet <- isSetBS bitSet (_faceNo face)
   unless isSet $ do
+    -- set this face in the bitset
     setBS bitSet $ _faceNo face
-    let vertData = _vertexData mp
-        vIndices = _vindices   mp
-        buffers  = _buffers    mp
     case _faceType face of
-      1 -> renderPolygonFace buffers face vertData vIndices
-      2 -> renderPatches     buffers face
-      3 -> renderMeshFace    buffers face vertData vIndices
+      1 -> renderPolygonFace mp face
+      2 -> renderPatches     mp face
+      3 -> renderMeshFace    mp face
       -- 4 would be to render a billboard, but we didn't currently
       -- support this. TODO, however
       _ -> pure ()
@@ -162,160 +183,141 @@ renderFaces bitSet mp (face : faces) = do
 -- surface rendering --
 
 -- renders a polygon surface
-renderPolygonFace :: BSPBuffers
-                  -> BSPFace
-                  -> VertexArrays
-                  -> Ptr GL.GLint
-                  -> IO ()
-renderPolygonFace bufs face _ _ =  do
-  -- putStrLn "===============renderPolygonFace==============="
+renderPolygonFace :: BSPMap -> BSPFace -> IO ()
+renderPolygonFace mp face =  do
   let (a, b, c, d) = _arrayPtrs face
-  GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition bufs)
-  -- printGLErrors "drawPolygonFace buffer position"
+      buffers      = _buffers mp
+
+  GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition buffers)
+  printGLErrors "drawPolygonFace buffer position"
   GL.vertexAttribPointer (getALoc "vertexPosition") $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 3 GL.Float 0 a )
-  -- printGLErrors "drawPolygonFace position pointer"
+  printGLErrors "drawPolygonFace position pointer"
 
-  GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords bufs)
-  -- printGLErrors "drawPolygonFace buffer texture"
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords buffers)
+  printGLErrors "drawPolygonFace buffer texture"
   GL.activeTexture $= GL.TextureUnit 0
-  -- printGLErrors "drawPolygonFace active texture"
+  printGLErrors "drawPolygonFace active texture"
   GL.textureBinding GL.Texture2D $= _textureObj face
-  -- printGLErrors "drawPolygonFace binding texture"
-  GL.vertexAttribPointer (getALoc "vertexUV") $=
+  printGLErrors "drawPolygonFace binding texture"
+  GL.vertexAttribPointer (getALoc "textureUV") $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 2 GL.Float 0 b )
-  -- printGLErrors "drawPolygonFace texture pointer"
+  printGLErrors "drawPolygonFace texture pointer"
 
-  GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords bufs)
-  -- printGLErrors "drawPolygonFace buffer lightmap"
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords buffers)
+  printGLErrors "drawPolygonFace buffer lightmap"
   GL.activeTexture $= GL.TextureUnit 1
-  -- printGLErrors "drawPolygonFace active lightmap"
+  printGLErrors "drawPolygonFace active lightmap"
   GL.textureBinding GL.Texture2D $= _lightmapObj face
-  -- printGLErrors "drawPolygonFace binding lightmap"
+  printGLErrors "drawPolygonFace binding lightmap"
   GL.vertexAttribPointer (getALoc "lightmapUV") $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 2 GL.Float 0 c )
-  -- printGLErrors "drawPolygonFace lightmap pointer"
+  printGLErrors "drawPolygonFace lightmap pointer"
 
-  -- GL.drawRangeElements
-  --   GL.Triangles
-  --   (0, _numOfIndices face)
-  --   (_numOfIndices face)
-  --   GL.UnsignedInt
-  --   d
-  -- -- GL.drawElements GL.Triangles (_numOfIndices face) GL.UnsignedInt d
-  GL.drawArrays GL.Triangles 0 (_numOfIndices face)
-  -- printGLErrors "drawPolygonFace draw"
-  -- putStrLn "===============renderPolygonFace==============="
+  GL.bindBuffer GL.ElementArrayBuffer $= Just (_bspIndices buffers)
+  printGLErrors "drawPolygonFace bind elem buffer"
+
+  GL.drawRangeElements
+    GL.Triangles
+    (0, _numOfIndices face)
+    (_numOfIndices face)
+    GL.UnsignedInt
+    d
+  printGLErrors "drawPolygonFace draw"
 
 
 -- renders a mesh face
-renderMeshFace :: BSPBuffers
-               -> BSPFace
-               -> VertexArrays
-               -> Ptr GL.GLint
-               -> IO ()
-renderMeshFace bufs face vertexArrays vIndex = do
-  -- putStrLn "===============renderMeshFace==============="
-  let (vertexPtr, texturePtr, lightmapPtr, _, _) = vertexArrays
-      startVIndex                                = _startVertIndex face
+renderMeshFace :: BSPMap -> BSPFace -> IO ()
+renderMeshFace mp face = do
+  let buffers                  = _buffers mp
+      (vPtr, tPtr, lPtr, _, _) = _vertexData mp
+      vIdx                     = _vIndices mp
+      svIdx                    = _startVertIndex face
 
-  GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition bufs)
-  -- printGLErrors "renderMeshFace buffer position"
+  GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition buffers)
+  printGLErrors "renderMeshFace buffer position"
   GL.vertexAttribPointer (getALoc "vertexPosition") $=
       ( GL.ToFloat
-      , GL.VertexArrayDescriptor 3 GL.Float 0 (plusPtr vertexPtr (12 * startVIndex)) )
-  -- printGLErrors "renderMeshFace position pointer"
+      , GL.VertexArrayDescriptor 3 GL.Float 0 (plusPtr vPtr (12 * svIdx)) )
+  printGLErrors "renderMeshFace position pointer"
 
-  GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords bufs)
-  -- printGLErrors "renderMeshFace buffer texture"
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords buffers)
+  printGLErrors "renderMeshFace buffer texture"
   GL.activeTexture               $= GL.TextureUnit 0
-  -- printGLErrors "renderMeshFace active texture"
+  printGLErrors "renderMeshFace active texture"
   GL.textureBinding GL.Texture2D $= _textureObj face
-  -- printGLErrors "renderMeshFace binding texture"
-  GL.vertexAttribPointer (getALoc "vertexUV") $=
+  printGLErrors "renderMeshFace binding texture"
+  GL.vertexAttribPointer (getALoc "textureUV") $=
     ( GL.ToFloat
-    , GL.VertexArrayDescriptor 2 GL.Float 0 (advancePtr texturePtr (2 * startVIndex)) )
-  -- printGLErrors "renderMeshFace texture pointer"
+    , GL.VertexArrayDescriptor 2 GL.Float 0 (plusPtr tPtr (2 * svIdx)) )
+  printGLErrors "renderMeshFace texture pointer"
 
-  GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords bufs)
-  -- printGLErrors "renderMeshFace buffer lightmap"
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords buffers)
+  printGLErrors "renderMeshFace buffer lightmap"
   GL.activeTexture               $= GL.TextureUnit 1
-  -- printGLErrors "renderMeshFace active lightmap"
+  printGLErrors "renderMeshFace active lightmap"
   GL.textureBinding GL.Texture2D $= _lightmapObj face
-  -- printGLErrors "renderMeshFace binding lightmap"
+  printGLErrors "renderMeshFace binding lightmap"
   GL.vertexAttribPointer (getALoc "lightmapUV") $=
     ( GL.ToFloat
-    , GL.VertexArrayDescriptor 2 GL.Float 0 (plusPtr lightmapPtr (8 * startVIndex)) )
-  -- printGLErrors "renderMeshFace lightmap pointer"
+    , GL.VertexArrayDescriptor 2 GL.Float 0 (plusPtr lPtr (8 * svIdx)) )
+  printGLErrors "renderMeshFace lightmap pointer"
 
-  GL.drawArrays GL.Triangles 0 (_numOfIndices face)
-  -- printGLErrors "renderMeshFace draw"
-  -- putStrLn "===============renderMeshFace==============="
+  GL.drawRangeElements
+    GL.Triangles
+    (0, _numOfVerts face)
+    (_numOfIndices face)
+    GL.UnsignedInt
+    (plusPtr vIdx (4 * _startIndex face))
+  printGLErrors "renderMeshFace draw"
 
 -- renders patch surfaces
-renderPatches :: BSPBuffers -> BSPFace -> IO ()
-renderPatches bufs face = mapM_ (renderPatch bufs face) (_patch face)
+renderPatches :: BSPMap -> BSPFace -> IO ()
+renderPatches mp face = mapM_ (renderPatch mp face) (_patch face)
 
-renderPatch :: BSPBuffers -> BSPFace -> BSPPatch -> IO ()
-renderPatch bufs face bsppatch = do
-  -- putStrLn "===============renderPatch==============="
-  let patchPtr = _patchPtr bsppatch -- pointer to patch vertices
-  -- GL.arrayPointer GL.VertexArray $=
-  --   -- stride of 28 -- why?
-  --   GL.VertexArrayDescriptor 3 GL.Float 28 patchPtr
-  -- GL.clientState GL.VertexArray $= GL.Enabled
-  GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition bufs)
-  -- printGLErrors "renderPatch buffer position"
+renderPatch :: BSPMap -> BSPFace -> BSPPatch -> IO ()
+renderPatch mp face patch = do
+  let patchPtr = _patchPtr patch -- pointer to patch vertices
+      buffers  = _buffers mp
+
+  GL.bindBuffer GL.ArrayBuffer  $= Just (_bspPosition buffers)
+  printGLErrors "renderPatch buffer position"
   GL.vertexAttribPointer (getALoc "vertexPosition") $=
       ( GL.ToFloat
       , GL.VertexArrayDescriptor 3 GL.Float 28 patchPtr )
-  -- printGLErrors "renderPatch position pointer"
+  printGLErrors "renderPatch position pointer"
 
-  GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords bufs)
-  -- printGLErrors "renderPatch buffer texture"
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspTexCoords buffers)
+  printGLErrors "renderPatch buffer texture"
   GL.activeTexture               $= GL.TextureUnit 0
-  -- printGLErrors "renderPatch active texture"
+  printGLErrors "renderPatch active texture"
   GL.textureBinding GL.Texture2D $= _textureObj face
-  -- printGLErrors "renderPatch binding texture"
-  GL.vertexAttribPointer (getALoc "vertexUV") $=
+  printGLErrors "renderPatch binding texture"
+  GL.vertexAttribPointer (getALoc "textureUV") $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 2 GL.Float 28 (plusPtr patchPtr 12) )
-  -- printGLErrors "renderPatch texture pointer"
-  -- GL.clientActiveTexture $= GL.TextureUnit 0
-  -- GL.arrayPointer GL.TextureCoordArray $=
-  --   -- 12 pointers ahead of the patch pointer -- why?
-  --   -- brushes have size of 12
-  --   GL.VertexArrayDescriptor 2 GL.Float 28 (plusPtr patchPtr 12) -- maybe its a pointer to "a"
-  -- GL.clientState GL.TextureCoordArray $= GL.Enabled
-  -- GL.texture GL.Texture2D $= GL.Enabled
+  printGLErrors "renderPatch texture pointer"
 
-  GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords bufs)
-  -- printGLErrors "renderPatch buffer lightmap"
+  GL.bindBuffer GL.ArrayBuffer $= Just (_bspLmpCoords buffers)
+  printGLErrors "renderPatch buffer lightmap"
   GL.activeTexture               $= GL.TextureUnit 1
-  -- printGLErrors "renderPatch active lightmap"
+  printGLErrors "renderPatch active lightmap"
   GL.textureBinding GL.Texture2D $= _lightmapObj face
-  -- printGLErrors "renderPatch binding lightmap"
+  printGLErrors "renderPatch binding lightmap"
   GL.vertexAttribPointer (getALoc "lightmapUV") $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 2 GL.Float 28 (plusPtr patchPtr 20) )
-  -- printGLErrors "renderPatch lightmap pointer"
-  -- GL.clientActiveTexture $= GL.TextureUnit 1
-  -- GL.arrayPointer GL.TextureCoordArray $=
-  --   -- 20 pointers ahead of the patch pointer -- why?
-  --   -- brush sides have total size of 8
-  --   GL.VertexArrayDescriptor 2 GL.Float 28 (plusPtr patchPtr 20) -- pointer to "b"? (12 + 8)
-  -- GL.clientState GL.TextureCoordArray $= GL.Enabled
-  -- GL.texture GL.Texture2D $= GL.Enabled
+  printGLErrors "renderPatch lightmap pointer"
 
-  GL.drawArrays GL.TriangleStrip 0 (_numOfIndices face)
-  -- GL.multiDrawElements
-  --   GL.TriangleStrip -- we're drawing a "curved surface" here
-  --   (_numIndexPtr bsppatch) -- number of indices
-  --   GL.UnsignedInt
-  --   (_indexPtrPtr bsppatch) -- pointer to indices
-  --   (fromIntegral (_patchLOD bsppatch)) -- level of tesselation
-  -- printGLErrors "renderPatch draw"
-  -- putStrLn "===============renderPatch==============="
+  GL.multiDrawElements
+    -- we're drawing a "curved surface" here
+    GL.TriangleStrip
+    (_numIndexPtr patch)
+    GL.UnsignedInt
+    (_indexPtrPtr patch)
+    -- level of tesselation
+    (fromIntegral (_patchLOD patch))
+  printGLErrors "renderPatch draw"
