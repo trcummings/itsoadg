@@ -109,8 +109,15 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.vertexAttribPointer  posLoc $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
+
+  GL.blend     $= GL.Enabled
+  GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
+
   -- draw indexed triangles
   GL.drawArrays GL.TriangleStrip 0 numVerts
+
+  GL.blend     $= GL.Disabled
+
   -- disable all attributes
   GL.vertexAttribArray    posLoc $= GL.Disabled
   -- unbind array buffer

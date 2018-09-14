@@ -49,7 +49,7 @@ kVertices = 10
 kIndices :: Int
 kIndices = 11
 
--- Stores special map effects. CURRENTLY UNUSED
+-- Stores special shader effects on the map. CURRENTLY UNUSED
 -- kEffects :: Int
 -- kEffects = 12
 

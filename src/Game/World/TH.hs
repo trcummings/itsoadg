@@ -26,11 +26,14 @@ import Game.Types
   , VAO
   , Player
   , BSPMap
+  , DebugHUD
 
   , ShaderProgram
   , TexResource
   , BBResource
+  , BufferResource
   , RotatingCube
+  , Texture
 
   , Camera
   , HasCameraEvent
@@ -75,6 +78,12 @@ instance Component TexResource where
 instance Component BBResource where
   type Storage BBResource = Map BBResource
 
+instance Component BufferResource where
+  type Storage BufferResource = Map BufferResource
+
+instance Component Texture where
+  type Storage Texture = Map Texture
+
 
 instance Component RotatingCube where
   type Storage RotatingCube = Map RotatingCube
@@ -88,6 +97,9 @@ instance Component Player where
 
 instance Component BSPMap where
   type Storage BSPMap = Unique BSPMap
+
+instance Component DebugHUD where
+  type Storage DebugHUD = Unique DebugHUD
 
 
 -- Camera Components
@@ -122,10 +134,13 @@ makeWorld "World" [
   , ''ShaderProgram
   , ''TexResource
   , ''BBResource
+  , ''Texture
   , ''RotatingCube
   , ''VAO
   , ''BSPMap
   , ''Player
+  , ''DebugHUD
+  , ''BufferResource
 
   , ''Camera
   , ''HasCameraEvent

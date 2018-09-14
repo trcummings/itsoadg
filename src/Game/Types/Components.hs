@@ -6,6 +6,7 @@ module Game.Types.Components where
 -- import qualified Animate
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Linear as L
+import           Data.Map
 
 import           Game.Types.Loaders.Obj (ObjData)
 import           Game.Types.Shader      (ShaderProgram)
@@ -158,6 +159,28 @@ data RotatingCube = RotatingCube
   { _axis :: (L.V3 Float)
   , _deg  :: Degrees }
   deriving Show
+
+data BufferResource = BufferResource
+  { _positionBuffer :: Maybe GL.BufferObject
+  , _texCoordBuffer :: Maybe GL.BufferObject
+  , _rgbCoordBuffer :: Maybe GL.BufferObject }
+
+newtype Texture = Texture (Maybe GL.TextureObject)
+
+newtype DebugHUD = DebugHUD (Map HUDType FontInfo)
+
+data HUDType =
+    FPSCounter
+  | PositionTracker
+  deriving (Eq, Ord)
+
+data FontInfo = FontInfo
+  { _fText :: String
+  , _fxPos :: Int
+  , _fyPos :: Int
+  , _fSize :: Int }
+
+
 -- data CameraTarget =
 --   CameraTarget Entity
 --   deriving Show

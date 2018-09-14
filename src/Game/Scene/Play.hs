@@ -9,7 +9,7 @@ import qualified Graphics.GLUtil as U
 import qualified Graphics.GLUtil.Camera3D as U
 import qualified Graphics.Rendering.OpenGL as GL
 
-import qualified Data.Map as Map (empty, fromList)
+import qualified Data.Map as Map (empty, fromList, elems)
 import           Data.Map ((!), keys)
 import           Data.Text (singleton)
 import           Data.List (find, findIndex)
@@ -26,10 +26,12 @@ import           Game.Effect.Renderer (getWindowDims)
 
 import           Game.World.TH        (ECS)
 import           Game.Loaders.Save    (saveDataFile, loadDataFile)
+import           Game.Loaders.Cfg     (readMapCfg, readMapMedia)
 import           Game.Util.Billboard  (renderBillboard)
 import           Game.Util.Constants  (frameDeltaSeconds, assetPath, shaderPath)
 import           Game.Util.Program    (createProgram)
 import           Game.Util.BSP.Render (BSPRenderData, renderBSP)
+import           Game.Util.GLError    (printGLErrors)
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -52,6 +54,7 @@ import           Game.Types
   , CameraAxes(..)
 
   , BSPMap
+  , DebugHUD(..)
   , ShaderInfo(..)
   , Position3D(..)
   , Scene(..) )
@@ -69,27 +72,32 @@ import Game.System.Scratch.PlayerBillboard
   ( PlayerB
   , initPlayerBillboard
   , drawPlayerBillboard )
-import Game.Loaders.Cfg (readMapCfg, readMapMedia)
-import Game.Util.GLError (printGLErrors)
+import Game.System.Scratch.DebugHUD
+  ( DebugHUDEntity
+  , initDebugHUD
+  , drawDebugHUD
+  , stepDebugHUD )
+
 
 initialize :: ECS ()
 initialize = do
   -- init VAO
   initVAO
   -- load config data
-  liftIO $ readMapCfg $ assetPath </> "leveleg.cfg"
-  bsp     <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
-  liftIO $ printGLErrors "initialize make bsp"
-  program <- liftIO $ createProgram
-                [ ShaderInfo GL.VertexShader   (shaderPath </> "bsp.v.glsl")
-                , ShaderInfo GL.FragmentShader (shaderPath </> "bsp.f.glsl") ]
-  liftIO $ printGLErrors "initialize make bsp program"
-  -- create BSP entity
-  newEntity (bsp, program)
+  -- liftIO $ readMapCfg $ assetPath </> "leveleg.cfg"
+  -- bsp     <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
+  -- liftIO $ printGLErrors "initialize make bsp"
+  -- program <- liftIO $ createProgram
+  --               [ ShaderInfo GL.VertexShader   (shaderPath </> "bsp.v.glsl")
+  --               , ShaderInfo GL.FragmentShader (shaderPath </> "bsp.f.glsl") ]
+  -- liftIO $ printGLErrors "initialize make bsp program"
+  -- -- create BSP entity
+  -- newEntity (bsp, program)
   -- entities
   initColorCube
-  -- initTextureCube
-  -- initPlayerBillboard
+  initTextureCube
+  initPlayerBillboard
+  initDebugHUD
 
   -- camera
   cam :: CameraEntity <- liftIO $ loadDataFile "test.json"
@@ -168,6 +176,7 @@ runCameraActions (HasCameraEvent e, c) =
 
 step :: ECS ()
 step = do
+  stepDebugHUD
   -- rotate da cubes!!!
   cmap stepColorCube
   -- get inputs
@@ -184,14 +193,15 @@ render = do
   -- render cube
   vc <- get global :: ECS VideoConfig
   dims <- liftIO $ getWindowDims vc
-  -- t <- getGlobalTime
   cmapM_ $ \(camera :: CameraEntity) -> do
     let camProjMatrix = cameraProjectionMatrix dims camera
         camViewMatrix = cameraViewMatrix camera
         mats          = (camProjMatrix, camViewMatrix)
         (_, cPos, _)  = camera
-    cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
+    -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
     cmapM_ $ \(r :: ColorCube)     -> liftIO $ drawColorCube       mats r
-    -- cmapM_ $ \(r :: TexCube)   -> liftIO $ drawTextureCube     mats r
-    -- cmapM_ $ \(r :: PlayerB)   -> liftIO $ drawPlayerBillboard mats r
+    -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
+    cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
     return ()
+  cmapM_ $ \((DebugHUD db, p, t, b) :: DebugHUDEntity) -> do
+    liftIO $ mapM_ (drawDebugHUD (p, t, b)) $ Map.elems db
