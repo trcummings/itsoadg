@@ -52,7 +52,9 @@ createTexture (Just (texSize, pixels@(GL.PixelData _ _ ptr))) = do
   GL.generateMipmap' GL.Texture2D
   printGLErrors "createTexture generate mipmaps"
 
-  GL.textureFilter  GL.Texture2D $= ((GL.Linear', Just GL.Nearest), GL.Linear')
+  -- filtering between mipmaps. set to "nearest" for both to maximize
+  -- pixelization
+  GL.textureFilter  GL.Texture2D $= ((GL.Nearest, Just GL.Nearest), GL.Nearest)
   printGLErrors "createTexture setting texture filter"
   -- textureFunction $= Modulate
   -- printGLErrors "createTexture setting texture function"
