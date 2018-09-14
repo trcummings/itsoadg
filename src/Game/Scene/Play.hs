@@ -204,4 +204,4 @@ render = do
     cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
     return ()
   cmapM_ $ \((DebugHUD db, p, t, b) :: DebugHUDEntity) -> do
-    liftIO $ mapM_ (drawDebugHUD (p, t, b)) $ Map.elems db
+    liftIO $ mapM_ (drawDebugHUD (p, t, b) dims) $ Map.elems db

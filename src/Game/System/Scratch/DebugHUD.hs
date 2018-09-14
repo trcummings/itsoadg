@@ -1,7 +1,6 @@
 module Game.System.Scratch.DebugHUD where
 
 import qualified Graphics.GLUtil           as U
-import qualified Graphics.GLUtil.Camera3D  as U
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Linear                    as L
 import           SDL                     (($=))
@@ -9,6 +8,7 @@ import           System.FilePath         ((</>))
 import           Control.Monad.IO.Class  (liftIO)
 import           Data.Map                (fromList, update)
 import           Data.Char               (ord)
+import           Data.Int                (Int32)
 import           Apecs                   (newEntity, cmap, cmapM_, set)
 
 import           Game.World.TH       (ECS)
@@ -45,7 +45,8 @@ initDebugHUD = do
   -- create the buffer related data
   vertsBuf <- liftIO $ U.fromSource GL.ArrayBuffer ([] :: [L.V2 Float])
   uvBuf    <- liftIO $ U.fromSource GL.ArrayBuffer ([] :: [L.V2 Float])
-  -- define the entity
+  -- note, x & y positions are [-1/2 screen, 1/2 screen] both axes,
+  -- 0,0 is the center
   let fpsInfo = FontInfo { _fText = "Fps: 0"
                          , _fxPos = 10
                          , _fyPos = 550
@@ -54,6 +55,7 @@ initDebugHUD = do
                          , _fxPos = 10
                          , _fyPos = 500
                          , _fSize = 20 }
+  -- define the entity
   newEntity
     ( DebugHUD $ fromList [ (FPSCounter,      fpsInfo)
                           , (PositionTracker, posInfo) ]
@@ -117,12 +119,14 @@ makeFontVertices fontInfo =
                           , uvDnRight, uvUpRight, uvDnLeft ] ]
   in (concat verts, concat uvxs)
 
-drawDebugHUD :: (ShaderProgram, Texture, BufferResource) -> FontInfo -> IO ()
-drawDebugHUD (sProgram, Texture texObj, br) fontInfo = do
+drawDebugHUD :: (ShaderProgram, Texture, BufferResource)
+             -> (L.V2 Int32) -> FontInfo -> IO ()
+drawDebugHUD (sProgram, Texture texObj, br) dims fontInfo = do
   let program      = _glProgram sProgram
       vpLocation   = getAttrib  sProgram "vertexPosition_screenSpace"
       uvLocation   = getAttrib  sProgram "vertexUV"
       sampLocation = getUniform sProgram "fontTextureSampler"
+      dimsLocation = getUniform sProgram "dims"
       posBuffer    = _positionBuffer br
       uvBuffer     = _texCoordBuffer br
       (verts, uvs) = makeFontVertices fontInfo
@@ -137,6 +141,8 @@ drawDebugHUD (sProgram, Texture texObj, br) fontInfo = do
   GL.vertexAttribArray uvLocation $= GL.Enabled
   printGLErrors "drawDebugHUD set attribs"
   -- handle uniforms
+  -- set "dims" to viewport dims
+  (realToFrac <$> dims :: L.V2 Float) `U.asUniform` dimsLocation
   -- set "fontTextureSampler" uniform
   GL.activeTexture               $= GL.TextureUnit 2
   GL.textureBinding GL.Texture2D $= texObj
