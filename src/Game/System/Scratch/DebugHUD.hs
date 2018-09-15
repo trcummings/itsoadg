@@ -60,9 +60,11 @@ initDebugHUD = do
     ( DebugHUD $ fromList [ (FPSCounter,      fpsInfo)
                           , (PositionTracker, posInfo) ]
     , Texture texObj
-    , BufferResource { _positionBuffer = Just vertsBuf
+    , BufferResource { _vertexBuffer   = Just vertsBuf
                      , _texCoordBuffer = Just uvBuf
-                     , _rgbCoordBuffer = Nothing }
+                     , _normalBuffer   = Nothing
+                     , _rgbCoordBuffer = Nothing
+                     , _indexBuffer    = Nothing  }
     , program )
   return ()
 
@@ -127,7 +129,7 @@ drawDebugHUD (sProgram, Texture texObj, br) dims fontInfo = do
       uvLocation   = getAttrib  sProgram "vertexUV"
       sampLocation = getUniform sProgram "fontTextureSampler"
       dimsLocation = getUniform sProgram "dims"
-      posBuffer    = _positionBuffer br
+      posBuffer    = _vertexBuffer br
       uvBuffer     = _texCoordBuffer br
       (verts, uvs) = makeFontVertices fontInfo
   -- clear the depth buffer

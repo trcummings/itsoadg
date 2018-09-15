@@ -130,16 +130,16 @@ data Camera = Camera
 -- OpenGL types
 newtype VAO = VAO GL.VertexArrayObject
 
-data Resource = Resource
-  { _shaderProgram :: ShaderProgram
-  , _vertexBuffer  :: GL.BufferObject
-  , _colorBuffer   :: GL.BufferObject }
+-- data Resource = Resource
+--   { _shaderProgram :: ShaderProgram
+--   , _vertexBuffer  :: GL.BufferObject
+--   , _colorBuffer   :: GL.BufferObject }
 
-data Model = Model
-  { _resource  :: Resource
-  , _vertices  :: [L.V3 Float]
-  , _colors    :: [L.V3 Float] }
-  -- , _elements  :: [L.V3 GL.GLuint] }
+-- data Model = Model
+--   { _resource  :: Resource
+--   , _vertices  :: [L.V3 Float]
+--   , _colors    :: [L.V3 Float] }
+--   -- , _elements  :: [L.V3 GL.GLuint] }
 
 newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
 newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
@@ -147,19 +147,20 @@ newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
 
 data Player = Player
 
+data Terrain = Terrain
 
 
-data TexResource = TexResource
-  { _sProgram   :: ShaderProgram
-  , _texObj     :: Maybe GL.TextureObject
-  , _vertBuffer :: GL.BufferObject
-  , _uvBuffer   :: GL.BufferObject
-  , _objData    :: ObjData }
+-- data TexResource = TexResource
+--   { _sProgram   :: ShaderProgram
+--   , _texObj     :: Maybe GL.TextureObject
+--   , _vertBuffer :: GL.BufferObject
+--   , _uvBuffer   :: GL.BufferObject
+--   , _objData    :: ObjData }
 
-data BBResource = BBResource
-  { _bbSProgram   :: ShaderProgram
-  , _bbTexObj     :: Maybe GL.TextureObject
-  , _bbVertBuffer :: GL.BufferObject }
+-- data BBResource = BBResource
+--   { _bbSProgram   :: ShaderProgram
+--   , _bbTexObj     :: Maybe GL.TextureObject
+--   , _bbVertBuffer :: GL.BufferObject }
 
 data RotatingCube = RotatingCube
   { _axis :: (L.V3 Float)
@@ -167,9 +168,11 @@ data RotatingCube = RotatingCube
   deriving Show
 
 data BufferResource = BufferResource
-  { _positionBuffer :: Maybe GL.BufferObject
+  { _vertexBuffer   :: Maybe GL.BufferObject
   , _texCoordBuffer :: Maybe GL.BufferObject
-  , _rgbCoordBuffer :: Maybe GL.BufferObject }
+  , _normalBuffer   :: Maybe GL.BufferObject
+  , _rgbCoordBuffer :: Maybe GL.BufferObject
+  , _indexBuffer    :: Maybe GL.BufferObject }
 
 newtype Texture = Texture (Maybe GL.TextureObject)
 

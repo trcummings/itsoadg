@@ -23,15 +23,13 @@ import Game.Types
   , Orientation
   , HasMoveCommand
 
-  , Model
   , VAO
   , Player
   , BSPMap
   , DebugHUD
+  , Terrain
 
   , ShaderProgram
-  , TexResource
-  , BBResource
   , BufferResource
   , RotatingCube
   , Texture
@@ -73,15 +71,6 @@ instance Component HasMoveCommand where
 instance Component ShaderProgram where
   type Storage ShaderProgram = Map ShaderProgram
 
-instance Component Model where
-  type Storage Model = Map Model
-
-instance Component TexResource where
-  type Storage TexResource = Map TexResource
-
-instance Component BBResource where
-  type Storage BBResource = Map BBResource
-
 instance Component BufferResource where
   type Storage BufferResource = Map BufferResource
 
@@ -104,6 +93,9 @@ instance Component BSPMap where
 
 instance Component DebugHUD where
   type Storage DebugHUD = Unique DebugHUD
+
+instance Component Terrain where
+  type Storage Terrain = Unique Terrain
 
 
 -- Camera Components
@@ -134,15 +126,13 @@ makeWorld "World" [
   , ''Orientation
   , ''HasMoveCommand
 
-  , ''Model
   , ''ShaderProgram
-  , ''TexResource
-  , ''BBResource
   , ''Texture
   , ''RotatingCube
   , ''VAO
   , ''BSPMap
   , ''Player
+  , ''Terrain
   , ''DebugHUD
   , ''BufferResource
 

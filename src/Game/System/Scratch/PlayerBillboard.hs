@@ -62,9 +62,11 @@ initPlayerBillboard = do
       Player
     , program
     , Texture texObj
-    , BufferResource { _positionBuffer = Just vb
+    , BufferResource { _vertexBuffer   = Just vb
                      , _texCoordBuffer = Nothing
-                     , _rgbCoordBuffer = Nothing }
+                     , _normalBuffer   = Nothing
+                     , _rgbCoordBuffer = Nothing
+                     , _indexBuffer    = Nothing }
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
     , Position3D  $ L.V3 0 0 (-1) )
   return ()
@@ -106,7 +108,7 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   -- set view-projection to camera vp
   trans `U.asUniform` vpLoc
   -- bind position VB
-  GL.bindBuffer GL.ArrayBuffer   $= (_positionBuffer br)
+  GL.bindBuffer GL.ArrayBuffer   $= (_vertexBuffer br)
   GL.vertexAttribPointer  posLoc $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )

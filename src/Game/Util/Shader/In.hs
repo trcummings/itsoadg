@@ -1,0 +1,105 @@
+-- module Game.Util.Shader.In (createAttrList, bindAttrib) where
+module Game.Util.Shader.In where
+-- 
+-- import qualified Graphics.Rendering.OpenGL as GL
+-- import qualified Data.ByteString.Char8     as C
+-- import qualified Data.ByteString           as B
+-- import           SDL                     (($=))
+--
+-- import           Foreign.Ptr             (nullPtr)
+-- import           Game.Util.Shader.Buffer (makeBuffer, replaceBuffer)
+-- import           Game.Types              (In(..), AttribGPU(..))
+--
+--
+-- bindAttrib :: t -> AttribGPU t -> IO ()
+-- bindAttrib global aGPU = do
+--   let onBindAttrib = _onBindAttrib   aGPU
+--       location     = _attribLocation aGPU
+--       descriptor   = _descriptor     aGPU
+--       buffer       = _buffer         aGPU
+--   -- run hook func
+--   onBindAttrib global
+--   -- bind current buffer
+--   GL.bindBuffer GL.ArrayBuffer    $= Just buffer
+--   -- set pointer to vertex array descriptor
+--   GL.vertexAttribPointer location $= (GL.ToFloat, descriptor)
+--   -- set array buffer to read from given location
+--   GL.vertexAttribArray   location $= GL.Enabled
+
+-- createAttrList :: GL.Program -> t -> [In t] -> IO [AttribGPU t]
+-- createAttrList progId global = mapM $ getInGPUInfo progId global
+--
+--
+-- -- helpers
+-- getInGPUInfo :: GL.Program -> t -> In t -> IO (AttribGPU t)
+-- getInGPUInfo prog global i = do
+--     let name      = inName i
+--         lenValues = inLength i global
+--
+--     buffer <- inMkBuffer i global
+--
+--     let updateFunc g = do
+--           GL.bindBuffer GL.ArrayBuffer $= Just buffer
+--           inReplaceBuffer i g lenValues
+--
+--     location <- GL.get . GL.attribLocation prog $ C.unpack name
+--
+--     let (elemCount, glType) = inDescriptor i
+--         descriptor = GL.VertexArrayDescriptor elemCount glType 0 nullPtr
+--
+--     return $ AttribGPU buffer updateFunc location descriptor
+--                        (fromIntegral $ lenValues)
+--
+-- inMkBuffer :: In t -> t -> IO GL.BufferObject
+-- inMkBuffer (InFloat valFunc _) global = makeBuffer GL.ArrayBuffer $ valFunc global
+-- inMkBuffer (InInt   valFunc _) global = makeBuffer GL.ArrayBuffer $ valFunc global
+-- inMkBuffer (InVec2  valFunc _) global = makeBuffer GL.ArrayBuffer $ valFunc global
+-- inMkBuffer (InVec3  valFunc _) global = makeBuffer GL.ArrayBuffer $ valFunc global
+-- inMkBuffer (InVec4  valFunc _) global = makeBuffer GL.ArrayBuffer $ valFunc global
+-- inMkBuffer InMat4{} _ =
+--     error "Primitive.inMkBuffer Given Mat4. Idk what to do."
+-- inMkBuffer InNone{} _ =
+--     error "Primitive.inMkBuffer Given InNone. Idk what to do."
+--
+-- inReplaceBuffer :: In t -> t -> Int -> IO ()
+-- inReplaceBuffer (InFloat valFunc _) global lenVals =
+--     replaceBuffer GL.ArrayBuffer (valFunc global) lenVals
+-- inReplaceBuffer (InInt valFunc _) global lenVals =
+--     replaceBuffer GL.ArrayBuffer (valFunc global) lenVals
+-- inReplaceBuffer (InVec2 valFunc _) global lenVals =
+--     replaceBuffer GL.ArrayBuffer (valFunc global) lenVals
+-- inReplaceBuffer (InVec3 valFunc _) global lenVals =
+--     replaceBuffer GL.ArrayBuffer (valFunc global) lenVals
+-- inReplaceBuffer (InVec4 valFunc _) global lenVals =
+--     replaceBuffer GL.ArrayBuffer (valFunc global) lenVals
+-- inReplaceBuffer InMat4{} _ _ =
+--     error "Primitive.inReplaceBuffer: InMat4"
+-- inReplaceBuffer InNone{} _ _ =
+--     error "Primitive.inReplaceBuffer: InNone"
+--
+-- inLength :: In t -> t -> Int
+-- inLength (InFloat valFunc _) = length . valFunc
+-- inLength (InInt   valFunc _) = length . valFunc
+-- inLength (InVec2  valFunc _) = length . valFunc
+-- inLength (InVec3  valFunc _) = length . valFunc
+-- inLength (InVec4  valFunc _) = length . valFunc
+-- inLength (InMat4  valFunc _) = length . valFunc
+-- inLength InNone{} = error "Primitive.inLength: Given InNone."
+--
+-- inDescriptor :: In t -> (GL.GLint, GL.DataType)
+-- inDescriptor InFloat{} = (1 , GL.Float)
+-- inDescriptor InInt{}   = (1 , GL.Int  )
+-- inDescriptor InVec2{}  = (2 , GL.Float)
+-- inDescriptor InVec3{}  = (3 , GL.Float)
+-- inDescriptor InVec4{}  = (4 , GL.Float)
+-- inDescriptor InMat4{}  = (16, GL.Float)
+-- inDescriptor InNone{}  = error "Primitive.inDescriptor: Given InNone."
+--
+-- inName :: In t -> B.ByteString
+-- inName (InFloat _ name) = name
+-- inName (InInt   _ name) = name
+-- inName (InVec2  _ name) = name
+-- inName (InVec3  _ name) = name
+-- inName (InVec4  _ name) = name
+-- inName (InMat4  _ name) = name
+-- inName (InNone    name) = name

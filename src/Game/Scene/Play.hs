@@ -69,14 +69,14 @@ import Game.System.Scratch.ColorCube
   , initColorCube
   , stepColorCube
   , drawColorCube )
-import Game.System.Scratch.TextureCube
-  ( TexCube
-  , initTextureCube
-  , drawTextureCube )
 import Game.System.Scratch.PlayerBillboard
   ( PlayerB
   , initPlayerBillboard
   , drawPlayerBillboard )
+import Game.System.Scratch.Terrain
+  ( TerrainE
+  , initTerrain
+  , drawTerrain )
 import Game.System.Scratch.DebugHUD
   ( DebugHUDEntity
   , initDebugHUD
@@ -88,7 +88,7 @@ initialize :: ECS ()
 initialize = do
   -- init VAO
   initVAO
-  -- load config data
+  -- -- load config data
   -- liftIO $ readMapCfg $ assetPath </> "leveleg.cfg"
   -- bsp     <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
   -- liftIO $ printGLErrors "initialize make bsp"
@@ -98,8 +98,10 @@ initialize = do
   -- liftIO $ printGLErrors "initialize make bsp program"
   -- -- create BSP entity
   -- newEntity (bsp, program)
+  -- terrain
+  initTerrain
   -- entities
-  initColorCube
+  -- initColorCube
   -- initTextureCube
   -- initPlayerBillboard
   initDebugHUD
@@ -109,8 +111,8 @@ initialize = do
   newEntity (c, (o, p))
   cmap $ \((c, m) :: CameraEntity) ->
     runMoveCommand (Move'Compose
-      (Move'Translate $ Translation $ L.V3 0 2 0)
-      (Move'Rotate      Pitch (Degrees (-15))) ) m
+      (Move'Translate $ Translation $ L.V3 0 2 2)
+      (Move'Rotate      Pitch (Degrees (0))) ) m
   return ()
 
 cleanUp :: ECS ()
@@ -131,8 +133,8 @@ quitOnEsc inputs = do
     set global $ sc { _nextScene = Scene'Quit }
 
 playerEvents :: Inputs
-             -> (Player, Moveable, Not HasMoveCommand)
-             -> Either Player (Player, HasMoveCommand)
+             -> (Camera, Moveable, Not HasMoveCommand)
+             -> Either Camera (Camera, HasMoveCommand)
 playerEvents inputs (p, _, _) =
   let m            = _inputs . _keyboardInput $ inputs
       leftPress    = isTouched $ m ! SDL.KeycodeA
@@ -194,8 +196,9 @@ render = do
         mats           = (camProjMatrix, camViewMatrix)
         (_, (_, cPos)) = camera
     -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
-    cmapM_ $ \(r :: ColorCube)     -> liftIO $ drawColorCube mats r
-    cmapM_ $ \(r :: PlayerCube)    -> liftIO $ drawColorCube mats r
+    cmapM_ $ \(r :: TerrainE)   -> liftIO $ drawTerrain mats r
+    -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
+    -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
     -- cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
     return ()
