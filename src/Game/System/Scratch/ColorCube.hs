@@ -140,14 +140,14 @@ initColorCube = do
     , Position3D  $ L.V3 0 0 (-3)
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
 
-  -- cube 2
-  newEntity (
-      RotatingCube { _axis = L.V3 1 0 0
-                   , _deg  = Degrees (-2) }
-    , model
-    , program
-    , Position3D  $ L.V3 3 1 (-3)
-    , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
+  -- -- cube 2
+  -- newEntity (
+  --     RotatingCube { _axis = L.V3 1 0 0
+  --                  , _deg  = Degrees (-2) }
+  --   , model
+  --   , program
+  --   , Position3D  $ L.V3 3 1 (-3)
+  --   , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   return ()
 
 -- rotate da cubes!!!

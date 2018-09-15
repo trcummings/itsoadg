@@ -107,6 +107,10 @@ initialize = do
   -- camera
   (c, p, o) :: (Camera, Position3D, Orientation) <- liftIO $ loadDataFile "test.json"
   newEntity (c, (o, p))
+  cmap $ \((c, m) :: CameraEntity) ->
+    runMoveCommand (Move'Compose
+      (Move'Translate $ Translation $ L.V3 0 2 0)
+      (Move'Rotate      Pitch (Degrees (-15))) ) m
   return ()
 
 cleanUp :: ECS ()
@@ -125,38 +129,6 @@ quitOnEsc inputs = do
   when (isPressed $ m ! SDL.KeycodeEscape) $ do
     sc <- get global :: ECS SceneControl
     set global $ sc { _nextScene = Scene'Quit }
-
--- sendCameraMoveEvents :: Inputs
---                      -> (Camera, Not HasMoveCommand)
---                      -> Either Camera (Camera, HasMoveCommand)
--- sendCameraMoveEvents inputs (c, _) =
---   let m            = _inputs . _keyboardInput $ inputs
---       leftPress    = isTouched $ m ! SDL.KeycodeA
---       rightPress   = isTouched $ m ! SDL.KeycodeD
---       forwardPress = isTouched $ m ! SDL.KeycodeW
---       backPress    = isTouched $ m ! SDL.KeycodeS
---       t            = realToFrac frameDeltaSeconds :: Float
---       toDolly v    = Camera'Dolly $ v L.^* t
---       toRotat r    = Camera'Rotation Yaw (Degrees $ r * t)
---       rt = if leftPress && rightPress
---            then Nothing
---            else if leftPress
---                 then Just $ toRotat 90
---                 else if rightPress
---                      then Just $ toRotat (-90)
---                      else Nothing
---       vx = if forwardPress && backPress
---            then Nothing
---            else if backPress
---                 then Just $ toDolly $ L.V3 0 0 1
---                 else if forwardPress
---                      then Just $ toDolly $ L.V3 0 0 (-1)
---                      else Nothing
---   in case (vx, rt) of
---       (Nothing , Nothing ) -> Left c
---       (Just vx', Just rt') -> Right (c, HasMoveCommand (Camera'Compose vx' rt'))
---       (Just vx', _       ) -> Right (c, HasMoveCommand vx')
---       (_       , Just rt') -> Right (c, HasMoveCommand rt')
 
 playerEvents :: Inputs
              -> (Player, Moveable, Not HasMoveCommand)
@@ -202,15 +174,14 @@ step = do
   quitOnEsc inputs
   -- send player events based on WASD presses
   cmap $ playerEvents inputs
-  -- orbit camera around player
-  cmapM $ \(Player, pMov@(pOr, Position3D pPos) :: Moveable, HasMoveCommand pmc) -> do
-    let pMov'@(Orientation pOr', Position3D pPos') = runMoveCommand pmc pMov
-    cmap $ \(cam :: Camera, (Orientation cOr, Position3D cPos) :: Moveable) ->
-      ( cam, (Orientation pOr', Position3D cPos) )
-    return (Player, pMov', Not :: Not HasMoveCommand)
   -- -- resolve movement based on movement events
-  -- cmap $ \(HasMoveCommand e, c :: Moveable) ->
-  --   (runMoveCommand e c, Not :: Not HasMoveCommand)
+  cmap $ \(HasMoveCommand e, c :: Moveable) ->
+    (runMoveCommand e c, Not :: Not HasMoveCommand)
+  -- orbit camera around player
+  -- cmapM_ $ \(Player, _ :: Not HasMoveCommand, Position3D pPos) -> do
+  --   cmap $ \(cam :: Camera, (Orientation cOr, Position3D cPos) :: Moveable) ->
+  --     ( cam, (Orientation pOr', Position3D cPos) )
+  --   return (Player, pMov', Not :: Not HasMoveCommand)
 
 render :: ECS ()
 render = do
