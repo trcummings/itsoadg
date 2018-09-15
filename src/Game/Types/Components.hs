@@ -69,8 +69,6 @@ newtype Orientation =
   Orientation (L.Quaternion Float)
   deriving Show
 
--- data Velocity3D = Velocity3D (V3 Unit)
-
 -- Option Menu Types
 data OptionMenuCommand =
     MoveUp
@@ -90,24 +88,29 @@ data Option = Option
 
 data OptionList = OptionList [Option]
 
-
--- Camera Types
+-- Movement types
 newtype Degrees = Degrees Float deriving Show
 
+newtype Translation =
+  Translation (L.V3 Float)
+  deriving Show
+
 data Rotation =
-    Pan
-  | Tilt
+    Yaw
+  | Pitch
   | Roll
   deriving Show
 
-data CameraAction =
-    Camera'Dolly (L.V3 Float)
-  | Camera'Rotation Rotation Degrees
-  | Camera'Compose CameraAction CameraAction
+data MoveCommand =
+    Move'Translate Translation
+  | Move'Rotate    Rotation Degrees
+  | Move'Compose   MoveCommand MoveCommand
   deriving Show
 
-newtype HasCameraEvent = HasCameraEvent CameraAction
+newtype HasMoveCommand = HasMoveCommand MoveCommand
 
+
+-- Camera Types
 data ClippingPlanes = ClippingPlanes
   { _near :: Float
   , _far  :: Float }
@@ -141,7 +144,10 @@ data Model = Model
 newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
 newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
 
+
 data Player = Player
+
+
 
 data TexResource = TexResource
   { _sProgram   :: ShaderProgram
@@ -203,37 +209,10 @@ data FontInfo = FontInfo
 --   , descent :: Unit }
 --   deriving Show
 --
--- newtype Friction =
---   Friction Double
---   deriving Show
---
--- data Font = Font [(Char, Texture)]
-
 -- data Jump = Jump
 --   { requested :: Bool
 --   , onGround  :: Bool }
 --   deriving (Eq, Show)
---
--- data FlowMeter = FlowMeter
---   { currentFlow :: Double
---   , baseFlow    :: Double
---   , flowLimit   :: Double
---   , counter     :: Double }
---   deriving Show
---
--- data HardFlow = HardFlow
---
--- -- For flow effect emitter state
--- data FlowEffectEmitState =
---     BurningFlow
---   | AbsorbingFlow
---   | NotEmittingFlowEffect
---   deriving Show
---
--- newtype FlowEffectEmitter =
---   FlowEffectEmitter FlowEffectEmitState
---   deriving Show
---
 -- type SFX'Key =
 --     Player'SFX'Key
 --

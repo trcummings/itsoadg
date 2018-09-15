@@ -26,10 +26,13 @@ import           Game.Types
   , ShaderInfo(..)
   , ShaderProgram(..)
   , Resource(..)
+  , Player(..)
   , ProjectionMatrix(..)
   , ViewMatrix(..) )
 
-type ColorCube = (RotatingCube, Model, ShaderProgram, Position3D, Orientation)
+type Cube a = (a, Model, ShaderProgram, Position3D, Orientation)
+type PlayerCube = Cube Player
+type ColorCube = Cube RotatingCube
 
 vs :: [L.V3 Float]
 vs = [
@@ -131,11 +134,10 @@ initColorCube = do
 
   -- cube 1
   newEntity (
-      RotatingCube { _axis = L.V3 0 0 (-1)
-                   , _deg  = Degrees 4 }
+      Player
     , model
     , program
-    , Position3D  $ L.V3 0 0 (-4)
+    , Position3D  $ L.V3 0 0 (-3)
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
 
   -- cube 2
@@ -144,7 +146,7 @@ initColorCube = do
                    , _deg  = Degrees (-2) }
     , model
     , program
-    , Position3D  $ L.V3 2 1 (-3)
+    , Position3D  $ L.V3 3 1 (-3)
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0) )
   return ()
 
@@ -155,7 +157,7 @@ stepColorCube (rc, Orientation o) =
   in  Orientation $ o * L.axisAngle (_axis rc) (U.deg2rad deg)
 
 
-drawColorCube :: (ProjectionMatrix, ViewMatrix) -> ColorCube -> IO ()
+drawColorCube :: (ProjectionMatrix, ViewMatrix) -> Cube a -> IO ()
 drawColorCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
               (_, model, shaderProgram, Position3D mPos, Orientation o) = do
   let modelMatrix   = L.mkTransformation o mPos
@@ -169,7 +171,6 @@ drawColorCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       -- attribs & uniforms
       colLoc = getAttrib  shaderProgram "vertexColor"
       posLoc = getAttrib  shaderProgram "vertexPosition_modelspace"
-      -- mvpLoc = U.getUniform shaderProgram "MVP"
   -- set current program to shaderProgram
   GL.currentProgram             $= Just program
   -- enable attribs

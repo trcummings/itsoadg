@@ -21,6 +21,7 @@ import Game.Types
 
   , Position3D
   , Orientation
+  , HasMoveCommand
 
   , Model
   , VAO
@@ -36,7 +37,6 @@ import Game.Types
   , Texture
 
   , Camera
-  , HasCameraEvent
 
   , HasOptionMenuEvent
   , ActiveOptionList
@@ -64,6 +64,10 @@ instance Component Position3D where
 
 instance Component Orientation where
   type Storage Orientation = Map Orientation
+
+instance Component HasMoveCommand where
+  type Storage HasMoveCommand = Map HasMoveCommand
+
 
 
 instance Component ShaderProgram where
@@ -106,8 +110,7 @@ instance Component DebugHUD where
 instance Component Camera where
   type Storage Camera = Unique Camera
 
-instance Component HasCameraEvent where
-  type Storage HasCameraEvent = Unique HasCameraEvent
+
 
 
 -- Option Menu Components
@@ -129,6 +132,7 @@ makeWorld "World" [
 
   , ''Position3D
   , ''Orientation
+  , ''HasMoveCommand
 
   , ''Model
   , ''ShaderProgram
@@ -143,7 +147,6 @@ makeWorld "World" [
   , ''BufferResource
 
   , ''Camera
-  , ''HasCameraEvent
 
   , ''OptionList
   , ''HasOptionMenuEvent

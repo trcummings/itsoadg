@@ -12,23 +12,29 @@ import           Control.Monad.IO.Class  (liftIO)
 import           Data.Map                (keys)
 import           Apecs                   (newEntity)
 
-import           Game.World.TH            (ECS)
-import           Game.Util.Constants      (objPath, texturePath, shaderPath)
-import           Game.Loaders.Obj.Loader  (loadObjFile)
-import           Game.Util.Program        (createProgram, getAttrib, getUniform)
-import           Game.Util.Texture        (getAndCreateTexture)
+import           Game.World.TH           (ECS)
+import           Game.Util.Constants     (objPath, texturePath, shaderPath)
+import           Game.Loaders.Obj.Loader (loadObjFile)
+import           Game.Util.Program       (createProgram, getAttrib, getUniform)
+import           Game.Util.Texture       (getAndCreateTexture)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
   , Position3D(..)
   , Orientation(..)
-  , ObjData(..)
   , ShaderProgram(..)
-  , BBResource(..)
+  , Texture(..)
+  , BufferResource(..)
   , ShaderInfo(..)
   , Player(..) )
 
-type PlayerB = (Player, ShaderProgram, BBResource, Orientation, Position3D)
+type PlayerB =
+  ( Player
+  , ShaderProgram
+  , Texture
+  , BufferResource
+  , Orientation
+  , Position3D )
 
 verts :: [L.V3 Float]
 verts = [
@@ -55,40 +61,35 @@ initPlayerBillboard = do
   newEntity (
       Player
     , program
-    , BBResource { _bbSProgram   = program
-                 , _bbTexObj     = texObj
-                 , _bbVertBuffer = vb }
+    , Texture texObj
+    , BufferResource { _positionBuffer = Just vb
+                     , _texCoordBuffer = Nothing
+                     , _rgbCoordBuffer = Nothing }
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-    , Position3D $ L.V3 (-1) 0 (-1) )
+    , Position3D  $ L.V3 0 0 (-1) )
   return ()
 
 drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> IO ()
 drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                    (_, shaderProgram, tr, Orientation o, Position3D mPos) = do
+                    (_, sProgram, Texture texObj, br, Orientation o, Position3D mPos) = do
   let modelMatrix   = L.mkTransformationMat L.identity mPos
       trans         = projMatrix !*! viewMatrix !*! modelMatrix
-      texture       = _bbTexObj     tr
-      vertices      = _bbVertBuffer tr
-      numVerts      = fromIntegral $ length verts
-      attribKeys    = keys $ _attribs  shaderProgram
-      uniformKeys   = keys $ _uniforms shaderProgram
-      program       = _glProgram shaderProgram
-      posLoc        = getAttrib  shaderProgram "squareVertices"
-      mtsLoc        = getUniform shaderProgram "myTextureSampler"
-      vpLoc         = getUniform shaderProgram "VP"
-      crwLoc        = getUniform shaderProgram "CameraRight_worldspace"
-      cuwLoc        = getUniform shaderProgram "CameraUp_worldspace"
-      bpLoc         = getUniform shaderProgram "BillboardPos"
-      bsLoc         = getUniform shaderProgram "BillboardSize"
+      posLoc        = getAttrib  sProgram "squareVertices"
+      mtsLoc        = getUniform sProgram "myTextureSampler"
+      vpLoc         = getUniform sProgram "VP"
+      crwLoc        = getUniform sProgram "CameraRight_worldspace"
+      cuwLoc        = getUniform sProgram "CameraUp_worldspace"
+      bpLoc         = getUniform sProgram "BillboardPos"
+      bsLoc         = getUniform sProgram "BillboardSize"
   -- set current program to shaderProgram
-  GL.currentProgram              $= Just program
+  GL.currentProgram              $= Just (_glProgram sProgram)
   -- enable all attributes
   GL.vertexAttribArray    posLoc $= GL.Enabled
   -- handle uniforms
   -- bind texture to TextureUnit 0
   -- set "myTextureSampler" sampler to use Texture Unit 1
   GL.activeTexture               $= GL.TextureUnit 1
-  GL.textureBinding GL.Texture2D $= texture
+  GL.textureBinding GL.Texture2D $= texObj
   GL.uniform mtsLoc              $= GL.Index1 (1 :: GL.GLint)
   -- align billboard to camera right & up axes
   let L.V4
@@ -99,27 +100,25 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   (L.V3 vm00 vm10 vm20) `U.asUniform` crwLoc
   (L.V3 vm01 vm11 vm21) `U.asUniform` cuwLoc
   -- set billboard pos to center of object position
-  mPos       `U.asUniform` bpLoc
+  mPos  `U.asUniform` bpLoc
   -- set size of billboard (in world units)
-  ((L.V2 2 2) :: L.V2 Float) `U.asUniform` bsLoc
+  ((L.V2 1 2) :: L.V2 Float) `U.asUniform` bsLoc
   -- set view-projection to camera vp
-  trans      `U.asUniform` vpLoc
+  trans `U.asUniform` vpLoc
   -- bind position VB
-  GL.bindBuffer GL.ArrayBuffer   $= Just vertices
+  GL.bindBuffer GL.ArrayBuffer   $= (_positionBuffer br)
   GL.vertexAttribPointer  posLoc $=
     ( GL.ToFloat
     , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
-
+  -- enable blending func (for transparency)
   GL.blend     $= GL.Enabled
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
-
   -- draw indexed triangles
-  GL.drawArrays GL.TriangleStrip 0 numVerts
-
+  GL.drawArrays GL.TriangleStrip 0 4
+  -- disable blending func
   GL.blend     $= GL.Disabled
-
   -- disable all attributes
-  GL.vertexAttribArray    posLoc $= GL.Disabled
+  GL.vertexAttribArray posLoc $= GL.Disabled
   -- unbind array buffer
   GL.bindBuffer GL.ArrayBuffer  $= Nothing
   -- unset current program

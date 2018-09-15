@@ -82,7 +82,7 @@ stepDebugHUD = do
               , _currentTime = cTime }) <- getGlobalTime
   let fpsDt = take 4 $ show (1 / ((cTime - pTime) / 1000 ))
   -- get camera position
-  cmapM_ $ \((_, cPos, _) :: CameraEntity) -> do
+  cmapM_ $ \((_, (_, cPos)) :: CameraEntity) -> do
     cmap $ \((DebugHUD dMap, _, _, _) :: DebugHUDEntity) ->
       DebugHUD $ (update (updatePosText cPos) PositionTracker)
                . (update (updateFpsText fpsDt) FPSCounter)
