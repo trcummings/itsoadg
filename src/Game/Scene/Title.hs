@@ -22,7 +22,7 @@ import           Control.Applicative
 import           System.FilePath ((</>))
 
 import           Game.Effect.Clock (getGlobalTime)
-import           Game.System.OptionMenu
+import           Game.System.Scratch.OptionMenu
   ( initOptionsMenu
   , cleanUpOptionsMenu
   , renderOptionMenu

@@ -3,17 +3,21 @@ module Game.Types.Components where
 -- import qualified SDL (Texture, Keycode)
 -- import qualified SDL.Mixer as Mixer (Chunk, Channel)
 -- import qualified Data.Map as Map (Map)
--- import qualified Animate
+import qualified Animate
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified Graphics.GLUtil as U
 import qualified Linear as L
+import           Data.Map
+
+import           Game.Types.Loaders.Obj (ObjData)
+import           Game.Types.Shader      (ShaderProgram)
 -- import           Foreign.C.Types (CInt, CDouble)
 -- import           GHC.Int (Int32(..))
 -- import           Linear (V2, V3)
 -- import           Apecs (Entity)
 -- import           KeyState
 
--- import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
+-- import           Game.Types.Util      (Seconds(..))
+-- import           Game.Types.Animation (AnimationKey(..))
 -- import           Game.Types.Physics (CollisionLayer, AABB, RaycastHit)
 -- import           Game.Types.TileMap (TileType)
 -- import           Game.Types.Audio (Audio'Command)
@@ -58,9 +62,13 @@ import qualified Linear as L
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
 --   deriving Show
 
-data Position3D = Position3D (L.V3 Float)
+newtype Position3D =
+  Position3D (L.V3 Float)
+  deriving Show
 
--- data Velocity3D = Velocity3D (V3 Unit)
+newtype Orientation =
+  Orientation (L.Quaternion Float)
+  deriving Show
 
 -- Option Menu Types
 data OptionMenuCommand =
@@ -74,59 +82,114 @@ newtype HasOptionMenuEvent =
 
 data ActiveOptionList = ActiveOptionList
 
-data Option =
-  Option { _oId      :: String
-         , _text     :: String
-         , _selected :: Bool   }
+data Option = Option
+  { _oId      :: String
+  , _text     :: String
+  , _selected :: Bool   }
 
 data OptionList = OptionList [Option]
 
-
--- Camera Types
+-- Movement types
 newtype Degrees = Degrees Float deriving Show
 
+newtype Translation =
+  Translation (L.V3 Float)
+  deriving Show
+
 data Rotation =
-    Pan
-  | Tilt
+    Yaw
+  | Pitch
   | Roll
   deriving Show
 
-data CameraAction =
-    Camera'Dolly (L.V3 Float)
-  | Camera'Rotation Rotation Degrees
-  | Camera'Compose CameraAction CameraAction
+data MoveCommand =
+    Move'Translate Translation
+  | Move'Rotate    Rotation Degrees
+  | Move'Compose   MoveCommand MoveCommand
   deriving Show
 
-newtype HasCameraEvent = HasCameraEvent CameraAction
+newtype HasMoveCommand = HasMoveCommand MoveCommand
 
-data ClippingPlanes = ClippingPlanes { _near :: Float
-                                     , _far  :: Float }
+
+-- Camera Types
+data ClippingPlanes = ClippingPlanes
+  { _near :: Float
+  , _far  :: Float }
 
 newtype FieldOfView = FieldOfView Float
 
-data CameraAxes = CameraAxes { _xAxis :: L.V3 Float
-                             , _yAxis :: L.V3 Float
-                             , _zAxis :: L.V3 Float }
+data CameraAxes = CameraAxes
+  { _xAxis :: L.V3 Float
+  , _yAxis :: L.V3 Float
+  , _zAxis :: L.V3 Float }
 
-newtype Orientation = Orientation (L.Quaternion Float)
-
-data Camera = Camera { _clippingPlanes :: ClippingPlanes
-                     , _fieldOfView    :: FieldOfView
-                     , _orientation    :: Orientation
-                     , _cameraAxes     :: CameraAxes }
+data Camera = Camera
+  { _clippingPlanes :: ClippingPlanes
+  , _fieldOfView    :: FieldOfView
+  , _cameraAxes     :: CameraAxes }
 
 -- OpenGL types
-data Resource = Resource { _shaderProgram :: U.ShaderProgram
-                         , _vertexBuffer  :: GL.BufferObject
-                         , _colorBuffer   :: GL.BufferObject
-                         , _elementBuffer :: GL.BufferObject }
+newtype VAO = VAO GL.VertexArrayObject
 
-data Model = Model { _resource  :: Resource
-                   , _vertices  :: [L.V3 Float]
-                   , _colors    :: [L.V3 Float]
-                   , _elements  :: [L.V3 GL.GLuint] }
+-- data Resource = Resource
+--   { _shaderProgram :: ShaderProgram
+--   , _vertexBuffer  :: GL.BufferObject
+--   , _colorBuffer   :: GL.BufferObject }
 
-newtype Player = Player (Maybe GL.TextureObject)
+-- data Model = Model
+--   { _resource  :: Resource
+--   , _vertices  :: [L.V3 Float]
+--   , _colors    :: [L.V3 Float] }
+--   -- , _elements  :: [L.V3 GL.GLuint] }
+
+newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
+newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
+
+
+data Player = Player
+
+data Terrain = Terrain
+
+
+-- data TexResource = TexResource
+--   { _sProgram   :: ShaderProgram
+--   , _texObj     :: Maybe GL.TextureObject
+--   , _vertBuffer :: GL.BufferObject
+--   , _uvBuffer   :: GL.BufferObject
+--   , _objData    :: ObjData }
+
+-- data BBResource = BBResource
+--   { _bbSProgram   :: ShaderProgram
+--   , _bbTexObj     :: Maybe GL.TextureObject
+--   , _bbVertBuffer :: GL.BufferObject }
+
+data RotatingCube = RotatingCube
+  { _axis :: (L.V3 Float)
+  , _deg  :: Degrees }
+  deriving Show
+
+data BufferResource = BufferResource
+  { _vertexBuffer   :: Maybe GL.BufferObject
+  , _texCoordBuffer :: Maybe GL.BufferObject
+  , _normalBuffer   :: Maybe GL.BufferObject
+  , _rgbCoordBuffer :: Maybe GL.BufferObject
+  , _indexBuffer    :: Maybe GL.BufferObject }
+
+newtype Texture = Texture (Maybe GL.TextureObject)
+
+newtype DebugHUD = DebugHUD (Map HUDType FontInfo)
+
+data HUDType =
+    FPSCounter
+  | PositionTracker
+  deriving (Eq, Ord)
+
+data FontInfo = FontInfo
+  { _fText :: String
+  , _fxPos :: Int
+  , _fyPos :: Int
+  , _fSize :: Int }
+
 
 -- data CameraTarget =
 --   CameraTarget Entity
@@ -135,52 +198,23 @@ newtype Player = Player (Maybe GL.TextureObject)
 -- data Texture =
 --   Texture SDL.Texture (V2 CInt)
 --
--- -- type AnimationKey =
--- --   PlayerKey
 --
 -- -- type Animations key =
 -- --   Animate.Animations key (Animate.SpriteClip key) Seconds
 --
 -- data SpriteSheet = SpriteSheet
---     (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
---     (Animate.Position AnimationKey Seconds)
+--   (Animate.SpriteSheet AnimationKey Texture Seconds)
+--   (Animate.Position AnimationKey Seconds)
 --
 -- data Gravity = Gravity
 --   { ascent  :: Unit
 --   , descent :: Unit }
 --   deriving Show
 --
--- newtype Friction =
---   Friction Double
---   deriving Show
---
--- data Font = Font [(Char, Texture)]
-
 -- data Jump = Jump
 --   { requested :: Bool
 --   , onGround  :: Bool }
 --   deriving (Eq, Show)
---
--- data FlowMeter = FlowMeter
---   { currentFlow :: Double
---   , baseFlow    :: Double
---   , flowLimit   :: Double
---   , counter     :: Double }
---   deriving Show
---
--- data HardFlow = HardFlow
---
--- -- For flow effect emitter state
--- data FlowEffectEmitState =
---     BurningFlow
---   | AbsorbingFlow
---   | NotEmittingFlowEffect
---   deriving Show
---
--- newtype FlowEffectEmitter =
---   FlowEffectEmitter FlowEffectEmitState
---   deriving Show
---
 -- type SFX'Key =
 --     Player'SFX'Key
 --

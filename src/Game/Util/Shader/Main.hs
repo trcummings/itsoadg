@@ -1,0 +1,161 @@
+module Game.Util.Shader.Main where
+
+-- import qualified Graphics.Rendering.OpenGL as GL
+-- import           SDL (($=))
+
+-- import           Game.Util.FBO            (FBO(..))
+-- import           Game.Util.Shader.In      (bindAttrib)
+-- import           Game.Util.Shader.Uniform (bindUniform)
+-- import           Game.Types
+--   ( VideoConfig
+--   , ShaderProgram(..)
+--   , AttribGPU(..)
+--   , UniformGPU(..) )
+
+-- -- mainLoop :: GLFW.Window -> ShaderUniverse t -> IO ()
+-- -- mainLoop win univ = do
+-- --   -- if no post shaders
+-- --   if   not . hasPostShaders $ univ
+-- --   -- step loop
+-- --   then loop univ
+-- --   else do
+-- --     size <- getViewportSize win
+-- --     fbo <- makeFramebuffer size
+-- --     loopPP fbo univ
+-- --   -- otherwise clean up
+-- --   mapM_ cleanupGalaxy $ allGalaxies univ
+-- --   GLFW.destroyWindow win
+-- --   GLFW.terminate
+-- --   where
+-- --     loop universe = do
+-- --       universe'   <- stepUniverse win universe
+-- --       shouldClose <- GLFW.windowShouldClose win
+-- --       unless shouldClose $
+-- --           loop universe'
+-- --
+-- --     loopPP fbo universe = do
+-- --       universe'   <- stepUniversePP win fbo universe
+-- --       shouldClose <- GLFW.windowShouldClose win
+-- --       unless shouldClose $
+-- --           loopPP fbo universe'
+-- --
+-- stepUniversePP :: VideoConfig
+--                -> FBO
+--                -> ShaderUniverse t
+--                -> IO (ShaderUniverse t)
+-- stepUniversePP vc fbo shaderUniverse = do
+--   let frameBuffer = _frameBuffer fbo
+--       viewSize    = _size        fbo
+--       galaxies    = _galaxies    shaderUniverse
+--       postShaders = _postShaders shaderUniverse
+--   -- bind our frame buffer to the current frame buffer
+--   GL.bindFramebuffer GL.Framebuffer $= frameBuffer
+--   -- prep viewport for next render
+--   GL.viewport $= (GL.Position 0 0, viewSize)
+--   GL.clear [GL.ColorBuffer, GL.DepthBuffer]
+--   -- draw all shader galaxies, producing new galaxies
+--   galaxies' <- mapM drawGalaxy galaxies
+--   -- change to default framebuffer instead and prep to draw post shaders
+--   GL.bindFramebuffer GL.Framebuffer $= GL.defaultFramebufferObject
+--   GL.clear [GL.ColorBuffer, GL.DepthBuffer]
+--   -- pass in the fbo, the post shaders, and then the FBO as a "global"
+--   -- FBO, which gets vars bound to it along the way
+--   drawPostShaders fbo postShaders fbo
+--   -- swap buffers
+--   -- endFrame win
+--   -- return shader universe with updated galaxies
+--   return $ shaderUniverse { _galaxies = galaxies' }
+--
+-- stepUniverse :: VideoConfig
+--              -> ShaderUniverse t
+--              -> IO (ShaderUniverse t)
+-- stepUniverse vc shaderUniverse = do
+--   -- prep viewport for next render
+--   GL.clear [GL.ColorBuffer, GL.DepthBuffer]
+--   -- draw all shader galaxies, producing new galaxies
+--   galaxies' <- mapM drawGalaxy $ _galaxies shaderUniverse
+--   -- swap buffers
+--   -- endFrame win
+--   -- return shader universe with updated galaxies
+--   return $ shaderUniverse { _galaxies = galaxies' }
+--
+-- cleanUpUniverse :: ShaderUniverse t -> IO ()
+-- cleanUpUniverse universe = mapM_ cleanUpGalaxy $ _galaxies universe
+--
+--
+-- drawGalaxy :: ShaderGalaxy t -> IO (ShaderGalaxy t)
+-- drawGalaxy shaderGalaxy = do
+--   let program = _shaderProgram shaderGalaxy
+--       onDraw  = _onDrawProgram shaderGalaxy
+--       global  = _global        shaderGalaxy
+--   -- draw shader galaxy
+--   drawProgram program global
+--   -- run shader galaxy hook on global
+--   global' <- onDraw global
+--   return $ shaderGalaxy { _global = global' }
+--
+-- cleanUpGalaxy :: ShaderGalaxy t -> IO ()
+-- cleanUpGalaxy galaxy = cleanUpProgram $ _shaderProgram galaxy
+
+
+-- drawProgram :: ShaderProgram t -> t -> IO ()
+-- drawProgram shaderProgram global = do
+--   let program  = _glProgram shaderProgram
+--       attribs  = _attribs   shaderProgram
+--       uniforms = _uniforms  shaderProgram
+--   -- set current program to shader program
+--   GL.currentProgram $= Just program
+--   -- bind all vars
+--   -- mapM_ (bindAttrib  global) attribs
+--   -- mapM_ (bindUniform global) uniforms
+--   -- draw array buffer
+--   -- our "head" attrib value is going to have the same length as all
+--   -- the others, so we only need to access it
+--   let len = _length $ head $ attribs
+--   GL.drawArrays GL.Triangles 0 len
+--   -- unbind array buffer
+--   GL.bindBuffer GL.ArrayBuffer $= Nothing
+--   -- unset current program
+--   GL.currentProgram $= Nothing
+--
+-- cleanUpProgram :: ShaderProgram t -> IO ()
+-- cleanUpProgram shaderProgram = do
+--   let program = _glProgram shaderProgram
+--       attribs = _attribs   shaderProgram
+--   -- delete the program
+--   GL.deleteObjectName program
+--   -- delete all the attribs
+--   mapM_ (GL.deleteObjectName . _buffer) attribs
+--
+--
+-- drawPostShaders :: FBO -> [ShaderProgram t] -> t -> IO ()
+-- drawPostShaders fbo (shader:y:xs) global = do
+--   drawPostShader  fbo shader global
+--   drawPostShaders fbo (y:xs) global
+-- -- when there's only one program left in the queue
+-- drawPostShaders fbo [shader] global = do
+--   GL.bindFramebuffer GL.Framebuffer $= GL.defaultFramebufferObject
+--   drawPostShader fbo shader global
+-- drawPostShaders _ _ _ = return ()
+--
+-- drawPostShader :: FBO -> ShaderProgram t -> t -> IO ()
+-- drawPostShader fbo shaderProgram global = do
+--   let program  = _glProgram shaderProgram
+--       attribs  = _attribs   shaderProgram
+--       uniforms = _uniforms  shaderProgram
+--       texObj   = _fbTexture fbo
+--   -- set current program to shader program
+--   GL.currentProgram $= Just program
+--   -- activate FBO
+--   GL.activeTexture $= GL.TextureUnit 0
+--   GL.textureBinding GL.Texture2D $= Just texObj
+--   -- bind all vars
+--   mapM_ (bindAttrib  global) attribs
+--   mapM_ (bindUniform global) uniforms
+--   -- draw array buffer
+--   let len = _length $ head $ attribs
+--   GL.drawArrays GL.Triangles 0 len
+--   -- unbind array buffer
+--   GL.bindBuffer GL.ArrayBuffer $= Nothing
+--   -- turn off shader
+--   GL.currentProgram $= Nothing

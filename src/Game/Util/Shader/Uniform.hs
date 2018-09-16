@@ -1,0 +1,95 @@
+-- module Game.Util.Shader.Uniform (createUniformList, bindUniform) where
+module Game.Util.Shader.Uniform where
+
+-- import qualified Graphics.Rendering.OpenGL as GL
+-- import qualified Data.ByteString           as B
+-- import qualified Data.ByteString.Char8     as C
+-- import qualified Linear                    as L
+-- import           Graphics.GL.Core33    (glUniformMatrix4fv)
+-- import           SDL                   (($=))
+-- import           Foreign.Marshal.Array (withArray)
+-- import           Foreign.Ptr           (Ptr)
+--
+-- -- import           Game.Types
+-- --   ( UniformGPU(..)
+-- --   , Uniform(..)
+-- --   , Sampler2D(..) )
+-- import           Game.Types (UniformGPU(..))
+--
+-- -- we dont need to set any pointers or buffers for uniforms, so
+-- -- we just call its hook to set the uniform
+-- bindUniform :: t -> UniformGPU t -> IO ()
+-- bindUniform global uGPU = _onBindUniform uGPU $ global
+--
+-- createUniformList :: GL.Program -> [Uniform t] -> IO [UniformGPU t]
+-- createUniformList prog = mapM (getUniformInfo prog)
+--
+--
+-- -- helpers
+-- getUniformInfo :: GL.Program -> Uniform t -> IO (UniformGPU t)
+-- getUniformInfo prog u = do
+--     let name = _uniName u
+--
+--     location <- GL.get $ GL.uniformLocation prog (C.unpack name)
+--     let updateFunc = uniBind u location
+--
+--     return $ UniformGPU location updateFunc
+--
+-- uniBind :: Uniform t -> GL.UniformLocation -> t -> IO ()
+-- -- for floats
+-- uniBind (UniformFloat valueFunc _) location global =
+--   GL.uniform location $= GL.Index1 (valueFunc global)
+-- -- for ints
+-- uniBind (UniformInt valueFunc _) location global =
+--   GL.uniform location $=
+--     GL.Index1 (fromIntegral $ valueFunc global :: GL.GLint)
+-- -- for vec2s
+-- uniBind (UniformVec2 valueFunc _) location global =
+--   let L.V2 x y = valueFunc global
+--   in GL.uniform location $= GL.Vertex2 x y
+-- -- for vec3s
+-- uniBind (UniformVec3 valueFunc _) location global =
+--   let L.V3 x y z = valueFunc global
+--   in GL.uniform location $= GL.Vertex3 x y z
+-- -- for vec4s
+-- uniBind (UniformVec4 valueFunc _) location global =
+--   let L.V4 x y z w = valueFunc global
+--   in GL.uniform location $= GL.Vertex4 x y z w
+-- -- for mat4s
+-- uniBind (UniformMat4 valueFunc _)
+--         (GL.UniformLocation location) global =
+--   withHMatrix (m44ToLists . valueFunc $ global) $ \ptr ->
+--     glUniformMatrix4fv location 1 1 ptr
+-- -- for sampler2Ds
+-- uniBind (UniformSampler2D valueFunc _) location global = do
+--   let Sampler2DInfo textureObject textureUnit = valueFunc global
+--       GL.TextureUnit textureId = textureUnit
+--   GL.activeTexture $= textureUnit
+--   GL.textureBinding GL.Texture2D $= Just textureObject
+--   GL.uniform location $= GL.Index1 (fromIntegral textureId :: GL.GLint)
+--
+-- m44ToLists :: L.M44 GL.GLfloat -> [[GL.GLfloat]]
+-- m44ToLists (L.V4 (L.V4 a1 a2 a3 a4)
+--                  (L.V4 b1 b2 b3 b4)
+--                  (L.V4 c1 c2 c3 c4)
+--                  (L.V4 d1 d2 d3 d4)) =
+--   [ [a1, a2, a3, a4]
+--   , [b1, b2, b3, b4]
+--   , [c1, c2, c3, c4]
+--   , [d1, d2, d3, d4] ]
+--
+-- -- allocate an OpenGL matrix from a nested list matrix, and pass a
+-- -- pointer to that matrix to an 'IO' action.
+-- withHMatrix :: [[GL.GLfloat]] -> (Ptr GL.GLfloat -> IO a) -> IO a
+-- withHMatrix lstMat m = do
+--     mat <- GL.newMatrix GL.RowMajor (concat lstMat) :: IO (GL.GLmatrix GL.GLfloat)
+--     GL.withMatrix mat (\_ -> m)
+--
+-- _uniName :: Uniform t -> B.ByteString
+-- _uniName (UniformFloat     _ name) = name
+-- _uniName (UniformInt       _ name) = name
+-- _uniName (UniformVec2      _ name) = name
+-- _uniName (UniformVec3      _ name) = name
+-- _uniName (UniformVec4      _ name) = name
+-- _uniName (UniformMat4      _ name) = name
+-- _uniName (UniformSampler2D _ name) = name

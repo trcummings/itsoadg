@@ -1,22 +1,24 @@
 module Game.Util.TGA where
 
-import Data.Word (Word8)
-import Control.Exception (bracket)
-import System.IO (Handle, IOMode(ReadMode), openBinaryFile, hGetBuf, hClose)
-import Foreign.Marshal.Array (peekArray, pokeArray)
-import Foreign.Marshal.Alloc (free, mallocBytes)
-import Foreign.Ptr (plusPtr, Ptr())
-import Graphics.Rendering.OpenGL
-  ( Size(..)
-  , PixelData(..)
-  , DataType(UnsignedByte)
-  , PixelFormat (RGBA, RGB) )
+import qualified Graphics.Rendering.OpenGL as GL
+import           Data.Word (Word8)
+import           Control.Exception (bracket)
+import           Foreign.Marshal.Array (peekArray, pokeArray)
+import           Foreign.Marshal.Alloc (free, mallocBytes)
+import           Foreign.Ptr (plusPtr, Ptr)
+import           System.IO
+  ( Handle
+  , IOMode(ReadMode)
+  , openBinaryFile
+  , hGetBuf
+  , hClose )
 
+import           Game.Util.File (withBinaryFile)
 
 -- reads a *.tga file
-readTga :: FilePath -> IO (Maybe (Size, PixelData Word8))
+readTga :: FilePath -> IO (Maybe (GL.TextureSize2D, GL.PixelData Word8))
 readTga filePath =
-   withBinaryFile' filePath $ \handle -> do
+   withBinaryFile filePath $ \handle -> do
    buf <- mallocBytes 6 :: IO (Ptr Word8)
    --the first 12 bytes of the header aren't used
    hGetBuf handle buf 6
@@ -38,11 +40,8 @@ readTga filePath =
    --convert the pixels which are in BGR/BGRA to RGB/RGBA
    swapBytes' image (bitspp `div` 8) (width * height)
    putStrLn ("loaded " ++ filePath)
-   return $ Just ( Size (fromIntegral width) (fromIntegral height)
-                 , PixelData pixelFormat UnsignedByte image )
-
-withBinaryFile' :: FilePath -> (Handle -> IO a) -> IO a
-withBinaryFile' filePath = bracket (openBinaryFile filePath ReadMode) hClose
+   return $ Just ( GL.TextureSize2D (fromIntegral width) (fromIntegral height)
+                 , GL.PixelData pixelFormat GL.UnsignedByte image )
 
 -- converts the image from bgr/bgra to rgb/rgba
 -- perhaps the opengl bgra extension could be
@@ -66,6 +65,6 @@ swapByteRGBA ptr = do
    pokeArray ptr [r,g,b,a]
 
 -- returns the pixel format given the bits per pixel
-getFormat :: Int ->  IO PixelFormat
-getFormat bpp = case bpp of 32 -> return RGBA
-                            _  -> return RGB -- 24
+getFormat :: Int ->  IO GL.PixelFormat
+getFormat bpp = case bpp of 32 -> return GL.RGBA
+                            _  -> return GL.RGB -- 24

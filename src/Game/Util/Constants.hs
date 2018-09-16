@@ -26,15 +26,22 @@ initialSize :: V2 CInt
 initialSize = V2 (toPixels screenWidth) (toPixels screenHeight)
 
 -- Loader constants
+assetPath :: FilePath
+assetPath = "assets"
+
+dataPath :: FilePath
+dataPath = "data"
 
 shaderPath :: FilePath
-shaderPath = "assets" </> "glsl"
+shaderPath = assetPath </> "glsl"
 
 texturePath :: FilePath
-texturePath = "assets" </> "sprites"
+texturePath = assetPath </> "sprites"
+
+objPath :: FilePath
+objPath = assetPath </> "obj"
 
 -- Physics constants
-
 maxSpeed :: Unit
 maxSpeed = 17
 

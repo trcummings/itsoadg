@@ -21,8 +21,9 @@ data Scene =
   | Scene'Quit
   deriving Eq
 
-data SceneControl = SceneControl { _scene     :: Scene
-                                 , _nextScene :: Scene }
+data SceneControl = SceneControl
+  { _scene     :: Scene
+  , _nextScene :: Scene }
 
 instance Monoid SceneControl where
   mempty = SceneControl { _scene     = Scene'Init
@@ -31,17 +32,24 @@ instance Monoid SceneControl where
 
 -- Clock
 -- accumulator for fixed time step
-data PhysicsTime =
-  PhysicsTime { _time :: Double, _accum :: Double }
+data PhysicsTime = PhysicsTime
+  { _time  :: Double
+  , _accum :: Double }
   deriving Show
 -- global timer
-newtype GlobalTime = GlobalTime Double deriving Show
+data GlobalTime = GlobalTime
+  { _pastTime    :: Double
+  , _currentTime :: Double }
+  deriving Show
+
+data Clock = Clock
+  { _globalTime  :: GlobalTime
+  , _physicsTime :: PhysicsTime }
 
 instance Monoid Clock where
-  mempty = Clock { _globalTime  = GlobalTime 0
+  mempty = Clock { _globalTime  = GlobalTime 0 0
                  , _physicsTime = PhysicsTime { _time = 0, _accum = 0 } }
-data Clock = Clock { _globalTime  :: GlobalTime
-                   , _physicsTime :: PhysicsTime }
+
 
 -- Input
 type PlayerInputMap = (Map SDL.Keycode (KeyState Double))
@@ -57,8 +65,9 @@ instance Monoid Inputs where
                                                  , _justModified = empty }
                   , _mousePosition = MousePosition $ V2 0 0 }
 
-data Inputs = Inputs { _keyboardInput :: PlayerInput
-                     , _mousePosition :: MousePosition }
+data Inputs = Inputs
+  { _keyboardInput :: PlayerInput
+  , _mousePosition :: MousePosition }
 
 allKeys :: [SDL.Keycode]
 allKeys = [ SDL.KeycodeA

@@ -20,13 +20,21 @@ import Game.Types
   , Clock
 
   , Position3D
+  , Orientation
+  , HasMoveCommand
 
-  , Model
-
+  , VAO
   , Player
+  , BSPMap
+  , DebugHUD
+  , Terrain
+
+  , ShaderProgram
+  , BufferResource
+  , RotatingCube
+  , Texture
 
   , Camera
-  , HasCameraEvent
 
   , HasOptionMenuEvent
   , ActiveOptionList
@@ -52,20 +60,49 @@ instance Component Clock where
 instance Component Position3D where
   type Storage Position3D = Map Position3D
 
+instance Component Orientation where
+  type Storage Orientation = Map Orientation
 
-instance Component Model where
-  type Storage Model = Map Model
+instance Component HasMoveCommand where
+  type Storage HasMoveCommand = Map HasMoveCommand
+
+
+
+instance Component ShaderProgram where
+  type Storage ShaderProgram = Map ShaderProgram
+
+instance Component BufferResource where
+  type Storage BufferResource = Map BufferResource
+
+instance Component Texture where
+  type Storage Texture = Map Texture
+
+
+instance Component RotatingCube where
+  type Storage RotatingCube = Map RotatingCube
+
+instance Component VAO where
+  type Storage VAO = Unique VAO
+
 
 instance Component Player where
   type Storage Player = Unique Player
+
+instance Component BSPMap where
+  type Storage BSPMap = Unique BSPMap
+
+instance Component DebugHUD where
+  type Storage DebugHUD = Unique DebugHUD
+
+instance Component Terrain where
+  type Storage Terrain = Unique Terrain
 
 
 -- Camera Components
 instance Component Camera where
   type Storage Camera = Unique Camera
 
-instance Component HasCameraEvent where
-  type Storage HasCameraEvent = Unique HasCameraEvent
+
 
 
 -- Option Menu Components
@@ -86,13 +123,20 @@ makeWorld "World" [
   , ''Clock
 
   , ''Position3D
+  , ''Orientation
+  , ''HasMoveCommand
 
-  , ''Model
-
+  , ''ShaderProgram
+  , ''Texture
+  , ''RotatingCube
+  , ''VAO
+  , ''BSPMap
   , ''Player
+  , ''Terrain
+  , ''DebugHUD
+  , ''BufferResource
 
   , ''Camera
-  , ''HasCameraEvent
 
   , ''OptionList
   , ''HasOptionMenuEvent
