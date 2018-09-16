@@ -18,7 +18,7 @@ void main(void){
 	vec4 modelMatrix = transformationMatrix * vec4(position, 1);
 
 	gl_Position    = projectionMatrix * viewMatrix * modelMatrix;
-	pass_texCoords = texCoords * 40;
+	pass_texCoords = texCoords;
 
 	surfaceNormal  = (transformationMatrix * vec4(normal, 0)).xyz;
 	toLightVector  = lightPosition - modelMatrix.xyz;

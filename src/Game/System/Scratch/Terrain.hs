@@ -10,13 +10,14 @@ import           Control.Monad           (mapM_)
 import           System.FilePath         ((</>))
 import           Control.Monad.IO.Class  (liftIO)
 import           Apecs                   (newEntity)
+import           Foreign.Ptr             (nullPtr)
 
 import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (shaderPath, texturePath)
 import           Game.Util.Texture       (getAndCreateTexture)
 import           Game.Util.GLError       (printGLErrors)
 import           Game.Util.Program       (createProgram, getAttrib, getUniform)
-import           Game.Util.Terrain       (generateTerrain, TerrainInfo(..), vertexCount)
+import           Game.Util.Terrain       (generateTerrain, TerrainInfo(..), size, intVertexCount)
 import           Game.Util.Move          (Moveable)
 import           Game.Types
   ( ProjectionMatrix(..)
@@ -40,6 +41,7 @@ initTerrain = do
       tr             = generateTerrain
 
   -- liftIO $ putStrLn $ show $ ((3 * length (_trVertices tr)) + (3 * length (_trNormals tr)) + (2 * length (_trTexCoords tr)))
+  -- liftIO $ putStrLn $ show $ ((_trIndices tr))
 
   terrainTexture <- liftIO $ getAndCreateTexture texFilePath
   -- load in shaders
@@ -51,6 +53,11 @@ initTerrain = do
   texCoords <- liftIO $ U.fromSource GL.ArrayBuffer $ _trTexCoords tr
   normals   <- liftIO $ U.fromSource GL.ArrayBuffer $ _trNormals tr
   indices   <- liftIO $ U.fromSource GL.ElementArrayBuffer $ _trIndices tr
+
+  -- bind element buffer
+  liftIO $ GL.bindBuffer GL.ElementArrayBuffer $= Just indices
+  liftIO $ printGLErrors "renderTerrain bind element buffer"
+
   -- define the entity
   newEntity (
       Terrain
@@ -62,7 +69,7 @@ initTerrain = do
                      , _rgbCoordBuffer = Nothing
                      , _indexBuffer    = Just indices }
     , ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-      , Position3D  $ L.V3 0 0 (-20) ) )
+      , Position3D  $ L.V3 0 0 (-size / 2) ) )
   return ()
 
 sun :: L.V3 Float
@@ -80,7 +87,7 @@ reflectivity = 0
 drawTerrain :: (ProjectionMatrix, ViewMatrix) -> TerrainE -> IO ()
 drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
             (_, Texture texObj, sProgram, br, (Orientation o, Position3D mPos)) = do
-  let transMatrix      = L.mkTransformation o mPos
+  let transMatrix      = L.mkTransformationMat L.identity mPos
       -- vertex shader attrib locations
       positionLocation = getAttrib sProgram "position"
       texCoordLocation = getAttrib sProgram "texCoords"
@@ -100,10 +107,6 @@ drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.currentProgram $= Just (_glProgram sProgram)
   printGLErrors "renderTerrain set program"
 
-  -- bind element buffer
-  -- GL.bindBuffer GL.ElementArrayBuffer $= (_indexBuffer br)
-  -- printGLErrors "renderTerrain bind element buffer"
-
   -- enable all attributes
   GL.vertexAttribArray positionLocation $= GL.Enabled
   GL.vertexAttribArray texCoordLocation $= GL.Enabled
@@ -118,6 +121,7 @@ drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   sunColor     `U.asUniform` lightColorLocation
   shineDamper  `U.asUniform` shineDamperLocation
   reflectivity `U.asUniform` reflectivityLocation
+
   -- sampler2D uniform
   GL.activeTexture               $= GL.TextureUnit 4
   GL.textureBinding GL.Texture2D $= texObj
@@ -142,11 +146,13 @@ drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
     , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
   printGLErrors "renderTerrain set attrib pointers"
 
-  -- draw indexed triangles
-  -- U.drawIndexedTris 32768
-  -- GL.drawArrays GL.Triangles 0 16384
-  -- GL.drawArrays GL.Triangles 0 49152
-  GL.drawArrays GL.Triangles 0 131072
+  -- bind element buffer
+  GL.bindBuffer GL.ElementArrayBuffer $= (_indexBuffer br)
+  printGLErrors "renderTerrain bind element buffer"
+
+  -- draw triangles
+  -- GL.drawArrays GL.Triangles 0 131072
+  GL.drawElements GL.Triangles (fromIntegral $ 3 * 6 * (intVertexCount * intVertexCount)) GL.UnsignedInt nullPtr
   printGLErrors "renderTerrain draw triangles"
 
   -- disable all attributes
@@ -159,9 +165,9 @@ drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.bindBuffer GL.ArrayBuffer $= Nothing
   printGLErrors "renderTerrain unbind array buffer"
 
-  -- -- unbind element buffer
-  -- GL.bindBuffer GL.ElementArrayBuffer $= Nothing
-  -- printGLErrors "renderTerrain unbind element buffer"
+  -- unbind element buffer
+  GL.bindBuffer GL.ElementArrayBuffer $= Nothing
+  printGLErrors "renderTerrain unbind element buffer"
 
   -- unset current program
   GL.currentProgram $= Nothing
