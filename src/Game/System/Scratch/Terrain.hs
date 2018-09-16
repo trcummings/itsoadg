@@ -12,7 +12,9 @@ import           Control.Monad.IO.Class  (liftIO)
 import           Apecs                   (newEntity)
 
 import           Game.World.TH           (ECS)
-import           Game.Util.Constants     (shaderPath)
+import           Game.Util.Constants     (shaderPath, texturePath)
+import           Game.Util.Texture       (getAndCreateTexture)
+import           Game.Util.GLError       (printGLErrors)
 import           Game.Util.Program       (createProgram, getAttrib, getUniform)
 import           Game.Util.Terrain       (generateTerrain, TerrainInfo(..), vertexCount)
 import           Game.Util.Move          (Moveable)
@@ -22,21 +24,24 @@ import           Game.Types
   , Position3D(..)
   , Orientation(..)
   , ShaderProgram(..)
-  -- , Texture(..)
+  , Texture(..)
   , BufferResource(..)
   , ShaderInfo(..)
   , Terrain(..)
   , Player(..) )
 
-type TerrainE = (Terrain, ShaderProgram, BufferResource, Moveable)
+type TerrainE = (Terrain, Texture, ShaderProgram, BufferResource, Moveable)
 
 initTerrain :: ECS ()
 initTerrain = do
   let vertexShader   = shaderPath  </> "terrain.v.glsl"
       fragmentShader = shaderPath  </> "terrain.f.glsl"
+      texFilePath    = texturePath </> "terrain.tga"
       tr             = generateTerrain
 
-  liftIO $ putStrLn $ show $ length $ _trVertices tr
+  -- liftIO $ putStrLn $ show $ ((3 * length (_trVertices tr)) + (3 * length (_trNormals tr)) + (2 * length (_trTexCoords tr)))
+
+  terrainTexture <- liftIO $ getAndCreateTexture texFilePath
   -- load in shaders
   program <- liftIO $
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
@@ -49,6 +54,7 @@ initTerrain = do
   -- define the entity
   newEntity (
       Terrain
+    , Texture terrainTexture
     , program
     , BufferResource { _vertexBuffer   = Just vertices
                      , _texCoordBuffer = Just texCoords
@@ -56,36 +62,107 @@ initTerrain = do
                      , _rgbCoordBuffer = Nothing
                      , _indexBuffer    = Just indices }
     , ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-      , Position3D  $ L.V3 0 0 (-10) ) )
+      , Position3D  $ L.V3 0 0 (-20) ) )
   return ()
+
+sun :: L.V3 Float
+sun = L.V3 20000 20000 2000
+
+sunColor :: L.V3 Float
+sunColor = L.V3 1 1 1
+
+shineDamper :: Float
+shineDamper = 1
+
+reflectivity :: Float
+reflectivity = 0
 
 drawTerrain :: (ProjectionMatrix, ViewMatrix) -> TerrainE -> IO ()
 drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-            (_, sProgram, br, (Orientation o, Position3D mPos)) = do
-  let transMatrix = L.mkTransformation o mPos
-      posLoc      = getAttrib sProgram "position"
+            (_, Texture texObj, sProgram, br, (Orientation o, Position3D mPos)) = do
+  let transMatrix      = L.mkTransformation o mPos
+      -- vertex shader attrib locations
+      positionLocation = getAttrib sProgram "position"
+      texCoordLocation = getAttrib sProgram "texCoords"
+      normalLocation   = getAttrib sProgram "normal"
+      -- vertex shader uniform locations
+      transMatLocation = getUniform sProgram "transformationMatrix"
+      projMatLocation  = getUniform sProgram "projectionMatrix"
+      viewMatLocation  = getUniform sProgram "viewMatrix"
+      lightPosLocation = getUniform sProgram "lightPosition"
+      -- fragment shader uniform locations
+      texSamplerLocation   = getUniform sProgram "terrainTexture"
+      lightColorLocation   = getUniform sProgram "lightColor"
+      shineDamperLocation  = getUniform sProgram "shineDamper"
+      reflectivityLocation = getUniform sProgram "reflectivity"
+
   -- set current program to shaderProgram
   GL.currentProgram $= Just (_glProgram sProgram)
-  -- enable all attributes
-  GL.vertexAttribArray posLoc $= GL.Enabled
-  -- handle uniforms
-  transMatrix `U.asUniform` (getUniform sProgram "transformationMatrix")
-  projMatrix  `U.asUniform` (getUniform sProgram "projectionMatrix")
-  viewMatrix  `U.asUniform` (getUniform sProgram "viewMatrix")
-  -- send attribs to shaders
-  GL.bindBuffer GL.ArrayBuffer  $= (_vertexBuffer br)
-  GL.vertexAttribPointer posLoc $=
-    ( GL.ToFloat
-    , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
+  printGLErrors "renderTerrain set program"
+
   -- bind element buffer
   -- GL.bindBuffer GL.ElementArrayBuffer $= (_indexBuffer br)
+  -- printGLErrors "renderTerrain bind element buffer"
+
+  -- enable all attributes
+  GL.vertexAttribArray positionLocation $= GL.Enabled
+  GL.vertexAttribArray texCoordLocation $= GL.Enabled
+  GL.vertexAttribArray normalLocation   $= GL.Enabled
+  printGLErrors "renderTerrain enable attribs"
+
+  -- handle uniforms
+  transMatrix  `U.asUniform` transMatLocation
+  projMatrix   `U.asUniform` projMatLocation
+  viewMatrix   `U.asUniform` viewMatLocation
+  sun          `U.asUniform` lightPosLocation
+  sunColor     `U.asUniform` lightColorLocation
+  shineDamper  `U.asUniform` shineDamperLocation
+  reflectivity `U.asUniform` reflectivityLocation
+  -- sampler2D uniform
+  GL.activeTexture               $= GL.TextureUnit 4
+  GL.textureBinding GL.Texture2D $= texObj
+  GL.uniform texSamplerLocation  $= GL.Index1 (4 :: GL.GLint)
+  printGLErrors "renderTerrain handle uniforms"
+
+  -- send attribs to shaders
+  -- send position vertices to shader
+  GL.bindBuffer GL.ArrayBuffer  $= (_vertexBuffer br)
+  GL.vertexAttribPointer positionLocation $=
+    ( GL.ToFloat
+    , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
+  -- send texture coordinate vertices to shader
+  GL.bindBuffer GL.ArrayBuffer  $= (_texCoordBuffer br)
+  GL.vertexAttribPointer texCoordLocation $=
+    ( GL.ToFloat
+    , GL.VertexArrayDescriptor 2 GL.Float 0 U.offset0 )
+  -- send normal vertices to shader
+  GL.bindBuffer GL.ArrayBuffer  $= (_normalBuffer br)
+  GL.vertexAttribPointer normalLocation $=
+    ( GL.ToFloat
+    , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
+  printGLErrors "renderTerrain set attrib pointers"
+
   -- draw indexed triangles
-  GL.drawArrays GL.Triangles 0 16384
+  -- U.drawIndexedTris 32768
+  -- GL.drawArrays GL.Triangles 0 16384
+  -- GL.drawArrays GL.Triangles 0 49152
+  GL.drawArrays GL.Triangles 0 131072
+  printGLErrors "renderTerrain draw triangles"
+
   -- disable all attributes
-  GL.vertexAttribArray posLoc $= GL.Enabled
+  GL.vertexAttribArray positionLocation $= GL.Disabled
+  GL.vertexAttribArray texCoordLocation $= GL.Disabled
+  GL.vertexAttribArray normalLocation   $= GL.Disabled
+  printGLErrors "renderTerrain disable attribs"
+
   -- unbind array buffer
   GL.bindBuffer GL.ArrayBuffer $= Nothing
-  -- unbind element buffer
+  printGLErrors "renderTerrain unbind array buffer"
+
+  -- -- unbind element buffer
   -- GL.bindBuffer GL.ElementArrayBuffer $= Nothing
+  -- printGLErrors "renderTerrain unbind element buffer"
+
   -- unset current program
   GL.currentProgram $= Nothing
+  printGLErrors "renderTerrain unset program"

@@ -48,13 +48,17 @@ initPlayerBillboard :: ECS ()
 initPlayerBillboard = do
   let vertexShader   = shaderPath  </> "billboard.v.glsl"
       fragmentShader = shaderPath  </> "billboard.f.glsl"
-      texture        = texturePath </> "player.tga"
+      texFilePath    = texturePath </> "player.tga"
+      -- texFilePath    = texturePath </> "doom_soldier.tga"
+      -- ssFilePath     = texturePath </> "doom_soldier.json"
+
+  -- spriteSheet <- liftIO $  ssFilePath :: SpriteAnimation
   -- load in shaders
   program <- liftIO $
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
                   , ShaderInfo GL.FragmentShader fragmentShader ]
   -- load the image
-  texObj  <- liftIO $ getAndCreateTexture texture
+  texObj  <- liftIO $ getAndCreateTexture texFilePath
   -- create the buffer related data
   vb  <- liftIO $ U.fromSource GL.ArrayBuffer $ verts
   -- define the entity

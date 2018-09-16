@@ -9,14 +9,14 @@ data TerrainInfo = TerrainInfo
   , _trIndices   :: [L.V3 Float] }
   deriving Show
 
-instance Monoid TerrainInfo where
-  mempty = TerrainInfo [] [] [] []
-  mappend (TerrainInfo v1 t1 n1 i1)
-          (TerrainInfo v2 t2 n2 i2) =
-    TerrainInfo (v1 ++ v2) (t1 ++ t2) (n1 ++ n2) (i1 ++ i2)
+-- instance Monoid TerrainInfo where
+--   mempty = TerrainInfo [] [] [] []
+--   mappend (TerrainInfo v1 t1 n1 i1)
+--           (TerrainInfo v2 t2 n2 i2) =
+--     TerrainInfo (v1 ++ v2) (t1 ++ t2) (n1 ++ n2) (i1 ++ i2)
 
 size :: Float
-size = 40
+size = 800
 
 vertexCount :: Float
 vertexCount = 128
@@ -35,11 +35,12 @@ generateTerrain =
                                | i <- countList
                                , j <- countList ]
 
-              , _trTexCoords = [ L.V2 (toVert j) (toVert i)
+              , _trTexCoords = [ L.V2 (j / (vertexCount - 1))
+                                      (i / (vertexCount - 1))
                                | i <- countList
                                , j <- countList ]
 
-              , _trNormals   = [ L.V3 0 1 0 | _ <- countList ]
+              , _trNormals   = [ L.V3 0 1 0 | _ <- countList, _ <- countList ]
 
               , _trIndices   = concat [ [ L.V3 topLeft  botLeft topRight
                                         , L.V3 topRight botLeft botRight ]

@@ -3,7 +3,7 @@ module Game.Types.Components where
 -- import qualified SDL (Texture, Keycode)
 -- import qualified SDL.Mixer as Mixer (Chunk, Channel)
 -- import qualified Data.Map as Map (Map)
--- import qualified Animate
+import qualified Animate
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Linear as L
 import           Data.Map
@@ -16,7 +16,8 @@ import           Game.Types.Shader      (ShaderProgram)
 -- import           Apecs (Entity)
 -- import           KeyState
 
--- import           Game.Types.Util (Seconds(..), Unit(..), Step(..))
+-- import           Game.Types.Util      (Seconds(..))
+-- import           Game.Types.Animation (AnimationKey(..))
 -- import           Game.Types.Physics (CollisionLayer, AABB, RaycastHit)
 -- import           Game.Types.TileMap (TileType)
 -- import           Game.Types.Audio (Audio'Command)
@@ -197,15 +198,13 @@ data FontInfo = FontInfo
 -- data Texture =
 --   Texture SDL.Texture (V2 CInt)
 --
--- -- type AnimationKey =
--- --   PlayerKey
 --
 -- -- type Animations key =
 -- --   Animate.Animations key (Animate.SpriteClip key) Seconds
 --
 -- data SpriteSheet = SpriteSheet
---     (Animate.SpriteSheet AnimationKey SDL.Texture Seconds)
---     (Animate.Position AnimationKey Seconds)
+--   (Animate.SpriteSheet AnimationKey Texture Seconds)
+--   (Animate.Position AnimationKey Seconds)
 --
 -- data Gravity = Gravity
 --   { ascent  :: Unit
