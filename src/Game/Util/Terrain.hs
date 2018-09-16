@@ -1,4 +1,4 @@
-module Game.Util.Terrain (generateTerrain, TerrainInfo(..), vertexCount) where
+module Game.Util.Terrain (generateTerrain, TerrainInfo(..), size, intVertexCount) where
 
 import qualified Linear as L
 
@@ -6,7 +6,7 @@ data TerrainInfo = TerrainInfo
   { _trVertices  :: [L.V3 Float]
   , _trTexCoords :: [L.V2 Float]
   , _trNormals   :: [L.V3 Float]
-  , _trIndices   :: [L.V3 Float] }
+  , _trIndices   :: [L.V3 Int] }
   deriving Show
 
 -- instance Monoid TerrainInfo where
@@ -18,36 +18,41 @@ data TerrainInfo = TerrainInfo
 size :: Float
 size = 800
 
-vertexCount :: Float
-vertexCount = 128
+flVertexCount :: Float
+flVertexCount = 128
 
-countList :: [Float]
-countList = [0..(vertexCount - 1)]
+intVertexCount :: Int
+intVertexCount = 128
 
-toVert :: Float -> Float
-toVert x = (x / (vertexCount - 1)) * size
+flCountList :: [Float]
+flCountList = [0..(flVertexCount - 1)]
+
+intCountList :: [Int]
+intCountList = [0..(intVertexCount - 1)]
 
 generateTerrain :: TerrainInfo
 generateTerrain =
-  TerrainInfo { _trVertices  = [ L.V3 (toVert j)
+  TerrainInfo { _trVertices  = [ L.V3 ((j / ((flVertexCount - 1)) * size))
                                       0
-                                      (toVert i)
-                               | i <- countList
-                               , j <- countList ]
+                                      ((i / ((flVertexCount - 1)) * size))
+                               | i <- flCountList
+                               , j <- flCountList ]
 
-              , _trTexCoords = [ L.V2 (j / (vertexCount - 1))
-                                      (i / (vertexCount - 1))
-                               | i <- countList
-                               , j <- countList ]
+              , _trTexCoords = [ L.V2 (j / (flVertexCount - 1))
+                                      (i / (flVertexCount - 1))
+                               | i <- flCountList
+                               , j <- flCountList ]
 
-              , _trNormals   = [ L.V3 0 1 0 | _ <- countList, _ <- countList ]
+              , _trNormals   = [ L.V3 0 1 0
+                               | _ <- flCountList
+                               , _ <- flCountList ]
 
               , _trIndices   = concat [ [ L.V3 topLeft  botLeft topRight
                                         , L.V3 topRight botLeft botRight ]
-                                      | gz <- countList
-                                      , gx <- countList
-                                      , let topLeft  = (gz * vertexCount) + gx
+                                      | gz <- intCountList
+                                      , gx <- intCountList
+                                      , let topLeft  = (gz * intVertexCount) + gx
                                             topRight = topLeft + 1
-                                            botLeft  = ((gz + 1) * vertexCount) + gx
+                                            botLeft  = ((gz + 1) * intVertexCount) + gx
                                             botRight = botLeft + 1
                                       ] }

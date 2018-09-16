@@ -103,7 +103,7 @@ initialize = do
   -- entities
   -- initColorCube
   -- initTextureCube
-  initPlayerBillboard
+  -- initPlayerBillboard
   initDebugHUD
 
   -- camera
@@ -200,7 +200,7 @@ render = do
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
-    cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
+    -- cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
     return ()
   cmapM_ $ \((DebugHUD db, p, t, b) :: DebugHUDEntity) -> do
     liftIO $ mapM_ (drawDebugHUD (p, t, b) dims) $ Map.elems db
