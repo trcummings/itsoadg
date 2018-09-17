@@ -150,6 +150,7 @@ data Player = Player
 
 data Terrain = Terrain
 
+data Billboard = Billboard
 
 -- data TexResource = TexResource
 --   { _sProgram   :: ShaderProgram

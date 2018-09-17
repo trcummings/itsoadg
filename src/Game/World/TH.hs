@@ -23,12 +23,13 @@ import Game.Types
   , Orientation
   , HasMoveCommand
 
-  , VAO
   , Player
+  , Terrain
+  , Billboard
   , BSPMap
   , DebugHUD
-  , Terrain
 
+  , VAO
   , ShaderProgram
   , BufferResource
   , RotatingCube
@@ -66,8 +67,11 @@ instance Component Orientation where
 instance Component HasMoveCommand where
   type Storage HasMoveCommand = Map HasMoveCommand
 
+instance Component RotatingCube where
+  type Storage RotatingCube = Map RotatingCube
 
 
+-- Render System Types
 instance Component ShaderProgram where
   type Storage ShaderProgram = Map ShaderProgram
 
@@ -77,14 +81,12 @@ instance Component BufferResource where
 instance Component Texture where
   type Storage Texture = Map Texture
 
-
-instance Component RotatingCube where
-  type Storage RotatingCube = Map RotatingCube
-
 instance Component VAO where
   type Storage VAO = Unique VAO
 
 
+
+-- Render Entity Types
 instance Component Player where
   type Storage Player = Unique Player
 
@@ -96,6 +98,9 @@ instance Component DebugHUD where
 
 instance Component Terrain where
   type Storage Terrain = Unique Terrain
+
+instance Component Billboard where
+  type Storage Billboard = Map Billboard
 
 
 -- Camera Components
@@ -125,16 +130,18 @@ makeWorld "World" [
   , ''Position3D
   , ''Orientation
   , ''HasMoveCommand
+  , ''RotatingCube
 
   , ''ShaderProgram
   , ''Texture
-  , ''RotatingCube
   , ''VAO
+  , ''BufferResource
+
   , ''BSPMap
   , ''Player
+  , ''Billboard
   , ''Terrain
   , ''DebugHUD
-  , ''BufferResource
 
   , ''Camera
 

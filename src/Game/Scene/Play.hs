@@ -82,6 +82,10 @@ import Game.System.Scratch.DebugHUD
   , initDebugHUD
   , drawDebugHUD
   , stepDebugHUD )
+import Game.System.Scratch.Billboard
+  ( RenderBillboard
+  , initBillboards
+  , drawBillboard )
 
 
 initialize :: ECS ()
@@ -104,6 +108,10 @@ initialize = do
   -- initColorCube
   -- initTextureCube
   -- initPlayerBillboard
+  -- create all billboards
+  billboards <- liftIO $ initBillboards
+  mapM_ newEntity billboards
+  -- initialize HUD
   initDebugHUD
 
   -- camera
@@ -196,7 +204,8 @@ render = do
         mats           = (camProjMatrix, camViewMatrix)
         (_, (_, cPos)) = camera
     -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
-    cmapM_ $ \(r :: TerrainE)   -> liftIO $ drawTerrain mats r
+    cmapM_ $ \(r :: TerrainE)        -> liftIO $ drawTerrain mats r
+    cmapM_ $ \(r :: RenderBillboard) -> liftIO $ drawBillboard mats r
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r

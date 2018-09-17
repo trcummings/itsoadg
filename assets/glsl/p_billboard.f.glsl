@@ -6,13 +6,13 @@ in vec2 UV;
 // Ouput data
 out vec4 color;
 
-uniform vec3 entityColor;
+uniform sampler2D myTextureSampler;
 
 // uniform float LifeLevel;
 
 void main(){
 	// Output color = color of the texture at the specified UV
-	color = vec4(entityColor, 1);
+	color = texture( myTextureSampler, UV );
 
 	// // Hardcoded life level, should be in a separate texture.
 	// if (UV.x < LifeLevel && UV.y > 0.3 && UV.y < 0.7 && UV.x > 0.04 )
