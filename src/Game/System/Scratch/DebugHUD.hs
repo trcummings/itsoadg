@@ -17,6 +17,8 @@ import           Game.Util.Constants (texturePath, shaderPath)
 import           Game.Util.Program   (createProgram, getAttrib, getUniform)
 import           Game.Util.Texture   (getAndCreateTexture)
 import           Game.Util.GLError   (printGLErrors)
+import           Game.Util.Font      (loadCharacter)
+import           Game.Util.BufferObjects (fromSource)
 import           Game.Util.Camera    (CameraEntity)
 import           Game.Types
   ( GlobalTime(..)
@@ -43,8 +45,8 @@ initDebugHUD = do
   -- load the image
   texObj   <- liftIO $ getAndCreateTexture fontTexture
   -- create the buffer related data
-  vertsBuf <- liftIO $ U.fromSource GL.ArrayBuffer ([] :: [L.V2 Float])
-  uvBuf    <- liftIO $ U.fromSource GL.ArrayBuffer ([] :: [L.V2 Float])
+  vertsBuf <- liftIO $ fromSource (GL.DynamicDraw, GL.ArrayBuffer) ([] :: [L.V2 Float])
+  uvBuf    <- liftIO $ fromSource (GL.DynamicDraw, GL.ArrayBuffer) ([] :: [L.V2 Float])
   -- note, x & y positions are [-1/2 screen, 1/2 screen] both axes,
   -- 0,0 is the center
   let fpsInfo = FontInfo { _fText = "Fps: 0"

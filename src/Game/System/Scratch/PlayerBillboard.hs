@@ -17,6 +17,7 @@ import           Game.Util.Constants     (objPath, texturePath, shaderPath)
 import           Game.Loaders.Obj.Loader (loadObjFile)
 import           Game.Util.Program       (createProgram, getAttrib, getUniform)
 import           Game.Util.Texture       (getAndCreateTexture)
+import           Game.Util.BufferObjects (fromSource)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
@@ -60,7 +61,7 @@ initPlayerBillboard = do
   -- load the image
   texObj  <- liftIO $ getAndCreateTexture texFilePath
   -- create the buffer related data
-  vb  <- liftIO $ U.fromSource GL.ArrayBuffer $ verts
+  vb  <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) $ verts
   -- define the entity
   newEntity (
       Player

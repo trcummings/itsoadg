@@ -14,6 +14,7 @@ import           Data.Map                (keys)
 import           Game.Util.Constants     (texturePath, shaderPath)
 import           Game.Util.Program       (createProgram, getAttrib, getUniform)
 import           Game.Util.Texture       (getAndCreateTexture)
+import           Game.Util.BufferObjects (fromSource)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
@@ -49,7 +50,7 @@ initBillboards = do
   program <- createProgram [ ShaderInfo GL.VertexShader   vertexShader
                            , ShaderInfo GL.FragmentShader fragmentShader ]
   -- create the buffer related data
-  vb  <- U.fromSource GL.ArrayBuffer $ verts
+  vb  <- fromSource (GL.StaticDraw, GL.ArrayBuffer) $ verts
   -- define the entities
   return
     [ ( Billboard

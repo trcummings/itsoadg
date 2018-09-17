@@ -1,7 +1,6 @@
 module Game.Util.BSP.Read where
 
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified Graphics.GLUtil           as U
 import qualified Data.Array.MArray         as Arr (readArray, newListArray)
 import qualified Linear                    as L
 import           Foreign.Marshal
@@ -30,6 +29,7 @@ import           Game.Util.File       (withBinaryFile)
 import           Game.Util.GLError    (printGLErrors)
 import           Game.Util.Constants  (assetPath)
 import           Game.Util.Texture    (getAndCreateTextures)
+import           Game.Util.BufferObjects (fromSource)
 import           Game.Util.BSP.Curves (checkForPatch)
 import           Game.Util.BSP.Indices
 import           Game.Util.BSP.BitSet
@@ -67,11 +67,11 @@ readBSP filePath = withBinaryFile filePath $ \handle -> do
   ntree   <- constructTree nodeArray leafArray 0
   -- make buffers
   printGLErrors "readBSP pre-create buffers"
-  buffers <- BSPBuffers <$> U.fromSource GL.ArrayBuffer a
-                        <*> U.fromSource GL.ArrayBuffer b
-                        <*> U.fromSource GL.ArrayBuffer c
-                        <*> U.fromSource GL.ArrayBuffer d
-                        <*> U.fromSource GL.ElementArrayBuffer indices
+  buffers <- BSPBuffers <$> fromSource (GL.StaticDraw, GL.ArrayBuffer) a
+                        <*> fromSource (GL.StaticDraw, GL.ArrayBuffer) b
+                        <*> fromSource (GL.StaticDraw, GL.ArrayBuffer) c
+                        <*> fromSource (GL.StaticDraw, GL.ArrayBuffer) d
+                        <*> fromSource (GL.StaticDraw, GL.ElementArrayBuffer) indices
   printGLErrors "readBSP post-create buffers"
   -- return BSP map
   return BSPMap { _vertexData = newVertexArrays

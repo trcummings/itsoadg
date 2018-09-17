@@ -16,6 +16,7 @@ import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (shaderPath, texturePath)
 import           Game.Util.Texture       (getAndCreateTexture)
 import           Game.Util.GLError       (printGLErrors)
+import           Game.Util.BufferObjects (fromSource)
 import           Game.Util.Program       (createProgram, getAttrib, getUniform)
 import           Game.Util.Terrain       (generateTerrain, TerrainInfo(..), size, intVertexCount)
 import           Game.Util.Move          (Moveable)
@@ -49,10 +50,10 @@ initTerrain = do
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
                   , ShaderInfo GL.FragmentShader fragmentShader ]
   -- create the buffer related data
-  vertices  <- liftIO $ U.fromSource GL.ArrayBuffer $ _trVertices tr
-  texCoords <- liftIO $ U.fromSource GL.ArrayBuffer $ _trTexCoords tr
-  normals   <- liftIO $ U.fromSource GL.ArrayBuffer $ _trNormals tr
-  indices   <- liftIO $ U.fromSource GL.ElementArrayBuffer $ _trIndices tr
+  vertices  <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) $ _trVertices tr
+  texCoords <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) $ _trTexCoords tr
+  normals   <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) $ _trNormals tr
+  indices   <- liftIO $ fromSource (GL.StaticDraw, GL.ElementArrayBuffer) $ _trIndices tr
 
   -- bind element buffer
   liftIO $ GL.bindBuffer GL.ElementArrayBuffer $= Just indices

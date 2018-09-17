@@ -16,6 +16,7 @@ import           Apecs
 
 import           Game.World.TH            (ECS)
 import           Game.Util.Constants      (shaderPath)
+import           Game.Util.BufferObjects (fromSource)
 import           Game.Util.Program (createProgram, getUniform, getAttrib)
 import           Game.Types
   ( Degrees(..)
@@ -119,8 +120,8 @@ initColorCube :: ECS ()
 initColorCube = do
   let vertexShader   = shaderPath </> "cube.v.glsl"
       fragmentShader = shaderPath </> "cube.f.glsl"
-  vertexBuffer  <- liftIO $ U.fromSource GL.ArrayBuffer vs
-  colorBuffer   <- liftIO $ U.fromSource GL.ArrayBuffer cs
+  vertexBuffer  <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) vs
+  colorBuffer   <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) cs
   program       <- liftIO $
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
                   , ShaderInfo GL.FragmentShader fragmentShader ]

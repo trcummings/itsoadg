@@ -17,6 +17,7 @@ module Game.System.Scratch.TextureCube where
 -- import           Game.Loaders.Obj.Loader  (loadObjFile)
 -- import           Game.Util.Program (createProgram, getAttrib, getUniform)
 -- import           Game.Util.Texture        (getAndCreateTexture)
+-- import           Game.Util.BufferObjects (fromSource)
 -- import           Game.Types
 --   ( ProjectionMatrix(..)
 --   , ViewMatrix(..)
@@ -46,8 +47,8 @@ module Game.System.Scratch.TextureCube where
 --   -- load the image
 --   uv  <- liftIO $ getAndCreateTexture uvTexPath
 --   -- create the buffer related data
---   vb  <- liftIO $ U.fromSource GL.ArrayBuffer $ _verts     obj
---   uvb <- liftIO $ U.fromSource GL.ArrayBuffer $ _texCoords obj
+--   vb  <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) $ _verts     obj
+--   uvb <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) $ _texCoords obj
 --   -- define the entity
 --   newEntity (
 --       TexResource { _sProgram   = program
