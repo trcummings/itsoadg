@@ -17,7 +17,7 @@ import           Apecs
 import           Game.World.TH            (ECS)
 import           Game.Util.Constants      (shaderPath)
 import           Game.Util.BufferObjects (fromSource)
-import           Game.Util.Program (createProgram, getUniform, getAttrib)
+import           Game.Loaders.Program (createProgram, getUniform, getAttrib)
 import           Game.Types
   ( Degrees(..)
   , Orientation(..)

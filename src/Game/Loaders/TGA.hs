@@ -1,4 +1,4 @@
-module Game.Util.TGA where
+module Game.Loaders.TGA where
 
 import qualified Graphics.Rendering.OpenGL as GL
 import           Data.Word (Word8)
@@ -13,7 +13,7 @@ import           System.IO
   , hGetBuf
   , hClose )
 
-import           Game.Util.File (withBinaryFile)
+import           Game.Loaders.File (withBinaryFile)
 
 -- reads a *.tga file
 readTga :: FilePath -> IO (Maybe (GL.TextureSize2D, GL.PixelData Word8))

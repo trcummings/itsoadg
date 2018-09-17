@@ -15,7 +15,7 @@ import           Game.Util.BSP.Frustum (Frustum, getFrustum, boxInFrustum)
 import           Game.Util.BSP.Indices
 import           Game.Util.BSP.BitSet
 import           Game.Util.BSP.Util
-import           Game.Util.Program     (getUniform)
+import           Game.Loaders.Program     (getUniform)
 import           Game.Util.GLError     (printGLErrors)
 import           Game.Types.BSP
 import           Game.Types

@@ -2,7 +2,7 @@ module Game.Loaders.Cfg where
 
 import System.FilePath ((</>))
 
-import Game.Util.File      (withBinaryFile, readLines)
+import Game.Loaders.File      (withBinaryFile, readLines)
 import Game.Util.Constants (assetPath)
 import Game.Util.BSP.Read  (readBSP)
 import Game.Types          (BSPMap)

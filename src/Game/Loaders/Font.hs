@@ -1,6 +1,7 @@
-module Game.Util.Font where
+module Game.Loaders.Font where
 
 import qualified Graphics.Rendering.OpenGL as GL
+import qualified Linear                    as L
 import           SDL              (($=))
 import           Control.Monad    (unless, fail, forM)
 import           System.IO        (hPutStrLn, stderr)
@@ -8,6 +9,7 @@ import           Foreign          (alloca, peek, plusPtr)
 import           Foreign.C.String (withCString)
 import           Graphics.Rendering.FreeType.Internal.Library    (FT_Library)
 import           Graphics.Rendering.FreeType.Internal.BitmapSize (FT_Bitmap_Size)
+import           Graphics.Rendering.FreeType.Internal.Vector     (FT_Vector(x))
 import           Graphics.Rendering.FreeType.Internal
   ( ft_Init_FreeType
   , ft_New_Face
@@ -29,6 +31,7 @@ import           Graphics.Rendering.FreeType.Internal.GlyphSlot
   ( bitmap
   , bitmap_top
   , bitmap_left
+  , advance
   , format
   )
 import           Graphics.Rendering.FreeType.Internal.Bitmap
@@ -51,8 +54,9 @@ import           Graphics.Rendering.FreeType.Internal.PrimitiveTypes
   )
 
 import Game.Util.GLError (printGLErrors)
+import Game.Types        (Character(..), Texture(..))
 
-loadCharacter :: FilePath -> Char -> Int -> GL.TextureUnit -> IO GL.TextureObject
+loadCharacter :: FilePath -> Char -> Int -> GL.TextureUnit -> IO Character
 loadCharacter path char px (GL.TextureUnit texUnit) = do
     -- FreeType (http://freetype.org/freetype2/docs/tutorial/step1.html)
     ft <- freeType
@@ -87,13 +91,13 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
       peek $ sizesPtr `plusPtr` fromIntegral i :: IO FT_Bitmap_Size
     print sizes
 
-    l <- peek $ bitmap_left slot
-    t <- peek $ bitmap_top  slot
+    left <- peek $ bitmap_left slot
+    top  <- peek $ bitmap_top  slot
     putStrLn $ concat
       [ "left:"
-      , show l
+      , show left
       , "\ntop:"
-      , show t
+      , show top
       ]
 
     runFreeType $ ft_Render_Glyph slot ft_RENDER_MODE_NORMAL
@@ -115,10 +119,14 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
       , show $ palette_mode bmp
       ]
 
-    let w  = fromIntegral $ width bmp
-        h  = fromIntegral $ rows bmp
-        w' = fromIntegral w
-        h' = fromIntegral h
+    -- get glyph slot advance
+    adv <- peek $ advance slot
+
+    let w        = fromIntegral $ width bmp
+        h        = fromIntegral $ rows bmp
+        w'       = fromIntegral w
+        h'       = fromIntegral h
+        advanceX = fromIntegral $ x adv
 
     -- Set the texture params on our bound texture.
     GL.texture GL.Texture2D   $= GL.Enabled
@@ -132,7 +140,7 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
     GL.activeTexture  $= GL.TextureUnit (fromIntegral texUnit)
     GL.textureBinding GL.Texture2D $= Just tex
 
-    printGLErrors "Game.Util.Font.loadCharacter, GL.textureBinding"
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.textureBinding"
 
     putStrLn "Buffering glyph bitmap into texture."
     GL.texImage2D
@@ -143,7 +151,7 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
         (GL.TextureSize2D w' h')
         0
         (GL.PixelData GL.Red GL.UnsignedByte $ buffer bmp)
-    printGLErrors "Game.Util.Font.loadCharacter, GL.texImage2D"
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.texImage2D"
 
     putStrLn "Texture loaded."
     GL.textureFilter   GL.Texture2D      $= ((GL.Linear', Nothing), GL.Linear')
@@ -154,8 +162,12 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
     ft_Done_Face     ff
     ft_Done_FreeType ft
 
-    -- return texture
-    return tex
+    -- return character
+    return $ Character { _charChar    = char
+                       , _charTexture = Texture $ Just tex
+                       , _charSize    = L.V2 (fromIntegral w)    (fromIntegral h)
+                       , _charBearing = L.V2 (fromIntegral left) (fromIntegral top)
+                       , _charAdvance = advanceX }
 
 
 addPadding :: Int -> Int -> a -> [a] -> [a]

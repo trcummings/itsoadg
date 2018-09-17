@@ -1,7 +1,6 @@
 module Game (main) where
 
 import qualified SDL
-import qualified SDL.Font  as TTF
 import qualified SDL.Mixer as Mixer
 import           Apecs              (runSystem)
 
@@ -12,8 +11,6 @@ main :: IO ()
 main = do
   -- initialize all SDL systems
   SDL.initializeAll
-  -- initialize SDL.Font
-  TTF.initialize
   -- initialize SDL.Mixer with 256 chunk size
   Mixer.openAudio Mixer.defaultAudio 256
   -- start game
@@ -21,5 +18,4 @@ main = do
   -- clean up SDL systems
   Mixer.closeAudio
   Mixer.quit
-  TTF.quit
   SDL.quit

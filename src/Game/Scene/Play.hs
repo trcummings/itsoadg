@@ -29,7 +29,7 @@ import           Game.Loaders.Save    (saveDataFile, loadDataFile)
 import           Game.Loaders.Cfg     (readMapCfg, readMapMedia)
 import           Game.Util.Billboard  (renderBillboard)
 import           Game.Util.Constants  (frameDeltaSeconds, assetPath, shaderPath)
-import           Game.Util.Program    (createProgram)
+import           Game.Loaders.Program    (createProgram)
 import           Game.Util.BSP.Render (BSPRenderData, renderBSP)
 import           Game.Util.GLError    (printGLErrors)
 import           Game.Util.Camera

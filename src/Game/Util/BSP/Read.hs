@@ -25,10 +25,10 @@ import           System.IO
   , hGetBuf
   , hSeek )
 
-import           Game.Util.File       (withBinaryFile)
+import           Game.Loaders.File       (withBinaryFile)
 import           Game.Util.GLError    (printGLErrors)
 import           Game.Util.Constants  (assetPath)
-import           Game.Util.Texture    (getAndCreateTextures)
+import           Game.Loaders.Texture    (getAndCreateTextures)
 import           Game.Util.BufferObjects (fromSource)
 import           Game.Util.BSP.Curves (checkForPatch)
 import           Game.Util.BSP.Indices

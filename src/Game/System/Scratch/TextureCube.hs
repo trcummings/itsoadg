@@ -15,8 +15,8 @@ module Game.System.Scratch.TextureCube where
 -- import           Game.World.TH            (ECS)
 -- import           Game.Util.Constants      (objPath, texturePath, shaderPath)
 -- import           Game.Loaders.Obj.Loader  (loadObjFile)
--- import           Game.Util.Program (createProgram, getAttrib, getUniform)
--- import           Game.Util.Texture        (getAndCreateTexture)
+-- import           Game.Loaders.Program (createProgram, getAttrib, getUniform)
+-- import           Game.Loaders.Texture        (getAndCreateTexture)
 -- import           Game.Util.BufferObjects (fromSource)
 -- import           Game.Types
 --   ( ProjectionMatrix(..)

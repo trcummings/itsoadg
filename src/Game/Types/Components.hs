@@ -191,6 +191,13 @@ data FontInfo = FontInfo
   , _fyPos :: Int
   , _fSize :: Int }
 
+data Character = Character
+  { _charChar    :: Char
+  , _charTexture :: Texture
+  , _charSize    :: L.V2 Int
+  , _charBearing :: L.V2 Int
+  , _charAdvance :: Int }
+
 
 -- data CameraTarget =
 --   CameraTarget Entity

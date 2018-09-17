@@ -14,10 +14,10 @@ import           Foreign.Ptr             (nullPtr)
 
 import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (shaderPath, texturePath)
-import           Game.Util.Texture       (getAndCreateTexture)
+import           Game.Loaders.Texture       (getAndCreateTexture)
 import           Game.Util.GLError       (printGLErrors)
 import           Game.Util.BufferObjects (fromSource)
-import           Game.Util.Program       (createProgram, getAttrib, getUniform)
+import           Game.Loaders.Program       (createProgram, getAttrib, getUniform)
 import           Game.Util.Terrain       (generateTerrain, TerrainInfo(..), size, intVertexCount)
 import           Game.Util.Move          (Moveable)
 import           Game.Types

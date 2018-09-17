@@ -12,8 +12,8 @@ import           Control.Monad.IO.Class  (liftIO)
 import           Data.Map                (keys)
 
 import           Game.Util.Constants     (texturePath, shaderPath)
-import           Game.Util.Program       (createProgram, getAttrib, getUniform)
-import           Game.Util.Texture       (getAndCreateTexture)
+import           Game.Loaders.Program       (createProgram, getAttrib, getUniform)
+import           Game.Loaders.Texture       (getAndCreateTexture)
 import           Game.Util.BufferObjects (fromSource)
 import           Game.Types
   ( ProjectionMatrix(..)

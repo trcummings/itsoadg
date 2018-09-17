@@ -1,4 +1,4 @@
-module Game.Util.File where
+module Game.Loaders.File where
 
 import Control.Exception (bracket)
 import System.IO

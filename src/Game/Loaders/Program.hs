@@ -1,4 +1,4 @@
-module Game.Util.Program
+module Game.Loaders.Program
   ( createProgram
   , getUniform
   , getAttrib ) where
