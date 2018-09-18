@@ -9,7 +9,7 @@ import qualified Graphics.GLUtil as U
 import qualified Graphics.GLUtil.Camera3D as U
 import qualified Graphics.Rendering.OpenGL as GL
 
-import qualified Data.Map as Map (empty, fromList, elems)
+import qualified Data.Map as Map (empty, fromList, keys, elems)
 import           Data.Map ((!), keys)
 import           Data.Text (singleton)
 import           Data.List (find, findIndex)
@@ -59,6 +59,7 @@ import           Game.Types
 
   , BSPMap
   , DebugHUD(..)
+  , HUDInfo(..)
   , ShaderInfo(..)
   , Position3D(..)
   , Scene(..) )
@@ -112,7 +113,8 @@ initialize = do
   billboards <- liftIO $ initBillboards
   mapM_ newEntity billboards
   -- initialize HUD
-  initDebugHUD
+  hud <- liftIO $ initDebugHUD
+  mapM_ newEntity hud
 
   -- camera
   (c, p, o) :: (Camera, Position3D, Orientation) <- liftIO $ loadDataFile "test.json"
@@ -211,5 +213,6 @@ render = do
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
     -- cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
     return ()
-  cmapM_ $ \((DebugHUD db, p, t, b) :: DebugHUDEntity) -> do
-    liftIO $ mapM_ (drawDebugHUD (p, t, b) dims) $ Map.elems db
+  cmapM_ $ \(hud@(dHud, _, _) :: DebugHUDEntity) -> do
+    let (HUDInfo dMap) = _hudInfo dHud
+    liftIO $ mapM_ (drawDebugHUD hud dims) $ Map.keys dMap

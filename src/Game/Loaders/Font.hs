@@ -1,9 +1,10 @@
-module Game.Loaders.Font where
+module Game.Loaders.Font (loadCharacters) where
 
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Linear                    as L
 import           SDL              (($=))
-import           Control.Monad    (unless, fail, forM)
+import           Control.Monad    (unless, fail, forM, mapM)
+import           Data.Map         (fromList)
 import           System.IO        (hPutStrLn, stderr)
 import           Foreign          (alloca, peek, plusPtr)
 import           Foreign.C.String (withCString)
@@ -28,7 +29,8 @@ import           Graphics.Rendering.FreeType.Internal.Face
   , glyph
   )
 import           Graphics.Rendering.FreeType.Internal.GlyphSlot
-  ( bitmap
+  ( FT_GlyphSlot
+  , bitmap
   , bitmap_top
   , bitmap_left
   , advance
@@ -54,30 +56,40 @@ import           Graphics.Rendering.FreeType.Internal.PrimitiveTypes
   )
 
 import Game.Util.GLError (printGLErrors)
-import Game.Types        (Character(..), Texture(..))
+import Game.Types        (Character(..), Texture(..), FontMap(..))
 
-loadCharacter :: FilePath -> Char -> Int -> GL.TextureUnit -> IO Character
-loadCharacter path char px (GL.TextureUnit texUnit) = do
+loadCharacters :: FilePath
+               -> Int
+               -> GL.TextureUnit
+               -> String
+               -> IO FontMap
+loadCharacters path pxWidth texUnit chars = do
+    -- Set the texture params on our bound texture.
+    GL.activeTexture          $= texUnit
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.activeTexture"
+
+    -- Set the alignment to 1 byte, disabling the byte-alignment
+    -- restriction that would otherwise make this maybe segfault
+    GL.rowAlignment GL.Unpack $= 1
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.rowAlignment"
+
+    GL.activeTexture          $= texUnit
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.activeTexture"
+
     -- FreeType (http://freetype.org/freetype2/docs/tutorial/step1.html)
+    -- create handle to library object
     ft <- freeType
-
-    -- Get the Ubuntu Mono fontface.
+    -- Create handle to face object
     ff <- fontFace ft path
-    runFreeType $ ft_Set_Pixel_Sizes ff (fromIntegral px) 0
-
-    -- Get the unicode char index.
-    chNdx <- ft_Get_Char_Index ff $ fromIntegral $ fromEnum char
-
-    -- Load the glyph into freetype memory.
-    runFreeType $ ft_Load_Glyph ff chNdx 0
+    -- set face size
+    runFreeType $ ft_Set_Pixel_Sizes ff 0 (fromIntegral pxWidth)
 
     -- Get the GlyphSlot.
     slot <- peek $ glyph ff
-
-    -- Number of glyphs
+    -- print out number of glyphs
     n <- peek $ num_glyphs ff
-    putStrLn $ "glyphs:" ++ show n
-
+    putStrLn $ "number of glyphs:" ++ show n
+    --
     fmt <- peek $ format slot
     putStrLn $ "glyph format:" ++ glyphFormatString fmt
 
@@ -87,10 +99,33 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
     putStr "Sizes:"
     numSizes <- peek $ num_fixed_sizes ff
     sizesPtr <- peek $ available_sizes ff
-    sizes    <- forM [0 .. numSizes - 1] $ \i ->
+    sizes    <- forM [0..(numSizes - 1)] $ \i ->
       peek $ sizesPtr `plusPtr` fromIntegral i :: IO FT_Bitmap_Size
     print sizes
 
+    -- create all characters
+    charMap <- mapM (loadCharacter ff slot) chars
+
+    -- clean up freetype
+    ft_Done_Face     ff
+    ft_Done_FreeType ft
+
+    -- return font map
+    return $ FontMap $ fromList charMap
+
+loadCharacter :: FT_Face -> FT_GlyphSlot -> Char -> IO (Char, Character)
+loadCharacter ff slot char = do
+    putStrLn $ "Loading glyph for letter \"" ++ [char] ++ "\""
+    -- Get the unicode char index.
+    chNdx <- ft_Get_Char_Index ff $ fromIntegral $ fromEnum char
+
+    -- Load the glyph at the specified index into freetype memory.
+    runFreeType $ ft_Load_Glyph ff chNdx 0
+
+    -- convert glyph into a bitmap
+    runFreeType $ ft_Render_Glyph slot ft_RENDER_MODE_NORMAL
+
+    -- get the bitmap glyph top & left coordinates
     left <- peek $ bitmap_left slot
     top  <- peek $ bitmap_top  slot
     putStrLn $ concat
@@ -100,10 +135,10 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
       , show top
       ]
 
-    runFreeType $ ft_Render_Glyph slot ft_RENDER_MODE_NORMAL
-
     -- Get the char bitmap.
     bmp <- peek $ bitmap slot
+    -- get glyph slot advance
+    adv <- peek $ advance slot
     putStrLn $ concat
       [ "width:"
       , show $ width bmp
@@ -117,10 +152,9 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
       , show $ pixel_mode bmp
       , " palette_mode:"
       , show $ palette_mode bmp
+      , " advance:"
+      , show adv
       ]
-
-    -- get glyph slot advance
-    adv <- peek $ advance slot
 
     let w        = fromIntegral $ width bmp
         h        = fromIntegral $ rows bmp
@@ -128,19 +162,14 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
         h'       = fromIntegral h
         advanceX = fromIntegral $ x adv
 
-    -- Set the texture params on our bound texture.
-    GL.texture GL.Texture2D   $= GL.Enabled
-
-    -- Set the alignment to 1 byte, disabling the byte-alignment
-    -- restriction that would otherwise make this maybe segfault
-    GL.rowAlignment GL.Unpack $= 1
-
     -- Generate an opengl texture.
     [tex] <- GL.genObjectNames 1
-    GL.activeTexture  $= GL.TextureUnit (fromIntegral texUnit)
     GL.textureBinding GL.Texture2D $= Just tex
-
     printGLErrors "Game.Loaders.Font.loadCharacter, GL.textureBinding"
+
+    GL.textureWrapMode GL.Texture2D GL.S $= (GL.Repeated, GL.ClampToEdge)
+    GL.textureWrapMode GL.Texture2D GL.T $= (GL.Repeated, GL.ClampToEdge)
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.textureWrapMode"
 
     putStrLn "Buffering glyph bitmap into texture."
     GL.texImage2D
@@ -152,22 +181,22 @@ loadCharacter path char px (GL.TextureUnit texUnit) = do
         0
         (GL.PixelData GL.Red GL.UnsignedByte $ buffer bmp)
     printGLErrors "Game.Loaders.Font.loadCharacter, GL.texImage2D"
-
     putStrLn "Texture loaded."
-    GL.textureFilter   GL.Texture2D      $= ((GL.Linear', Nothing), GL.Linear')
-    GL.textureWrapMode GL.Texture2D GL.S $= (GL.Repeated, GL.ClampToEdge)
-    GL.textureWrapMode GL.Texture2D GL.T $= (GL.Repeated, GL.ClampToEdge)
 
-    -- clean up freetype
-    ft_Done_Face     ff
-    ft_Done_FreeType ft
+    GL.textureFilter GL.Texture2D $= ((GL.Linear', Nothing), GL.Linear')
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.textureFilter"
 
-    -- return character
-    return $ Character { _charChar    = char
-                       , _charTexture = Texture $ Just tex
-                       , _charSize    = L.V2 (fromIntegral w)    (fromIntegral h)
-                       , _charBearing = L.V2 (fromIntegral left) (fromIntegral top)
-                       , _charAdvance = advanceX }
+    GL.generateMipmap' GL.Texture2D
+    printGLErrors "Game.Loaders.Font.loadCharacter, GL.generateMipmap'"
+
+    -- return char, character map
+    return
+      ( char
+      , Character { _charTexture = Texture $ Just tex
+                  , _charSize    = L.V2 (realToFrac w)    (realToFrac h)
+                  , _charBearing = L.V2 (realToFrac left) (realToFrac top)
+                  , _charAdvance = advanceX }
+      )
 
 
 addPadding :: Int -> Int -> a -> [a] -> [a]

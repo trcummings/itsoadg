@@ -41,6 +41,9 @@ texturePath = assetPath </> "sprites"
 objPath :: FilePath
 objPath = assetPath </> "obj"
 
+fontPath :: FilePath
+fontPath = assetPath </> "fonts"
+
 -- Physics constants
 maxSpeed :: Unit
 maxSpeed = 17
