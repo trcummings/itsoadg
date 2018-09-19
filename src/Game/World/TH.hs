@@ -19,6 +19,8 @@ import Game.Types
   , Inputs
   , Clock
 
+  , Hierarchy
+
   , Position3D
   , Orientation
   , HasMoveCommand
@@ -26,6 +28,10 @@ import Game.Types
   , Player
   , Terrain
   , Billboard
+
+  , Door
+  , DoorPanel
+
   , BSPMap
   , DebugHUD
 
@@ -58,6 +64,9 @@ instance Component Clock where
 
 
 -- Entity related Components
+instance Component Hierarchy where
+  type Storage Hierarchy = Map Hierarchy
+
 instance Component Position3D where
   type Storage Position3D = Map Position3D
 
@@ -90,17 +99,27 @@ instance Component VAO where
 instance Component Player where
   type Storage Player = Unique Player
 
+instance Component Terrain where
+  type Storage Terrain = Unique Terrain
+
+instance Component Billboard where
+  type Storage Billboard = Map Billboard
+
+instance Component Door where
+  type Storage Door = Map Door
+
+instance Component DoorPanel where
+  type Storage DoorPanel = Map DoorPanel
+
+
+
 instance Component BSPMap where
   type Storage BSPMap = Unique BSPMap
 
 instance Component DebugHUD where
   type Storage DebugHUD = Unique DebugHUD
 
-instance Component Terrain where
-  type Storage Terrain = Unique Terrain
 
-instance Component Billboard where
-  type Storage Billboard = Map Billboard
 
 
 -- Camera Components
@@ -127,10 +146,14 @@ makeWorld "World" [
   , ''Inputs
   , ''Clock
 
+  , ''Hierarchy
   , ''Position3D
   , ''Orientation
   , ''HasMoveCommand
   , ''RotatingCube
+
+  , ''Door
+  , ''DoorPanel
 
   , ''ShaderProgram
   , ''Texture
