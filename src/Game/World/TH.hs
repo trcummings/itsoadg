@@ -41,6 +41,8 @@ import Game.Types
   , RotatingCube
   , Texture
 
+  , SpriteSheet
+
   , Camera
 
   , HasOptionMenuEvent
@@ -89,6 +91,9 @@ instance Component BufferResource where
 
 instance Component Texture where
   type Storage Texture = Map Texture
+
+instance Component SpriteSheet where
+  type Storage SpriteSheet = Map SpriteSheet
 
 instance Component VAO where
   type Storage VAO = Unique VAO
@@ -159,6 +164,8 @@ makeWorld "World" [
   , ''Texture
   , ''VAO
   , ''BufferResource
+
+  , ''SpriteSheet
 
   , ''BSPMap
   , ''Player

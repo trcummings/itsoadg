@@ -109,10 +109,10 @@ initialize = do
   -- entities
   -- initColorCube
   -- initTextureCube
-  -- initPlayerBillboard
+  initPlayerBillboard
   -- create all billboards
-  billboards <- liftIO $ initBillboards
-  mapM_ newEntity billboards
+  -- billboards <- liftIO $ initBillboards
+  -- mapM_ newEntity billboards
   -- initialize HUD
   hud <- liftIO $ initDebugHUD
   mapM_ newEntity hud
@@ -179,7 +179,7 @@ render = do
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
-    -- cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
+    cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
     return ()
   cmapM_ $ \(hud@(dHud, _, _) :: DebugHUDEntity) -> do
     let (HUDInfo dMap) = _hudInfo dHud

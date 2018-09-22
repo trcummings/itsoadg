@@ -4,6 +4,7 @@ import qualified Graphics.GLUtil           as U
 import qualified Graphics.GLUtil.Camera3D  as U
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Linear                    as L
+import qualified Animate                   as A
 import           Linear                  ((!*!))
 import           SDL                     (($=))
 import           Control.Monad           (mapM_)
@@ -15,8 +16,10 @@ import           Apecs                   (newEntity)
 import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (objPath, texturePath, shaderPath)
 import           Game.Loaders.Obj.Loader (loadObjFile)
-import           Game.Loaders.Program       (createProgram, getAttrib, getUniform)
-import           Game.Loaders.Texture       (getAndCreateTexture)
+import           Game.Loaders.Program    (createProgram, getAttrib, getUniform)
+import           Game.Loaders.Texture    (getAndCreateTexture)
+import           Game.Util.Move          (Moveable)
+import           Game.Util.Sprite        (loadSpriteSheet)
 import           Game.Util.BufferObjects (fromSource)
 import           Game.Types
   ( ProjectionMatrix(..)
@@ -25,6 +28,8 @@ import           Game.Types
   , Orientation(..)
   , ShaderProgram(..)
   , Texture(..)
+  , SpriteSheet(..)
+  , AnimationKey(..)
   , BufferResource(..)
   , ShaderInfo(..)
   , Player(..) )
@@ -32,10 +37,9 @@ import           Game.Types
 type PlayerB =
   ( Player
   , ShaderProgram
-  , Texture
+  , SpriteSheet
   , BufferResource
-  , Orientation
-  , Position3D )
+  , Moveable )
 
 verts :: [L.V3 Float]
 verts = [
@@ -51,9 +55,13 @@ initPlayerBillboard = do
       fragmentShader = shaderPath  </> "p_billboard.f.glsl"
       texFilePath    = texturePath </> "player.tga"
       -- texFilePath    = texturePath </> "doom_soldier.tga"
-      -- ssFilePath     = texturePath </> "doom_soldier.json"
+      ssFilePath     = texturePath </> "doom_soldier.json"
 
-  -- spriteSheet <- liftIO $  ssFilePath :: SpriteAnimation
+  spriteSheet <- liftIO $ loadSpriteSheet ssFilePath
+  let pSheet = SpriteSheet { _ssSheet    = spriteSheet
+                           , _ssPosition = A.initPosition PlayerKey'Idle }
+
+
   -- load in shaders
   program <- liftIO $
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
@@ -66,7 +74,8 @@ initPlayerBillboard = do
   newEntity (
       Player
     , program
-    , Texture texObj
+    , pSheet
+    -- , Texture texObj
     , BufferResource { _vertexBuffer   = Just vb
                      , _texCoordBuffer = Nothing
                      , _normalBuffer   = Nothing
@@ -78,16 +87,19 @@ initPlayerBillboard = do
 
 drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> IO ()
 drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                    (_, sProgram, Texture texObj, br, Orientation o, Position3D mPos) = do
-  let modelMatrix   = L.mkTransformationMat L.identity mPos
-      trans         = projMatrix !*! viewMatrix !*! modelMatrix
-      posLoc        = getAttrib  sProgram "squareVertices"
-      mtsLoc        = getUniform sProgram "myTextureSampler"
-      vpLoc         = getUniform sProgram "VP"
-      crwLoc        = getUniform sProgram "CameraRight_worldspace"
-      cuwLoc        = getUniform sProgram "CameraUp_worldspace"
-      bpLoc         = getUniform sProgram "BillboardPos"
-      bsLoc         = getUniform sProgram "BillboardSize"
+                    (_, sProgram, pSheet, br, (Orientation o, Position3D mPos)) = do
+  let modelMatrix    = L.mkTransformationMat L.identity mPos
+      trans          = projMatrix !*! viewMatrix !*! modelMatrix
+      -- animate
+      Texture texObj = A.ssImage $ _ssSheet pSheet
+      -- attribs & uniforms
+      posLoc         = getAttrib  sProgram "squareVertices"
+      mtsLoc         = getUniform sProgram "myTextureSampler"
+      vpLoc          = getUniform sProgram "VP"
+      crwLoc         = getUniform sProgram "CameraRight_worldspace"
+      cuwLoc         = getUniform sProgram "CameraUp_worldspace"
+      bpLoc          = getUniform sProgram "BillboardPos"
+      bsLoc          = getUniform sProgram "BillboardSize"
   -- set current program to shaderProgram
   GL.currentProgram              $= Just (_glProgram sProgram)
   -- enable all attributes
