@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Game.System.Scratch.PlayerBillboard where
 
 import qualified Graphics.GLUtil           as U
@@ -51,10 +53,8 @@ verts = [
 
 initPlayerBillboard :: ECS ()
 initPlayerBillboard = do
-  let vertexShader   = shaderPath  </> "billboard.v.glsl"
+  let vertexShader   = shaderPath  </> "p_billboard.v.glsl"
       fragmentShader = shaderPath  </> "p_billboard.f.glsl"
-      texFilePath    = texturePath </> "player.tga"
-      -- texFilePath    = texturePath </> "doom_soldier.tga"
       ssFilePath     = texturePath </> "doom_soldier.json"
 
   spriteSheet <- liftIO $ loadSpriteSheet ssFilePath
@@ -66,8 +66,6 @@ initPlayerBillboard = do
   program <- liftIO $
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
                   , ShaderInfo GL.FragmentShader fragmentShader ]
-  -- load the image
-  texObj  <- liftIO $ getAndCreateTexture texFilePath
   -- create the buffer related data
   vb  <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) $ verts
   -- define the entity
@@ -91,8 +89,15 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   let modelMatrix    = L.mkTransformationMat L.identity mPos
       trans          = projMatrix !*! viewMatrix !*! modelMatrix
       -- animate
-      Texture texObj = A.ssImage $ _ssSheet pSheet
+      texObj                       = A.ssImage $ _ssSheet pSheet
+      animations                   = A.ssAnimations (_ssSheet pSheet)
+      A.SpriteClip { A.scX = scX
+                   , A.scY = scY } = A.currentLocation animations (_ssPosition pSheet)
+      GL.TextureSize2D w h         = _textureSize texObj
+      frameX                       = ((realToFrac scX) / (realToFrac w)) :: Float
+      frameY                       = ((realToFrac scY) / (realToFrac h)) :: Float
       -- attribs & uniforms
+      -- framePos       = getAttrib  sProgram "framePos"
       posLoc         = getAttrib  sProgram "squareVertices"
       mtsLoc         = getUniform sProgram "myTextureSampler"
       vpLoc          = getUniform sProgram "VP"
@@ -100,6 +105,7 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       cuwLoc         = getUniform sProgram "CameraUp_worldspace"
       bpLoc          = getUniform sProgram "BillboardPos"
       bsLoc          = getUniform sProgram "BillboardSize"
+      txLoc          = getUniform sProgram "TextureCoords"
   -- set current program to shaderProgram
   GL.currentProgram              $= Just (_glProgram sProgram)
   -- enable all attributes
@@ -108,7 +114,7 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   -- bind texture to TextureUnit 0
   -- set "myTextureSampler" sampler to use Texture Unit 1
   GL.activeTexture               $= GL.TextureUnit 1
-  GL.textureBinding GL.Texture2D $= texObj
+  GL.textureBinding GL.Texture2D $= (_textureId texObj)
   GL.uniform mtsLoc              $= GL.Index1 (1 :: GL.GLint)
   -- align billboard to camera right & up axes
   let L.V4
@@ -124,6 +130,9 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   ((L.V2 1 2) :: L.V2 Float) `U.asUniform` bsLoc
   -- set view-projection to camera vp
   trans `U.asUniform` vpLoc
+  -- set coordinates of the frame's slice of the sprite sheet
+  -- (L.V2 frameX frameY) `U.asUniform` txLoc
+
   -- bind position VB
   GL.bindBuffer GL.ArrayBuffer   $= (_vertexBuffer br)
   GL.vertexAttribPointer  posLoc $=

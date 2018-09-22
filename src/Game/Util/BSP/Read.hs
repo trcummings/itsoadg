@@ -17,6 +17,7 @@ import           Foreign.C.Types  (CInt, CChar, CFloat)
 import           Data.Array       (Array, (!), listArray)
 import           Data.Word        (Word8)
 import           Data.List        (unzip5)
+import           Control.Monad    ((<=<))
 import           SDL              (($=))
 import           System.FilePath  ((</>))
 import           System.IO
@@ -25,12 +26,13 @@ import           System.IO
   , hGetBuf
   , hSeek )
 
-import           Game.Loaders.File       (withBinaryFile)
-import           Game.Util.GLError    (printGLErrors)
-import           Game.Util.Constants  (assetPath)
+import           Game.Types              (Texture(..))
 import           Game.Loaders.Texture    (getAndCreateTextures)
+import           Game.Loaders.File       (withBinaryFile)
+import           Game.Util.GLError       (printGLErrors)
+import           Game.Util.Constants     (assetPath)
 import           Game.Util.BufferObjects (fromSource)
-import           Game.Util.BSP.Curves (checkForPatch)
+import           Game.Util.BSP.Curves    (checkForPatch)
 import           Game.Util.BSP.Indices
 import           Game.Util.BSP.BitSet
 import           Game.Util.BSP.Util
@@ -238,7 +240,7 @@ readFaces handle lumps vertArrays indcs = do
   let lightMapArray =  listArray (0, length lightMaps - 1) lightMaps
   texInfos          <- readTexInfos handle lumps
   let texFileNames  =  map (\p -> assetPath </> (_strName p) ++ ".tga") texInfos
-  texObjs           <- getAndCreateTextures texFileNames
+  texObjs           <- map _textureId <$> getAndCreateTextures texFileNames
   let texObjArray   =  listArray (0, length texObjs - 1) texObjs
   (offst, lngth)    <- getLumpData (lumps !! kFaces)
   offs              <- getOffsets lngth offst 104

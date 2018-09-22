@@ -190,7 +190,11 @@ data BufferResource = BufferResource
   , _rgbCoordBuffer :: Maybe GL.BufferObject
   , _indexBuffer    :: Maybe GL.BufferObject }
 
-newtype Texture = Texture (Maybe GL.TextureObject) deriving Show
+-- newtype Texture = Texture (Maybe GL.TextureObject) deriving Show
+data Texture = Texture
+  { _textureId   :: Maybe GL.TextureObject
+  , _textureSize :: GL.TextureSize2D }
+  deriving Show
 
 
 -- Font types
@@ -216,7 +220,7 @@ data Character = Character
   -- texture object for character
   { _charTexture :: Texture
   -- size of glyph
-  , _charSize    :: L.V2 Float
+  -- , _charSize    :: L.V2 Float
   -- offset from baseline to left/top of glyph
   , _charBearing :: L.V2 Float
   -- offset to advance to next glyph

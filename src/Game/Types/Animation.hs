@@ -25,7 +25,7 @@ animKey'keyName = \case
   EnemyKey'Walk  -> "WalkBack"
   EnemyKey'Idle  -> "IdleBack"
 
-type Animations key = A.Animations key (A.SpriteClip key) Seconds
+-- type Animations key = A.Animations key (A.SpriteClip key) Seconds
 type SheetInfo = A.SpriteSheet AnimationKey Texture Seconds
 type FrameInfo = A.Position    AnimationKey Seconds
 

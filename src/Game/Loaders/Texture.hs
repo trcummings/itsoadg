@@ -5,25 +5,21 @@ import           SDL                   (($=))
 import           Data.Word             (Word8)
 import           Foreign.Marshal.Alloc (free)
 import           System.IO.Error       (catchIOError)
+import           Control.Monad         ((<=<))
 
 import           Game.Loaders.TGA     (readTga)
-import           Game.Util.GLError (printGLErrors)
+import           Game.Util.GLError    (printGLErrors)
+import           Game.Types           (Texture(..))
 
 -- read a list of images and returns a list of textures
 -- all images are assumed to be in the TGA image format
-getAndCreateTextures :: [FilePath] -> IO [Maybe GL.TextureObject]
-getAndCreateTextures fileNames = do
-   texData <- mapM readImageC    fileNames
-   texObjs <- mapM createTexture texData
-   return texObjs
+getAndCreateTextures :: [FilePath] -> IO [Texture]
+getAndCreateTextures = mapM getAndCreateTexture
 
 -- read an image file, return a texture
 -- images are assumed to be in the TGA image format
-getAndCreateTexture :: FilePath -> IO (Maybe GL.TextureObject)
-getAndCreateTexture path = do
-  texData <- readImageC    path
-  texObj  <- createTexture texData
-  return texObj
+getAndCreateTexture :: FilePath -> IO Texture
+getAndCreateTexture = createTexture <=< readImageC
 
 -- read the image data
 readImageC :: FilePath -> IO (Maybe (GL.TextureSize2D, GL.PixelData Word8))
@@ -33,8 +29,10 @@ readImageC path = catchIOError (readTga path) $ \_ -> do
 
 -- creates the texture
 createTexture :: (Maybe (GL.TextureSize2D, GL.PixelData a))
-              -> IO (Maybe GL.TextureObject)
-createTexture Nothing = return Nothing
+              -> IO Texture
+createTexture Nothing =
+  return Texture { _textureId   = Nothing
+                 , _textureSize = GL.TextureSize2D 0 0 }
 createTexture (Just (texSize, pixels@(GL.PixelData _ _ ptr))) = do
   -- generate our texture
   [texName] <- GL.genObjectNames 1
@@ -59,4 +57,5 @@ createTexture (Just (texSize, pixels@(GL.PixelData _ _ ptr))) = do
   -- textureFunction $= Modulate
   -- printGLErrors "createTexture setting texture function"
   free ptr
-  return (Just texName)
+  return $ Texture { _textureId   = Just texName
+                   , _textureSize = texSize }
