@@ -1,4 +1,4 @@
-module Game.Util.Move (Moveable, runMoveCommand) where
+module Game.Util.Move (Moveable, runMoveCommand, defaultMoveable) where
 
 import qualified Linear as L
 
@@ -11,6 +11,10 @@ import Game.Types
   , Position3D(..) )
 
 type Moveable = (Orientation, Position3D)
+
+defaultMoveable :: Moveable
+defaultMoveable = ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
+                  , Position3D  $ L.V3 0 0 0 )
 
 -- camera action commands
 runMoveCommand :: MoveCommand -> (Moveable -> Moveable)

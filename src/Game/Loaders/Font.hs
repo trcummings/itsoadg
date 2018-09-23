@@ -156,11 +156,13 @@ loadCharacter ff slot char = do
       , show adv
       ]
 
-    let w        = fromIntegral $ width bmp
-        h        = fromIntegral $ rows bmp
-        w'       = fromIntegral w
-        h'       = fromIntegral h
-        advanceX = fromIntegral $ x adv
+    let w         = fromIntegral $ width bmp
+        h         = fromIntegral $ rows bmp
+        w'        = fromIntegral w
+        h'        = fromIntegral h
+        advanceX  = fromIntegral $ x adv
+        size      = GL.TextureSize2D w' h'
+        pixelData = GL.PixelData GL.Red GL.UnsignedByte $ buffer bmp
 
     -- Generate an opengl texture.
     [tex] <- GL.genObjectNames 1
@@ -172,14 +174,7 @@ loadCharacter ff slot char = do
     printGLErrors "Game.Loaders.Font.loadCharacter, GL.textureWrapMode"
 
     putStrLn "Buffering glyph bitmap into texture."
-    GL.texImage2D
-        GL.Texture2D
-        GL.NoProxy
-        0
-        GL.R8
-        (GL.TextureSize2D w' h')
-        0
-        (GL.PixelData GL.Red GL.UnsignedByte $ buffer bmp)
+    GL.texImage2D GL.Texture2D GL.NoProxy 0 GL.R8 size 0 pixelData
     printGLErrors "Game.Loaders.Font.loadCharacter, GL.texImage2D"
     putStrLn "Texture loaded."
 
@@ -192,8 +187,9 @@ loadCharacter ff slot char = do
     -- return char, character map
     return
       ( char
-      , Character { _charTexture = Texture $ Just tex
-                  , _charSize    = L.V2 (realToFrac w)    (realToFrac h)
+      , Character { _charTexture = Texture { _textureId   = Just tex
+                                           , _textureSize = size }
+                  -- , _charSize    = L.V2 (realToFrac w)    (realToFrac h)
                   , _charBearing = L.V2 (realToFrac left) (realToFrac top)
                   , _charAdvance = advanceX }
       )

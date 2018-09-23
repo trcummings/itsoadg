@@ -14,10 +14,10 @@ import           Foreign.Ptr             (nullPtr)
 
 import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (shaderPath, texturePath)
-import           Game.Loaders.Texture       (getAndCreateTexture)
+import           Game.Loaders.Texture    (getAndCreateTexture)
 import           Game.Util.GLError       (printGLErrors)
 import           Game.Util.BufferObjects (fromSource)
-import           Game.Loaders.Program       (createProgram, getAttrib, getUniform)
+import           Game.Loaders.Program    (createProgram, getAttrib, getUniform)
 import           Game.Util.Terrain       (generateTerrain, TerrainInfo(..), size, intVertexCount)
 import           Game.Util.Move          (Moveable)
 import           Game.Types
@@ -62,7 +62,7 @@ initTerrain = do
   -- define the entity
   newEntity (
       Terrain
-    , Texture terrainTexture
+    , terrainTexture
     , program
     , BufferResource { _vertexBuffer   = Just vertices
                      , _texCoordBuffer = Just texCoords
@@ -87,7 +87,7 @@ reflectivity = 0
 
 drawTerrain :: (ProjectionMatrix, ViewMatrix) -> TerrainE -> IO ()
 drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-            (_, Texture texObj, sProgram, br, (Orientation o, Position3D mPos)) = do
+            (_, texture, sProgram, br, (Orientation o, Position3D mPos)) = do
   let transMatrix      = L.mkTransformationMat L.identity mPos
       -- vertex shader attrib locations
       positionLocation = getAttrib sProgram "position"
@@ -125,7 +125,7 @@ drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
 
   -- sampler2D uniform
   GL.activeTexture               $= GL.TextureUnit 4
-  GL.textureBinding GL.Texture2D $= texObj
+  GL.textureBinding GL.Texture2D $= (_textureId texture)
   GL.uniform texSamplerLocation  $= GL.Index1 (4 :: GL.GLint)
   printGLErrors "renderTerrain handle uniforms"
 

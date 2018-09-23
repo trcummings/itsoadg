@@ -27,9 +27,10 @@ import           Game.Effect.Renderer (getWindowDims)
 import           Game.World.TH        (ECS)
 import           Game.Loaders.Save    (saveDataFile, loadDataFile)
 import           Game.Loaders.Cfg     (readMapCfg, readMapMedia)
+import           Game.System.Camera   (cameraEvents)
 import           Game.Util.Billboard  (renderBillboard)
 import           Game.Util.Constants  (frameDeltaSeconds, assetPath, shaderPath)
-import           Game.Loaders.Program    (createProgram)
+import           Game.Loaders.Program (createProgram)
 import           Game.Util.BSP.Render (BSPRenderData, renderBSP)
 import           Game.Util.GLError    (printGLErrors)
 import           Game.Util.Camera
@@ -73,6 +74,7 @@ import Game.System.Scratch.ColorCube
 import Game.System.Scratch.PlayerBillboard
   ( PlayerB
   , initPlayerBillboard
+  , stepPlayerBillboard
   , drawPlayerBillboard )
 import Game.System.Scratch.Terrain
   ( TerrainE
@@ -108,10 +110,10 @@ initialize = do
   -- entities
   -- initColorCube
   -- initTextureCube
-  -- initPlayerBillboard
+  initPlayerBillboard
   -- create all billboards
-  billboards <- liftIO $ initBillboards
-  mapM_ newEntity billboards
+  -- billboards <- liftIO $ initBillboards
+  -- mapM_ newEntity billboards
   -- initialize HUD
   hud <- liftIO $ initDebugHUD
   mapM_ newEntity hud
@@ -142,50 +144,19 @@ quitOnEsc inputs = do
     sc <- get global :: ECS SceneControl
     set global $ sc { _nextScene = Scene'Quit }
 
-playerEvents :: Inputs
-             -> (Camera, Moveable, Not HasMoveCommand)
-             -> Either Camera (Camera, HasMoveCommand)
-playerEvents inputs (p, _, _) =
-  let m            = _inputs . _keyboardInput $ inputs
-      leftPress    = isTouched $ m ! SDL.KeycodeA
-      rightPress   = isTouched $ m ! SDL.KeycodeD
-      forwardPress = isTouched $ m ! SDL.KeycodeW
-      backPress    = isTouched $ m ! SDL.KeycodeS
-      t            = realToFrac frameDeltaSeconds :: Float
-      toDolly v    = Move'Translate (Translation $ v L.^* t)
-      toRotat r    = Move'Rotate    Yaw (Degrees $ r * t)
-      rt = if leftPress && rightPress
-           then Nothing
-           else if leftPress
-                then Just $ toRotat 90
-                else if rightPress
-                     then Just $ toRotat (-90)
-                     else Nothing
-      vx = if forwardPress && backPress
-           then Nothing
-           else if backPress
-                then Just $ toDolly $ L.V3 0 0 1
-                else if forwardPress
-                     then Just $ toDolly $ L.V3 0 0 (-1)
-                     else Nothing
-  in case (vx, rt) of
-      (Nothing , Nothing ) -> Left p
-      -- if both, bias rotation first
-      (Just vx', Just rt') -> Right (p, HasMoveCommand (Move'Compose rt' vx'))
-      (Just vx', _       ) -> Right (p, HasMoveCommand vx')
-      (_       , Just rt') -> Right (p, HasMoveCommand rt')
-
 step :: ECS ()
 step = do
   stepDebugHUD
   -- rotate da cubes!!!
   cmap stepColorCube
+  -- update da sprites!!!
+  cmap stepPlayerBillboard
   -- get inputs
   inputs <- getInputs
   -- if escape pressed, transition to quit
   quitOnEsc inputs
   -- send player events based on WASD presses
-  cmap $ playerEvents inputs
+  cmap $ cameraEvents inputs
   -- -- resolve movement based on movement events
   cmap $ \(HasMoveCommand e, c :: Moveable) ->
     (runMoveCommand e c, Not :: Not HasMoveCommand)
@@ -211,7 +182,7 @@ render = do
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
-    -- cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
+    cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
     return ()
   cmapM_ $ \(hud@(dHud, _, _) :: DebugHUDEntity) -> do
     let (HUDInfo dMap) = _hudInfo dHud

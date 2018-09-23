@@ -6,6 +6,7 @@ module Game.Types.Components where
 import qualified Animate
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Linear as L
+import           Apecs (Entity)
 import           Data.Map
 
 import           Game.Types.Loaders.Obj (ObjData)
@@ -56,6 +57,14 @@ import           Game.Types.Shader      (ShaderProgram)
 -- data Player =
 --   Player (Step PlayerAction)
 --   deriving Show
+
+data Hierarchy = Hierarchy
+  { _parent   :: Maybe Entity
+  , _children :: Maybe [Entity] }
+  deriving Show
+
+data HierarchyCons a =
+  HierarchyCons a [HierarchyCons a]
 
 -- data Camera = Camera
 --   { size :: (V2 Unit)   -- camera height and width
@@ -146,11 +155,16 @@ newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
 newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
 
 
-data Player = Player
-
-data Terrain = Terrain
-
+data Player    = Player
+data Terrain   = Terrain
 data Billboard = Billboard
+
+data Door = Door deriving Show
+
+data DoorPanel =
+    DoorPanel'Top
+  | DoorPanel'Bottom
+  deriving Show
 
 -- data TexResource = TexResource
 --   { _sProgram   :: ShaderProgram
@@ -176,7 +190,11 @@ data BufferResource = BufferResource
   , _rgbCoordBuffer :: Maybe GL.BufferObject
   , _indexBuffer    :: Maybe GL.BufferObject }
 
-newtype Texture = Texture (Maybe GL.TextureObject) deriving Show
+-- newtype Texture = Texture (Maybe GL.TextureObject) deriving Show
+data Texture = Texture
+  { _textureId   :: Maybe GL.TextureObject
+  , _textureSize :: GL.TextureSize2D }
+  deriving Show
 
 
 -- Font types
@@ -202,7 +220,7 @@ data Character = Character
   -- texture object for character
   { _charTexture :: Texture
   -- size of glyph
-  , _charSize    :: L.V2 Float
+  -- , _charSize    :: L.V2 Float
   -- offset from baseline to left/top of glyph
   , _charBearing :: L.V2 Float
   -- offset to advance to next glyph

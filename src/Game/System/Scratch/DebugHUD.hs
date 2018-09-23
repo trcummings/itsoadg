@@ -192,29 +192,31 @@ drawDebugHUD (hud, sProgram, br) dims hudType = do
   printGLErrors "drawDebugHUD texture uniform"
 
   foldM_ (\advAcc chr -> do
-    let character     = fontMap ! chr
-        scale         = _fSize fontInfo
-        (Texture tex) = _charTexture character
-        L.V2 bX bY    = _charBearing character
-        L.V2 sX sY    = _charSize    character
+    let character              = fontMap ! chr
+        scale                  = _fSize fontInfo
+        texture                = _charTexture character
+        GL.TextureSize2D sW sH = _textureSize texture
+        L.V2 bX bY             = _charBearing character
     -- generate new buffer coordinates here
-        xPos          = (_fxPos fontInfo + advAcc) + (bX * scale)
-        yPos          = (_fyPos fontInfo) - ((sY - bY) * scale)
-        w             = sX * scale
-        h             = sY * scale
+        sX                     = realToFrac sW
+        sY                     = realToFrac sH
+        xPos                   = (_fxPos fontInfo + advAcc) + (bX * scale)
+        yPos                   = (_fyPos fontInfo) - ((sY - bY) * scale)
+        w                      = sX * scale
+        h                      = sY * scale
     -- new VBO vertices
-        verts         = [ L.V2 xPos       (yPos + h)
-                        , L.V2 xPos       yPos
-                        , L.V2 (xPos + w) yPos
-                        , L.V2 xPos       (yPos + h)
-                        , L.V2 (xPos + w) yPos
-                        , L.V2 (xPos + w) (yPos + h)]
+        verts                  = [ L.V2 xPos       (yPos + h)   -- bottom left
+                                 , L.V2 xPos       yPos         -- top left
+                                 , L.V2 (xPos + w) yPos         -- top right
+                                 , L.V2 xPos       (yPos + h)   -- bottom left
+                                 , L.V2 (xPos + w) yPos         -- top right
+                                 , L.V2 (xPos + w) (yPos + h) ] -- bottom right
 
     -- bind to current letter texture
-    GL.textureBinding GL.Texture2D $= tex
+    GL.textureBinding GL.Texture2D $= (_textureId texture)
 
     -- replace vertex buffer with new coords
-    GL.bindBuffer   GL.ArrayBuffer    $= posBuffer
+    GL.bindBuffer GL.ArrayBuffer      $= posBuffer
     replaceBuffer (GL.DynamicDraw, GL.ArrayBuffer) verts
     GL.vertexAttribPointer vpLocation $=
       ( GL.ToFloat
