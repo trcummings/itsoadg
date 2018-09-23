@@ -74,6 +74,7 @@ import Game.System.Scratch.ColorCube
 import Game.System.Scratch.PlayerBillboard
   ( PlayerB
   , initPlayerBillboard
+  , stepPlayerBillboard
   , drawPlayerBillboard )
 import Game.System.Scratch.Terrain
   ( TerrainE
@@ -148,6 +149,8 @@ step = do
   stepDebugHUD
   -- rotate da cubes!!!
   cmap stepColorCube
+  -- update da sprites!!!
+  cmap stepPlayerBillboard
   -- get inputs
   inputs <- getInputs
   -- if escape pressed, transition to quit

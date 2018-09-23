@@ -16,7 +16,7 @@ import           Data.Map                (keys)
 import           Apecs                   (newEntity)
 
 import           Game.World.TH           (ECS)
-import           Game.Util.Constants     (objPath, texturePath, shaderPath)
+import           Game.Util.Constants     (objPath, texturePath, shaderPath, frameDeltaSeconds)
 import           Game.Loaders.Obj.Loader (loadObjFile)
 import           Game.Loaders.Program    (createProgram, getAttrib, getUniform)
 import           Game.Loaders.Texture    (getAndCreateTexture)
@@ -32,17 +32,31 @@ import           Game.Types
   , Texture(..)
   , SpriteSheet(..)
   , AnimationClip
+  , Animations
+  , FrameInfo
   , AnimationKey(..)
   , BufferResource(..)
   , ShaderInfo(..)
-  , Player(..) )
+  , Player(..)
+  , Seconds(..)
+  , Step(..)
+  , AnimAction(..)
+  )
 
 type PlayerB =
   ( Player
   , ShaderProgram
   , SpriteSheet
   , BufferResource
-  , Moveable )
+  , Moveable
+  )
+
+stepAction :: Step AnimAction -> Animations -> FrameInfo -> FrameInfo
+stepAction (Step'Sustain _)   animations pos =
+  A.stepPosition animations pos $ Seconds (realToFrac frameDeltaSeconds :: Float)
+stepAction (Step'Change _ pa) _          pos = case pa of
+  PlayerAction'Walk -> A.initPositionWithLoop PlayerKey'Walk A.Loop'Always
+  PlayerAction'Idle -> A.initPosition         PlayerKey'Idle
 
 verts :: [L.V3 Float]
 verts = [ L.V3 (-0.5) (-0.5)  0.0 -- bottom left
@@ -90,8 +104,9 @@ initPlayerBillboard = do
       ssFilePath     = texturePath </> "doom_soldier.json"
 
   spriteSheet <- liftIO $ loadSpriteSheet ssFilePath
-  let pSheet = SpriteSheet { _ssSheet    = spriteSheet
-                           , _ssPosition = A.initPosition PlayerKey'Idle }
+  let pSheet = SpriteSheet { _ssAction   = Step'Sustain PlayerAction'Walk
+                           , _ssSheet    = spriteSheet
+                           , _ssPosition = A.initPosition PlayerKey'Walk }
 
   -- load in shaders
   program <- liftIO $
@@ -114,6 +129,13 @@ initPlayerBillboard = do
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
     , Position3D  $ L.V3 0 0.5 (-2) )
   return ()
+
+stepPlayerBillboard :: (Player, SpriteSheet) -> SpriteSheet
+stepPlayerBillboard (_, ss) =
+  let animations = A.ssAnimations $ _ssSheet ss
+      frameInfo  = _ssPosition ss
+      action     = _ssAction   ss
+  in ss { _ssPosition = stepAction action animations frameInfo }
 
 drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> IO ()
 drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)

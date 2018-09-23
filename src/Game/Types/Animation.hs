@@ -5,8 +5,8 @@ module Game.Types.Animation where
 import qualified Animate as A
 import           Data.Text (Text)
 
-import           Game.Types.Components (Texture(..))
-import           Game.Types.Util       (Seconds(..))
+import           Game.Types.Components (Texture)
+import           Game.Types.Util       (Seconds, Step)
 
 data AnimationKey =
     PlayerKey'Walk
@@ -25,11 +25,17 @@ animKey'keyName = \case
   EnemyKey'Walk  -> "WalkBack"
   EnemyKey'Idle  -> "IdleBack"
 
--- type Animations key = A.Animations key (A.SpriteClip key) Seconds
-type AnimationClip = A.SpriteClip AnimationKey
-type SheetInfo = A.SpriteSheet AnimationKey Texture Seconds
-type FrameInfo = A.Position    AnimationKey Seconds
+data AnimAction =
+    PlayerAction'Walk
+  | PlayerAction'Idle
+  deriving (Show, Eq)
+
+type Animations    = A.Animations  AnimationKey (A.SpriteClip AnimationKey) Seconds
+type AnimationClip = A.SpriteClip  AnimationKey
+type SheetInfo     = A.SpriteSheet AnimationKey Texture Seconds
+type FrameInfo     = A.Position    AnimationKey Seconds
 
 data SpriteSheet = SpriteSheet
-  { _ssSheet    :: SheetInfo
+  { _ssAction   :: Step AnimAction
+  , _ssSheet    :: SheetInfo
   , _ssPosition :: FrameInfo }
