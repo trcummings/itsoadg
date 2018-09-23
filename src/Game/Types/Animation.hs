@@ -26,6 +26,7 @@ animKey'keyName = \case
   EnemyKey'Idle  -> "IdleBack"
 
 -- type Animations key = A.Animations key (A.SpriteClip key) Seconds
+type AnimationClip = A.SpriteClip AnimationKey
 type SheetInfo = A.SpriteSheet AnimationKey Texture Seconds
 type FrameInfo = A.Position    AnimationKey Seconds
 

@@ -205,18 +205,18 @@ drawDebugHUD (hud, sProgram, br) dims hudType = do
         w                      = sX * scale
         h                      = sY * scale
     -- new VBO vertices
-        verts                  = [ L.V2 xPos       (yPos + h)
-                                , L.V2 xPos       yPos
-                                , L.V2 (xPos + w) yPos
-                                , L.V2 xPos       (yPos + h)
-                                , L.V2 (xPos + w) yPos
-                                , L.V2 (xPos + w) (yPos + h)]
+        verts                  = [ L.V2 xPos       (yPos + h)   -- bottom left
+                                 , L.V2 xPos       yPos         -- top left
+                                 , L.V2 (xPos + w) yPos         -- top right
+                                 , L.V2 xPos       (yPos + h)   -- bottom left
+                                 , L.V2 (xPos + w) yPos         -- top right
+                                 , L.V2 (xPos + w) (yPos + h) ] -- bottom right
 
     -- bind to current letter texture
     GL.textureBinding GL.Texture2D $= (_textureId texture)
 
     -- replace vertex buffer with new coords
-    GL.bindBuffer   GL.ArrayBuffer    $= posBuffer
+    GL.bindBuffer GL.ArrayBuffer      $= posBuffer
     replaceBuffer (GL.DynamicDraw, GL.ArrayBuffer) verts
     GL.vertexAttribPointer vpLocation $=
       ( GL.ToFloat
