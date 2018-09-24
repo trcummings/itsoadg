@@ -124,8 +124,8 @@ initialize = do
   newEntity (c, (o, p))
   cmap $ \((_, m) :: CameraEntity) ->
     runMoveCommand (Move'Compose
-      (Move'Translate $ Translation $ L.V3 0 6 8)
-      (Move'Rotate      Pitch (Degrees (-45))) ) m
+      (Move'Translate $ Translation $ L.V3 0 2 4)
+      (Move'Rotate      Pitch (Degrees (-15))) ) m
   return ()
 
 playerEvents :: Inputs
@@ -216,7 +216,7 @@ render = do
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
-    cmapM_ $ \(r :: PlayerB)       -> liftIO $ drawPlayerBillboard mats r
+    cmapM_ $ (drawPlayerBillboard mats)
     return ()
   cmapM_ $ \(hud@(dHud, _, _) :: DebugHUDEntity) -> do
     let (HUDInfo dMap) = _hudInfo dHud

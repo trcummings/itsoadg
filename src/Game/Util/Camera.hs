@@ -31,8 +31,9 @@ cameraProjectionMatrix (L.V2 width' height') (camera, _) =
   let height = fromIntegral height'
       width  = fromIntegral width'
       FieldOfView fov   = _fieldOfView camera
-  in ProjectionMatrix $ U.projectionMatrix
-                          fov
-                          (width / height)
-                          (_near . _clippingPlanes $ camera)
-                          (_far  . _clippingPlanes $ camera)
+  in ProjectionMatrix
+    $ U.projectionMatrix
+        fov
+        (width / height)
+        (_near . _clippingPlanes $ camera)
+        (_far  . _clippingPlanes $ camera)

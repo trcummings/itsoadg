@@ -72,7 +72,7 @@ initTerrain = do
                      , _rgbCoordBuffer = Nothing
                      , _indexBuffer    = Just indices }
     , ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-      , Position3D  $ L.V3 (-halfSize) 0 0 ) )
+      , Position3D  $ L.V3 (-halfSize) 0 (-halfSize) ) )
   return ()
 
 sun :: L.V3 Float

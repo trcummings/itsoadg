@@ -63,9 +63,6 @@ data Hierarchy = Hierarchy
   , _children :: Maybe [Entity] }
   deriving Show
 
-data HierarchyCons a =
-  HierarchyCons a [HierarchyCons a]
-
 -- data Camera = Camera
 --   { size :: (V2 Unit)   -- camera height and width
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
@@ -168,7 +165,11 @@ data TerrainInfo = TerrainInfo
 
 
 data Player    = Player
+
+
 data Billboard = Billboard
+
+newtype FloorCircle = FloorCircle Float
 
 data Door = Door deriving Show
 

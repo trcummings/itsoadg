@@ -26,6 +26,8 @@ import Game.Types
   , HasMoveCommand
 
   , Player
+  , FloorCircle
+
   , Terrain
   , Billboard
 
@@ -104,6 +106,9 @@ instance Component VAO where
 instance Component Player where
   type Storage Player = Unique Player
 
+instance Component FloorCircle where
+  type Storage FloorCircle = Map FloorCircle
+
 instance Component Terrain where
   type Storage Terrain = Map Terrain
 
@@ -169,6 +174,7 @@ makeWorld "World" [
 
   , ''BSPMap
   , ''Player
+  , ''FloorCircle
   , ''Billboard
   , ''Terrain
   , ''DebugHUD

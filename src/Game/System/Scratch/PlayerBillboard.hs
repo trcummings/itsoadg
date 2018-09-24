@@ -13,7 +13,8 @@ import           Control.Monad           (mapM_)
 import           System.FilePath         ((</>))
 import           Control.Monad.IO.Class  (liftIO)
 import           Data.Map                (keys)
-import           Apecs                   (newEntity)
+import           Data.Maybe              (maybe)
+import           Apecs                   (newEntity, get)
 
 import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (objPath, texturePath, shaderPath, frameDeltaSeconds)
@@ -23,6 +24,7 @@ import           Game.Loaders.Texture    (getAndCreateTexture)
 import           Game.Util.Move          (Moveable)
 import           Game.Util.Sprite        (loadSpriteSheet)
 import           Game.Util.BufferObjects (fromSource, replaceBuffer)
+import           Game.World.Hierarchy    (HierarchyCons(..), newHierarchicalEntity)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
@@ -38,18 +40,38 @@ import           Game.Types
   , BufferResource(..)
   , ShaderInfo(..)
   , Player(..)
+  , FloorCircle(..)
   , Seconds(..)
   , Step(..)
+  , Hierarchy(..)
   , AnimAction(..)
   )
 
-type PlayerB =
+type PlayerProto =
   ( Player
   , ShaderProgram
   , SpriteSheet
   , BufferResource
   , Moveable
   )
+
+type PlayerBAnim = (Player, SpriteSheet)
+
+type PlayerB = (PlayerProto, Hierarchy)
+
+type FloorCircleProto =
+  ( FloorCircle
+  , ShaderProgram
+  , BufferResource
+  , Position3D
+  )
+
+type FloorCircleE =
+  ( FloorCircleProto
+  , Hierarchy )
+
+defaultBufferResource :: BufferResource
+defaultBufferResource = BufferResource Nothing Nothing Nothing Nothing Nothing
 
 stepAction :: Step AnimAction -> Animations -> FrameInfo -> FrameInfo
 stepAction (Step'Sustain _)   animations pos =
@@ -66,6 +88,15 @@ verts = [ L.V3 (-0.5) (-0.5)  0.0 -- bottom left
         , L.V3   0.5    0.5   0.0 -- top    right
         , L.V3   0.5  (-0.5)  0.0 -- bottom right
         ]
+
+zverts :: [L.V3 Float]
+zverts = [ L.V3 (-0.5) 0.0 (-0.5) -- bottom left
+         , L.V3 (-0.5) 0.0   0.5  -- top    left
+         , L.V3   0.5  0.0   0.5  -- top    right
+         , L.V3 (-0.5) 0.0 (-0.5) -- bottom left
+         , L.V3   0.5  0.0   0.5  -- top    right
+         , L.V3   0.5  0.0 (-0.5) -- bottom right
+         ]
 
 uvVertices :: [L.V2 Float]
 uvVertices = [ L.V2 0 1 -- bottom left
@@ -99,51 +130,106 @@ makeFrameUVs sc (L.V2 w' h') =
 
 initPlayerBillboard :: ECS ()
 initPlayerBillboard = do
+  pb <- liftIO $ initPlayerB
+  fc <- liftIO $ initFloorCircle
+  newHierarchicalEntity Nothing (HierarchyCons pb [HierarchyCons fc []])
+  return ()
+
+initFloorCircle :: IO FloorCircleProto
+initFloorCircle = do
+  let vertexShader   = shaderPath  </> "floor_circle.v.glsl"
+      fragmentShader = shaderPath  </> "floor_circle.f.glsl"
+  -- -- load in shaders
+  program <-
+    createProgram [ ShaderInfo GL.VertexShader   vertexShader
+                  , ShaderInfo GL.FragmentShader fragmentShader ]
+  -- -- create the buffer related data
+  vb  <- fromSource (GL.StaticDraw, GL.ArrayBuffer) zverts
+  return
+    ( FloorCircle 5
+    , program
+    , defaultBufferResource { _vertexBuffer = Just vb }
+    , Position3D (L.V3 0 (-0.99) (-0.25))
+    )
+
+initPlayerB :: IO PlayerProto
+initPlayerB = do
   let vertexShader   = shaderPath  </> "p_billboard.v.glsl"
       fragmentShader = shaderPath  </> "p_billboard.f.glsl"
       ssFilePath     = texturePath </> "doom_soldier.json"
 
-  spriteSheet <- liftIO $ loadSpriteSheet ssFilePath
+  spriteSheet <- loadSpriteSheet ssFilePath
   let pSheet = SpriteSheet { _ssAction   = Step'Sustain PlayerAction'Walk
                            , _ssSheet    = spriteSheet
                            , _ssPosition = A.initPosition PlayerKey'Walk }
 
   -- load in shaders
-  program <- liftIO $
+  program <-
     createProgram [ ShaderInfo GL.VertexShader   vertexShader
                   , ShaderInfo GL.FragmentShader fragmentShader ]
   -- create the buffer related data
-  vb  <- liftIO $ fromSource (GL.StaticDraw,  GL.ArrayBuffer) $ verts
-  tx  <- liftIO $ fromSource (GL.DynamicDraw, GL.ArrayBuffer) $ uvVertices
+  vb  <- fromSource (GL.StaticDraw,  GL.ArrayBuffer) $ verts
+  tx  <- fromSource (GL.DynamicDraw, GL.ArrayBuffer) $ uvVertices
   -- define the entity
-  newEntity (
-      Player
+  return
+    ( Player
     , program
     , pSheet
     -- , Texture texObj
-    , BufferResource { _vertexBuffer   = Just vb
-                     , _texCoordBuffer = Just tx
-                     , _normalBuffer   = Nothing
-                     , _rgbCoordBuffer = Nothing
-                     , _indexBuffer    = Nothing }
-    , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-    , Position3D  $ L.V3 0 1 (-2) )
-  return ()
+    , defaultBufferResource { _vertexBuffer   = Just vb
+                            , _texCoordBuffer = Just tx }
+    , ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
+      , Position3D  $ L.V3 0 1 0 )
+    )
 
-stepPlayerBillboard :: (Player, SpriteSheet) -> SpriteSheet
+stepPlayerBillboard :: PlayerBAnim -> SpriteSheet
 stepPlayerBillboard (_, ss) =
   let animations = A.ssAnimations $ _ssSheet ss
       frameInfo  = _ssPosition ss
       action     = _ssAction   ss
   in ss { _ssPosition = stepAction action animations frameInfo }
 
-drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> IO ()
-drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
+drawFloorCircle :: (ProjectionMatrix, ViewMatrix)
+                -> (Player, Moveable)
+                -> FloorCircleProto
+                -> IO ()
+drawFloorCircle (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
+                (_, (Orientation o, Position3D mPos))
+                (FloorCircle radius, sProgram, bufferResource, Position3D fPos) = do
+  let modelMatrix = L.mkTransformation o (mPos + fPos)
+  -- attribs & uniforms
+  -- vertex shader
+      posLoc      = getAttrib  sProgram "VertexPosition_WorldSpace"
+      modelMatLoc = getUniform sProgram "ModelMatrix"
+      viewMatLoc  = getUniform sProgram "ViewMatrix"
+      projMatLoc  = getUniform sProgram "ProjMatrix"
+      -- fragment shader
+      -- mtsLoc      = getUniform sProgram "TextureSampler"
+      -- set current program to shaderProgram
+  GL.currentProgram              $= Just (_glProgram sProgram)
+  -- enable all attributes
+  GL.vertexAttribArray posLoc    $= GL.Enabled
+  -- set view-projection to camera vp
+  modelMatrix  `U.asUniform` modelMatLoc
+  viewMatrix   `U.asUniform` viewMatLoc
+  projMatrix   `U.asUniform` projMatLoc
+  -- bind position VB ("VertexPosition_ModelSpace")
+  GL.bindBuffer GL.ArrayBuffer   $= (_vertexBuffer bufferResource)
+  GL.vertexAttribPointer  posLoc $=
+    ( GL.ToFloat
+    , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
+  GL.drawArrays GL.Triangles 0 6
+-- disable all attributes
+  GL.vertexAttribArray posLoc     $= GL.Disabled
+-- unbind array buffer
+  GL.bindBuffer GL.ArrayBuffer    $= Nothing
+  -- unset current program
+  GL.currentProgram               $= Nothing
+
+drawBillboardSprite :: (ProjectionMatrix, ViewMatrix) -> PlayerProto -> IO ()
+drawBillboardSprite (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
                     (_, sProgram, pSheet, br, (Orientation o, Position3D mPos)) = do
-  let modelMatrix = L.mkTransformationMat L.identity mPos
-      trans       = projMatrix !*! viewMatrix !*! modelMatrix
-      -- animate
-      texObj      = A.ssImage      $ _ssSheet pSheet
+  let texObj      = A.ssImage      $ _ssSheet pSheet
       animations  = A.ssAnimations $ _ssSheet pSheet
       spriteClip  = A.currentLocation animations (_ssPosition pSheet)
       L.V2 tW tH  = texSizeToDims (_textureSize texObj)
@@ -216,3 +302,18 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.bindBuffer GL.ArrayBuffer $= Nothing
   -- unset current program
   GL.currentProgram            $= Nothing
+
+drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> ECS ()
+drawPlayerBillboard pv (pp, hierarchy) = do
+  -- NB: you gotta draw back to front to maintain transparency
+  -- traverse billboard children to draw floor circle
+  let (p, _, _, _, mv) = pp
+      fcEtys           = _children hierarchy
+  case fcEtys of
+    Nothing   -> return ()
+    Just etys -> do
+      fcps <- mapM get etys :: ECS [FloorCircleProto]
+      liftIO $ mapM_ (drawFloorCircle pv (p, mv)) fcps
+  -- draw the billboard as normal
+  liftIO $ drawBillboardSprite pv pp
+  -- traverse billboard children to draw floor circle
