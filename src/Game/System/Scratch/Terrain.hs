@@ -18,8 +18,8 @@ import           Game.Loaders.Texture    (getAndCreateTexture)
 import           Game.Util.GLError       (printGLErrors)
 import           Game.Util.BufferObjects (fromSource)
 import           Game.Loaders.Program    (createProgram, getAttrib, getUniform)
-import           Game.Util.Terrain       (generateTerrain, TerrainInfo(..), size, intVertexCount)
 import           Game.Util.Move          (Moveable)
+import           Game.Util.Terrain       (generateTerrain)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
@@ -30,6 +30,8 @@ import           Game.Types
   , BufferResource(..)
   , ShaderInfo(..)
   , Terrain(..)
+  , TerrainInfo(..)
+  , TerrainConfig(..)
   , Player(..) )
 
 type TerrainE = (Terrain, Texture, ShaderProgram, BufferResource, Moveable)
@@ -39,10 +41,10 @@ initTerrain = do
   let vertexShader   = shaderPath  </> "terrain.v.glsl"
       fragmentShader = shaderPath  </> "terrain.f.glsl"
       texFilePath    = texturePath </> "terrain.tga"
-      tr             = generateTerrain
-
-  -- liftIO $ putStrLn $ show $ ((3 * length (_trVertices tr)) + (3 * length (_trNormals tr)) + (2 * length (_trTexCoords tr)))
-  -- liftIO $ putStrLn $ show $ ((_trIndices tr))
+      terrainConfig  = TerrainConfig { _trSize      = 20
+                                     , _trVertCount = 32 }
+      tr             = generateTerrain terrainConfig
+      halfSize       = (_trSize terrainConfig) / 2
 
   terrainTexture <- liftIO $ getAndCreateTexture texFilePath
   -- load in shaders
@@ -61,7 +63,7 @@ initTerrain = do
 
   -- define the entity
   newEntity (
-      Terrain
+      Terrain terrainConfig
     , terrainTexture
     , program
     , BufferResource { _vertexBuffer   = Just vertices
@@ -70,7 +72,7 @@ initTerrain = do
                      , _rgbCoordBuffer = Nothing
                      , _indexBuffer    = Just indices }
     , ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-      , Position3D  $ L.V3 0 0 (-size / 2) ) )
+      , Position3D  $ L.V3 (-halfSize) 0 0 ) )
   return ()
 
 sun :: L.V3 Float
@@ -87,7 +89,7 @@ reflectivity = 0
 
 drawTerrain :: (ProjectionMatrix, ViewMatrix) -> TerrainE -> IO ()
 drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-            (_, texture, sProgram, br, (Orientation o, Position3D mPos)) = do
+            (tr, texture, sProgram, br, (Orientation o, Position3D mPos)) = do
   let transMatrix      = L.mkTransformationMat L.identity mPos
       -- vertex shader attrib locations
       positionLocation = getAttrib sProgram "position"
@@ -103,6 +105,9 @@ drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       lightColorLocation   = getUniform sProgram "lightColor"
       shineDamperLocation  = getUniform sProgram "shineDamper"
       reflectivityLocation = getUniform sProgram "reflectivity"
+      -- terrain config
+      Terrain tConfig = tr
+      tSize = _trSize tConfig
 
   -- set current program to shaderProgram
   GL.currentProgram $= Just (_glProgram sProgram)
@@ -152,8 +157,7 @@ drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   printGLErrors "renderTerrain bind element buffer"
 
   -- draw triangles
-  -- GL.drawArrays GL.Triangles 0 131072
-  GL.drawElements GL.Triangles (fromIntegral $ 3 * 6 * (intVertexCount * intVertexCount)) GL.UnsignedInt nullPtr
+  GL.drawElements GL.Triangles (floor $ 3 * 6 * (tSize * tSize)) GL.UnsignedInt nullPtr
   printGLErrors "renderTerrain draw triangles"
 
   -- disable all attributes

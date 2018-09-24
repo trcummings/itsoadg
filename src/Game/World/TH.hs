@@ -105,7 +105,7 @@ instance Component Player where
   type Storage Player = Unique Player
 
 instance Component Terrain where
-  type Storage Terrain = Unique Terrain
+  type Storage Terrain = Map Terrain
 
 instance Component Billboard where
   type Storage Billboard = Map Billboard

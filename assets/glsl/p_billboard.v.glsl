@@ -11,7 +11,8 @@ out vec2 UV;
 uniform vec3 CameraRight_worldspace;
 uniform vec3 CameraUp_worldspace;
 
-uniform mat4 VP; // Model-View-Projection matrix, but without the Model (the position is in BillboardPos; the orientation depends on the camera)
+uniform mat4 ProjMatrix;
+uniform mat4 ViewMatrix;
 uniform vec3 BillboardPos; // Position of the center of the billboard
 uniform vec2 BillboardSize; // Size of the billboard, in world units (probably meters)
 
@@ -24,7 +25,7 @@ void main(void){
 
 
 	// Output position of the vertex
-	gl_Position = VP * vec4(vertexPosition_worldspace, 1.0f);
+	gl_Position = ProjMatrix * ViewMatrix * vec4(vertexPosition_worldspace, 1.0f);
 
 	// Or, if BillboardSize is in percentage of the screen size (1,1 for fullscreen) :
 	//vertexPosition_worldspace = particleCenter_wordspace;

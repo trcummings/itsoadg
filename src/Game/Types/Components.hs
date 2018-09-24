@@ -154,9 +154,20 @@ newtype VAO = VAO GL.VertexArrayObject
 newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
 newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
 
+newtype Terrain = Terrain TerrainConfig
+
+data TerrainConfig = TerrainConfig
+  { _trSize      :: Float
+  , _trVertCount :: Float }
+
+data TerrainInfo = TerrainInfo
+  { _trVertices  :: [L.V3 Float]
+  , _trTexCoords :: [L.V2 Float]
+  , _trNormals   :: [L.V3 Float]
+  , _trIndices   :: [L.V3 Int] }
+
 
 data Player    = Player
-data Terrain   = Terrain
 data Billboard = Billboard
 
 data Door = Door deriving Show

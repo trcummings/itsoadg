@@ -57,6 +57,7 @@ import           Game.Types
   , CameraAxes(..)
 
   , Player(..)
+  , Terrain
 
   , BSPMap
   , DebugHUD(..)
@@ -121,11 +122,43 @@ initialize = do
   -- camera
   (c, p, o) :: (Camera, Position3D, Orientation) <- liftIO $ loadDataFile "test.json"
   newEntity (c, (o, p))
-  cmap $ \((c, m) :: CameraEntity) ->
+  cmap $ \((_, m) :: CameraEntity) ->
     runMoveCommand (Move'Compose
-      (Move'Translate $ Translation $ L.V3 0 1 2)
-      (Move'Rotate      Pitch (Degrees (0))) ) m
+      (Move'Translate $ Translation $ L.V3 0 6 8)
+      (Move'Rotate      Pitch (Degrees (-45))) ) m
   return ()
+
+playerEvents :: Inputs
+             -> (Player, Moveable, Not HasMoveCommand)
+             -> Either Player (Player, HasMoveCommand)
+playerEvents inputs (p, _, _) =
+  let m            = _inputs . _keyboardInput $ inputs
+      leftPress    = isTouched $ m ! SDL.KeycodeA
+      rightPress   = isTouched $ m ! SDL.KeycodeD
+      forwardPress = isTouched $ m ! SDL.KeycodeW
+      backPress    = isTouched $ m ! SDL.KeycodeS
+      t            = realToFrac frameDeltaSeconds :: Float
+      toDolly v    = Move'Translate (Translation $ v L.^* t)
+      rt = if leftPress && rightPress
+           then Nothing
+           else if leftPress
+                then Just $ toDolly $ L.V3 (-1) 0 0
+                else if rightPress
+                     then Just $ toDolly $ L.V3 1 0 0
+                     else Nothing
+      vx = if forwardPress && backPress
+           then Nothing
+           else if backPress
+                then Just $ toDolly $ L.V3 0 0 1
+                else if forwardPress
+                     then Just $ toDolly $ L.V3 0 0 (-1)
+                     else Nothing
+  in case (vx, rt) of
+      (Nothing , Nothing ) -> Left p
+      -- if both, bias rotation first
+      (Just vx', Just rt') -> Right (p, HasMoveCommand (Move'Compose rt' vx'))
+      (Just vx', _       ) -> Right (p, HasMoveCommand vx')
+      (_       , Just rt') -> Right (p, HasMoveCommand rt')
 
 cleanUp :: ECS ()
 cleanUp = do
@@ -156,8 +189,9 @@ step = do
   -- if escape pressed, transition to quit
   quitOnEsc inputs
   -- send player events based on WASD presses
-  cmap $ cameraEvents inputs
-  -- -- resolve movement based on movement events
+  -- cmap $ cameraEvents inputs
+  cmap $ playerEvents inputs
+  -- resolve movement based on movement events
   cmap $ \(HasMoveCommand e, c :: Moveable) ->
     (runMoveCommand e c, Not :: Not HasMoveCommand)
   -- orbit camera around player
@@ -178,7 +212,7 @@ render = do
         (_, (_, cPos)) = camera
     -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
     cmapM_ $ \(r :: TerrainE)        -> liftIO $ drawTerrain mats r
-    cmapM_ $ \(r :: RenderBillboard) -> liftIO $ drawBillboard mats r
+    -- cmapM_ $ \(r :: RenderBillboard) -> liftIO $ drawBillboard mats r
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r

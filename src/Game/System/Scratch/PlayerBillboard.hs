@@ -127,7 +127,7 @@ initPlayerBillboard = do
                      , _rgbCoordBuffer = Nothing
                      , _indexBuffer    = Nothing }
     , Orientation $ L.Quaternion 1 (L.V3 0 0 0)
-    , Position3D  $ L.V3 0 0.5 (-2) )
+    , Position3D  $ L.V3 0 1 (-2) )
   return ()
 
 stepPlayerBillboard :: (Player, SpriteSheet) -> SpriteSheet
@@ -153,9 +153,10 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       -- vertex shader
       posLoc      = getAttrib  sProgram "SquareVertices"
       texLoc      = getAttrib  sProgram "TextureCoords"
-      vpLoc       = getUniform sProgram "VP"
-      crwLoc      = getUniform sProgram "CameraRight_worldspace"
-      cuwLoc      = getUniform sProgram "CameraUp_worldspace"
+      viewMatLoc  = getUniform sProgram "ViewMatrix"
+      projMatLoc  = getUniform sProgram "ProjMatrix"
+      cameraRight = getUniform sProgram "CameraRight_worldspace"
+      cameraUp    = getUniform sProgram "CameraUp_worldspace"
       bpLoc       = getUniform sProgram "BillboardPos"
       bsLoc       = getUniform sProgram "BillboardSize"
       -- fragment shader
@@ -178,14 +179,15 @@ drawPlayerBillboard (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
         (L.V4 vm10 vm11 _ _)
         (L.V4 vm20 vm21 _ _)
         _                    = viewMatrix
-  (L.V3 vm00 vm10 vm20) `U.asUniform` crwLoc
-  (L.V3 vm01 vm11 vm21) `U.asUniform` cuwLoc
+  (L.V3 vm00 vm10 vm20) `U.asUniform` cameraRight
+  (L.V3 vm01 vm11 vm21) `U.asUniform` cameraUp
   -- set billboard pos to center of object position
   mPos   `U.asUniform` bpLoc
   -- set size of billboard (in world units)
   bbSize `U.asUniform` bsLoc
   -- set view-projection to camera vp
-  trans  `U.asUniform` vpLoc
+  viewMatrix  `U.asUniform` viewMatLoc
+  projMatrix  `U.asUniform` projMatLoc
 
   -- bind position VB ("squareVertices")
   GL.bindBuffer GL.ArrayBuffer   $= (_vertexBuffer br)
