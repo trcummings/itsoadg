@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 
 module Game.World.Hierarchy
-  ( newHierarchicalEntity
+  ( hNewEntity
   , HierarchyCons(..)
   ) where
 
@@ -20,13 +20,22 @@ setChildren :: Maybe [Entity] -> Hierarchy -> Hierarchy
 setChildren etys@(Just _) h = h { _children = etys }
 setChildren Nothing       h = h { _children = Nothing }
 
-newHierarchicalEntity :: Maybe Entity -> HierarchyCons c -> ECS Entity
-newHierarchicalEntity mEty (HierarchyCons c xc) = do
+-- hGet :: (Get World IO cx, Get World IO cy)
+--      => (cx, Hierarchy) -> ECS (cx, [cy])
+-- hGet (cx', hierarchy) = do
+--   case (_children hierarchy) of
+--     Nothing   -> return (cx', [])
+--     Just etys -> do
+--       fcps <- mapM get etys :: ECS [cy]
+--       return (cx', fcps)
+
+hNewEntity :: Maybe Entity -> HierarchyCons c -> ECS Entity
+hNewEntity mEty (HierarchyCons c xc) = do
   -- create new parent entity with hierarchy component
   ety  <- newEntity (c, Hierarchy { _parent   = mEty
                                   , _children = Nothing })
   -- create children with entity pointing to parent
-  etys <- mapM (newHierarchicalEntity (Just ety)) xc
+  etys <- mapM (hNewEntity (Just ety)) xc
   -- update parent entity with children
   modify ety (setChildren $ Just etys)
   -- return entity

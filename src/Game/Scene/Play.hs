@@ -43,6 +43,8 @@ import           Game.Types
   , PlayerInput(..)
   , Inputs(..)
   , SceneControl(..)
+  , PolygonMode(..)
+  , PolygonModeType(..)
 
   , HasMoveCommand(..)
   , MoveCommand(..)
@@ -177,6 +179,19 @@ quitOnEsc inputs = do
     sc <- get global :: ECS SceneControl
     set global $ sc { _nextScene = Scene'Quit }
 
+toggleWireframeOnP :: Inputs -> ECS ()
+toggleWireframeOnP inputs = do
+  let m = _inputs . _keyboardInput $ inputs
+  when (isPressed $ m ! SDL.KeycodeP) $ do
+    PolygonMode pm <- get global
+    case pm of
+      PolygonMode'Normal    -> do
+        liftIO $ GL.polygonMode $= (GL.Line, GL.Line)
+        set global (PolygonMode PolygonMode'Wireframe)
+      PolygonMode'Wireframe -> do
+        liftIO $ GL.polygonMode $= (GL.Fill, GL.Fill)
+        set global (PolygonMode PolygonMode'Normal)
+
 step :: ECS ()
 step = do
   stepDebugHUD
@@ -187,7 +202,9 @@ step = do
   -- get inputs
   inputs <- getInputs
   -- if escape pressed, transition to quit
-  quitOnEsc inputs
+  quitOnEsc          inputs
+  -- toggle wireframe on press "p"
+  toggleWireframeOnP inputs
   -- send player events based on WASD presses
   -- cmap $ cameraEvents inputs
   cmap $ playerEvents inputs

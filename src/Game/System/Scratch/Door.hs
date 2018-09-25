@@ -2,7 +2,7 @@ module Game.System.Scratch.Door where
 
 import Game.Util.Move       (defaultMoveable)
 import Game.World.TH        (ECS, World)
-import Game.World.Hierarchy (HierarchyCons(..), newHierarchicalEntity)
+import Game.World.Hierarchy (HierarchyCons(..), hNewEntity)
 import Game.Types
   ( Position3D(..)
   , Orientation(..)
@@ -17,7 +17,7 @@ initDoor = do
       botPanel = (DoorPanel'Bottom, defaultMoveable)
       door     = (Door, defaultMoveable)
 
-  newHierarchicalEntity
+  hNewEntity
     Nothing
     (HierarchyCons
       (Door, defaultMoveable)

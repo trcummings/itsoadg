@@ -68,6 +68,17 @@ data Hierarchy = Hierarchy
 --   , ppos :: (V2 Unit) } -- past position for verlet transform
 --   deriving Show
 
+data PolygonModeType =
+    PolygonMode'Wireframe
+  | PolygonMode'Normal
+
+newtype PolygonMode = PolygonMode PolygonModeType
+
+instance Monoid PolygonMode where
+  mempty  = PolygonMode PolygonMode'Normal
+  mappend (PolygonMode p1) (PolygonMode p2) = PolygonMode p2
+
+
 newtype Position3D =
   Position3D (L.V3 Float)
   deriving Show

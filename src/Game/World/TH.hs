@@ -18,6 +18,7 @@ import Game.Types
   , SceneControl
   , Inputs
   , Clock
+  , PolygonMode
 
   , Hierarchy
 
@@ -65,6 +66,9 @@ instance Component Inputs where
 
 instance Component Clock where
   type Storage Clock = Global Clock
+
+instance Component PolygonMode where
+  type Storage PolygonMode = Global PolygonMode
 
 
 -- Entity related Components
@@ -155,6 +159,7 @@ makeWorld "World" [
   , ''SceneControl
   , ''Inputs
   , ''Clock
+  , ''PolygonMode
 
   , ''Hierarchy
   , ''Position3D

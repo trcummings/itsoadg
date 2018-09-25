@@ -24,7 +24,7 @@ import           Game.Loaders.Texture    (getAndCreateTexture)
 import           Game.Util.Move          (Moveable)
 import           Game.Util.Sprite        (loadSpriteSheet)
 import           Game.Util.BufferObjects (fromSource, replaceBuffer)
-import           Game.World.Hierarchy    (HierarchyCons(..), newHierarchicalEntity)
+import           Game.World.Hierarchy    (HierarchyCons(..), hNewEntity)
 import           Game.Types
   ( ProjectionMatrix(..)
   , ViewMatrix(..)
@@ -132,7 +132,7 @@ initPlayerBillboard :: ECS ()
 initPlayerBillboard = do
   pb <- liftIO $ initPlayerB
   fc <- liftIO $ initFloorCircle
-  newHierarchicalEntity Nothing (HierarchyCons pb [HierarchyCons fc []])
+  hNewEntity Nothing (HierarchyCons pb [HierarchyCons fc []])
   return ()
 
 initFloorCircle :: IO FloorCircleProto
@@ -190,11 +190,11 @@ stepPlayerBillboard (_, ss) =
   in ss { _ssPosition = stepAction action animations frameInfo }
 
 drawFloorCircle :: (ProjectionMatrix, ViewMatrix)
-                -> (Player, Moveable)
+                -> PlayerProto
                 -> FloorCircleProto
                 -> IO ()
 drawFloorCircle (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                (_, (Orientation o, Position3D mPos))
+                (_, _, _, _, (Orientation o, Position3D mPos))
                 (FloorCircle radius, sProgram, bufferResource, Position3D fPos) = do
   let modelMatrix = L.mkTransformation o (mPos + fPos)
   -- attribs & uniforms
@@ -313,7 +313,7 @@ drawPlayerBillboard pv (pp, hierarchy) = do
     Nothing   -> return ()
     Just etys -> do
       fcps <- mapM get etys :: ECS [FloorCircleProto]
-      liftIO $ mapM_ (drawFloorCircle pv (p, mv)) fcps
+      liftIO $ mapM_ (drawFloorCircle pv pp) fcps
   -- draw the billboard as normal
   liftIO $ drawBillboardSprite pv pp
   -- traverse billboard children to draw floor circle

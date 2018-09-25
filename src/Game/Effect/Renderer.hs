@@ -34,8 +34,6 @@ initRenderer vc = do
   GL.depthFunc  $= Just GL.Less
   -- set backface culling
   GL.cullFace   $= Just GL.Back
-  -- turn this on to wireframe everything
-  -- GL.polygonMode $= (GL.Line, GL.Line)
   -- set viewport
   setViewportToWindow vc
 
