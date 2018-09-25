@@ -17,7 +17,7 @@ import           Data.Coerce (coerce)
 import           Control.Lens ((&), (%~), element)
 import           Control.Monad (when, mapM_)
 import           Control.Monad.IO.Class (liftIO)
-import           KeyState (isPressed, isTouched)
+import           KeyState (isPressed, isTouched, isHeld)
 import           System.FilePath        ((</>))
 
 import           Game.Effect.Clock    (getGlobalTime)
@@ -161,17 +161,19 @@ playerEvents :: Inputs
              -> Either Player (Player, HasMoveCommand)
 playerEvents inputs (p@(Player (Facing dir)), _, _) =
   let m            = _inputs . _keyboardInput $ inputs
+      sHeld  = isHeld $ m ! SDL.KeycodeLShift
       toNegX = if isTouched $ m ! SDL.KeycodeA then negX else neutral
       toPosX = if isTouched $ m ! SDL.KeycodeD then posX else neutral
       toNegZ = if isTouched $ m ! SDL.KeycodeS then negZ else neutral
       toPosZ = if isTouched $ m ! SDL.KeycodeW then posZ else neutral
       t      = realToFrac frameDeltaSeconds :: Float
       total  = toNegX + toPosX + toNegZ + toPosZ
-      action = Move'Translate (Translation $ total L.^* t)
+      dir'   = if sHeld then dir else toDir dir total
+      total' = if sHeld then (total / 2) else total
+      action = Move'Translate (Translation $ total' L.^* t)
   in if total == neutral
-     then Left   p
-     else Right ( Player (Facing $ toDir dir total)
-                , HasMoveCommand $ Move'Translate (Translation $ total L.^* t) )
+     then Left p
+     else Right (Player (Facing dir'), HasMoveCommand action)
   --     rt = if leftPress && rightPress
   --          then Nothing
   --          else if leftPress

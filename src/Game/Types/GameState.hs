@@ -77,6 +77,7 @@ allKeys = [ SDL.KeycodeA
           , SDL.KeycodeN
           , SDL.KeycodeM
           , SDL.KeycodeP
+          , SDL.KeycodeLShift
           , SDL.KeycodeReturn
           , SDL.KeycodeRight
           , SDL.KeycodeLeft
