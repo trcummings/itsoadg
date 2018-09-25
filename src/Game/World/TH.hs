@@ -28,6 +28,7 @@ import Game.Types
 
   , Player
   , FloorCircle
+  , Frustum
 
   , Terrain
   , Billboard
@@ -113,6 +114,9 @@ instance Component Player where
 instance Component FloorCircle where
   type Storage FloorCircle = Map FloorCircle
 
+instance Component Frustum where
+  type Storage Frustum = Map Frustum
+
 instance Component Terrain where
   type Storage Terrain = Map Terrain
 
@@ -180,6 +184,7 @@ makeWorld "World" [
   , ''BSPMap
   , ''Player
   , ''FloorCircle
+  , ''Frustum
   , ''Billboard
   , ''Terrain
   , ''DebugHUD

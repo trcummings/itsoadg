@@ -10,11 +10,12 @@ import qualified Animate                   as A
 import           Linear                  ((!*!))
 import           SDL                     (($=))
 import           Control.Monad           (mapM_)
+import           Control.Monad.Extra     (partitionM)
 import           System.FilePath         ((</>))
 import           Control.Monad.IO.Class  (liftIO)
 import           Data.Map                (keys)
 import           Data.Maybe              (maybe)
-import           Apecs                   (newEntity, get)
+import           Apecs
 
 import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (objPath, texturePath, shaderPath, frameDeltaSeconds)
@@ -42,6 +43,7 @@ import           Game.Types
   , Player(..)
   , CardinalDir(..)
   , Facing(..)
+  , Frustum(..)
   , FloorCircle(..)
   , Seconds(..)
   , Step(..)
@@ -184,6 +186,33 @@ initPlayerB = do
       , Position3D  $ L.V3 0 1 0 )
     )
 
+
+createPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
+createPlayerFrustum (_, hierarchy, pEty) = do
+  -- create frustum with hierarchy
+  fEty <- newEntity
+    ( Frustum
+    , Hierarchy { _parent   = Just pEty
+                , _children = Nothing }
+    )
+  -- add frustum to player hierarchy
+  let children' = (flip (++) $ [fEty]) <$> (_children hierarchy)
+  set pEty $ hierarchy { _children = children' }
+  return ()
+
+destroyPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
+destroyPlayerFrustum (_, hierarchy, pEty) = do
+  let proxy = Proxy :: Proxy (Frustum, Hierarchy)
+  case (_children hierarchy) of
+    Nothing   -> return ()
+    Just etys -> do
+      -- partition into frustum entities & the rest
+      (fcps, rest) <- partitionM (flip exists proxy) etys
+      -- destroy the frustums
+      mapM_ (flip destroy proxy) fcps
+      -- remove the frustum from the player's hierarchy component
+      set pEty $ hierarchy { _children = Just rest }
+
 stepPlayerBillboard :: PlayerBAnim -> SpriteSheet
 stepPlayerBillboard (_, ss) =
   let animations = A.ssAnimations $ _ssSheet ss
@@ -305,6 +334,9 @@ drawBillboardSprite (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   -- unset current program
   GL.currentProgram            $= Nothing
 
+
+type PlayerHRender = Either FloorCircleProto Frustum
+
 drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> ECS ()
 drawPlayerBillboard pv (pp, hierarchy) = do
   -- NB: you gotta draw back to front to maintain transparency
@@ -314,8 +346,13 @@ drawPlayerBillboard pv (pp, hierarchy) = do
   case fcEtys of
     Nothing   -> return ()
     Just etys -> do
-      fcps <- mapM get etys :: ECS [FloorCircleProto]
-      liftIO $ mapM_ (drawFloorCircle pv pp) fcps
+      fcps <- mapM get etys :: ECS [PlayerHRender]
+      liftIO $ mapM_ (\c -> do
+        case c of
+          Left  e -> drawFloorCircle pv pp e
+          Right e -> putStrLn "frustum render!"
+        ) fcps
+      -- liftIO $ putStrLn $ show fcps
+      -- liftIO $ mapM_ (drawFloorCircle pv pp) fcps
   -- draw the billboard as normal
   liftIO $ drawBillboardSprite pv pp
-  -- traverse billboard children to draw floor circle

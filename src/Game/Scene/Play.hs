@@ -17,7 +17,7 @@ import           Data.Coerce (coerce)
 import           Control.Lens ((&), (%~), element)
 import           Control.Monad (when, mapM_)
 import           Control.Monad.IO.Class (liftIO)
-import           KeyState (isPressed, isTouched, isHeld)
+import           KeyState (isPressed, isTouched, isHeld, isReleased)
 import           System.FilePath        ((</>))
 
 import           Game.Effect.Clock    (getGlobalTime)
@@ -80,6 +80,8 @@ import Game.System.Scratch.PlayerBillboard
   ( PlayerB
   , initPlayerBillboard
   , stepPlayerBillboard
+  , createPlayerFrustum
+  , destroyPlayerFrustum
   , drawPlayerBillboard )
 import Game.System.Scratch.Terrain
   ( TerrainE
@@ -214,6 +216,15 @@ toggleWireframeOnP inputs = do
         liftIO $ GL.polygonMode $= (GL.Fill, GL.Fill)
         set global (PolygonMode PolygonMode'Normal)
 
+handlePlayerFrustum :: Inputs -> ECS ()
+handlePlayerFrustum inputs = do
+  let m = _inputs . _keyboardInput $ inputs
+  when (isPressed  $ m ! SDL.KeycodeLShift) $ do
+    cmapM_ createPlayerFrustum
+  when (isReleased $ m ! SDL.KeycodeLShift) $ do
+    cmapM_ destroyPlayerFrustum
+  return ()
+
 cleanUp :: ECS ()
 cleanUp = do
   -- destroy the cube
@@ -236,6 +247,8 @@ step = do
   -- send player events based on WASD presses
   -- cmap $ cameraEvents inputs
   cmap $ playerEvents inputs
+  -- on hold shift, create player frustum
+  handlePlayerFrustum inputs
   -- rotate da cubes!!!
   cmap stepColorCube
   -- update da sprites!!!

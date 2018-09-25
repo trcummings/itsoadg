@@ -267,6 +267,7 @@ instance Show CardinalDir where
 newtype Facing = Facing CardinalDir deriving Show
 
 
+data Frustum = Frustum
 
 -- data CameraTarget =
 --   CameraTarget Entity
