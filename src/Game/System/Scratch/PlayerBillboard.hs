@@ -40,6 +40,8 @@ import           Game.Types
   , BufferResource(..)
   , ShaderInfo(..)
   , Player(..)
+  , CardinalDir(..)
+  , Facing(..)
   , FloorCircle(..)
   , Seconds(..)
   , Step(..)
@@ -172,7 +174,7 @@ initPlayerB = do
   tx  <- fromSource (GL.DynamicDraw, GL.ArrayBuffer) $ uvVertices
   -- define the entity
   return
-    ( Player
+    ( Player (Facing CardinalDir'South)
     , program
     , pSheet
     -- , Texture texObj

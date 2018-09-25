@@ -175,9 +175,6 @@ data TerrainInfo = TerrainInfo
   , _trIndices   :: [L.V3 Int] }
 
 
-data Player    = Player
-
-
 data Billboard = Billboard
 
 newtype FloorCircle = FloorCircle Float
@@ -228,6 +225,7 @@ data DebugHUD = DebugHUD
 data HUDType =
     FPSCounter
   | PositionTracker
+  | PlayerFacing
   deriving (Eq, Ord)
 
 newtype HUDInfo = HUDInfo (Map HUDType FontInfo)
@@ -249,6 +247,25 @@ data Character = Character
   -- offset to advance to next glyph
   , _charAdvance :: Int }
   deriving Show
+
+
+
+newtype Player = Player Facing deriving Show
+
+data CardinalDir =
+    CardinalDir'North -- (+Z axis)
+  | CardinalDir'South -- (-Z axis)
+  | CardinalDir'East  -- (+X axis)
+  | CardinalDir'West  -- (-X axis)
+
+instance Show CardinalDir where
+  show CardinalDir'North = "North"
+  show CardinalDir'South = "South"
+  show CardinalDir'East  = "East"
+  show CardinalDir'West  = "West"
+
+newtype Facing = Facing CardinalDir deriving Show
+
 
 
 -- data CameraTarget =

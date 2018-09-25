@@ -128,8 +128,8 @@ initColorCube = do
 
   -- cube 1
   newEntity (
-      Player
-    , BufferResource { _vertexBuffer   = Just vertexBuffer
+      -- Player
+      BufferResource { _vertexBuffer   = Just vertexBuffer
                      , _texCoordBuffer = Nothing
                      , _normalBuffer   = Nothing
                      , _rgbCoordBuffer = Just colorBuffer

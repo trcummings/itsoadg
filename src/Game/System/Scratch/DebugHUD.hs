@@ -31,6 +31,8 @@ import           Game.Types
   , FontMap(..)
   , Character(..)
   , FontInfo(..)
+  , Player(..)
+  , Facing(..)
   , BufferResource(..)
   , Texture(..)
   , ShaderInfo(..)
@@ -79,18 +81,23 @@ initDebugHUD = do
     uvVertices
   -- note, x & y positions are [-1/2 screen, 1/2 screen] both axes,
   -- 0,0 is the center
-  let fpsInfo = FontInfo { _fText = "Fps: 0"
+  let fpsInfo = FontInfo { _fText = "Fps: "
                          , _fxPos = 10
                          , _fyPos = 550
                          , _fSize = 0.5 }
-      posInfo = FontInfo { _fText = "Pos: V3 0 0 0"
+      posInfo = FontInfo { _fText = "Pos: "
                          , _fxPos = 10
                          , _fyPos = 500
+                         , _fSize = 0.5 }
+      facInfo = FontInfo { _fText = "Facing: "
+                         , _fxPos = 10
+                         , _fyPos = 600
                          , _fSize = 0.5 }
   -- define the entity
   return [
       ( DebugHUD { _hudInfo = HUDInfo $ fromList [ (FPSCounter,      fpsInfo)
-                                                 , (PositionTracker, posInfo) ]
+                                                 , (PositionTracker, posInfo)
+                                                 , (PlayerFacing,    facInfo) ]
                  , _fontMap = fontMap }
       , program
       , BufferResource { _vertexBuffer   = Just vertsBuf
@@ -109,6 +116,9 @@ updatePosText (Position3D (L.V3 x y z)) fi =
 updateFpsText :: String -> FontInfo -> Maybe FontInfo
 updateFpsText str fi = Just $ fi { _fText = "Fps: " ++ str }
 
+updateFacingText :: Facing -> FontInfo -> Maybe FontInfo
+updateFacingText (Facing dir) fi = Just $ fi { _fText = "Facing: " ++ show dir }
+
 
 stepDebugHUD :: ECS ()
 stepDebugHUD = do
@@ -118,11 +128,13 @@ stepDebugHUD = do
   let fpsDt = take 4 $ show (1 / ((cTime - pTime) / 1000 ))
   -- get camera position
   cmapM_ $ \((_, (_, cPos)) :: CameraEntity) -> do
-    cmap $ \((dHud, _, _) :: DebugHUDEntity) ->
-      let (HUDInfo dMap) = _hudInfo dHud
-      in dHud { _hudInfo = HUDInfo $ (update (updatePosText cPos)  PositionTracker)
-                                   . (update (updateFpsText fpsDt) FPSCounter)
-                                   $ dMap }
+    cmapM_ $ \(Player facing) -> do
+      cmap $ \((dHud, _, _) :: DebugHUDEntity) ->
+        let (HUDInfo dMap) = _hudInfo dHud
+        in dHud { _hudInfo = HUDInfo $ (update (updatePosText    cPos)   PositionTracker)
+                                     . (update (updateFpsText    fpsDt)  FPSCounter)
+                                     . (update (updateFacingText facing) PlayerFacing)
+                                     $ dMap }
 
 -- makeFontVertices :: FontInfo -> ([L.V2 Float], [L.V2 Float])
 -- makeFontVertices fontInfo =
