@@ -18,7 +18,6 @@ import           Game.Effect.Clock       (getGlobalTime)
 import           Game.Util.Constants     (fontPath, shaderPath)
 import           Game.Loaders.Program    (createProgram, getAttrib, getUniform)
 import           Game.Loaders.Texture    (getAndCreateTexture)
-import           Game.Util.GLError       (printGLErrors)
 import           Game.Loaders.Font       (loadCharacters)
 import           Game.Util.BufferObjects (fromSource, replaceBuffer, offset0)
 import           Game.Util.Camera        (CameraEntity)
@@ -181,14 +180,11 @@ drawDebugHUD (hud, sProgram, br) dims hudType = do
       uvBuffer          = _texCoordBuffer br
   -- clear the depth buffer
   GL.clear [GL.DepthBuffer]
-  printGLErrors "drawDebugHUD clear depth buffer"
   -- set current program to shaderProgram
   GL.currentProgram               $= Just program
-  printGLErrors "drawDebugHUD set program"
   -- enable all attributes
   GL.vertexAttribArray vpLocation $= GL.Enabled
   GL.vertexAttribArray uvLocation $= GL.Enabled
-  printGLErrors "drawDebugHUD set attribs"
   -- handle uniforms
   -- set "dims" to viewport dims
   (realToFrac <$> dims :: L.V2 Float) `U.asUniform` dimsLocation
@@ -196,12 +192,10 @@ drawDebugHUD (hud, sProgram, br) dims hudType = do
   -- enable blending func
   GL.blend     $= GL.Enabled
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
-  printGLErrors "drawDebugHUD set blend"
 
   -- set "fontTextureSampler" uniform
   GL.activeTexture               $= textureUnit
   GL.uniform sampLocation        $= GL.Index1 (2 :: GL.GLint)
-  printGLErrors "drawDebugHUD texture uniform"
 
   foldM_ (\advAcc chr -> do
     let character              = fontMap ! chr
@@ -233,17 +227,14 @@ drawDebugHUD (hud, sProgram, br) dims hudType = do
     GL.vertexAttribPointer vpLocation $=
       ( GL.ToFloat
       , GL.VertexArrayDescriptor 2 GL.Float 0 offset0 )
-    printGLErrors "drawDebugHUD position buffer"
 
     -- replace UV buffer with new coords
     GL.bindBuffer GL.ArrayBuffer      $= uvBuffer
     GL.vertexAttribPointer uvLocation $=
       ( GL.ToFloat
       , GL.VertexArrayDescriptor 2 GL.Float 0 offset0 )
-    printGLErrors "drawDebugHUD uv buffer"
     -- -- draw indexed triangles
     GL.drawArrays GL.Triangles 0 6
-    printGLErrors "drawDebugHUD draw"
     -- accumulate advance offset (remember it's in 1/64 pixels, so divide it)
     return $ advAcc + (((realToFrac $ _charAdvance character) / 64) * scale)
     ) 0 $ _fText fontInfo
@@ -258,5 +249,4 @@ drawDebugHUD (hud, sProgram, br) dims hudType = do
   GL.bindBuffer GL.ArrayBuffer $= Nothing
   -- unset current program
   GL.currentProgram            $= Nothing
-  printGLErrors "drawDebugHUD clean up"
   return ()
