@@ -9,7 +9,7 @@ import qualified Linear                    as L
 import qualified Animate                   as A
 import           Linear                  ((!*!))
 import           SDL                     (($=))
-import           Control.Monad           (mapM_)
+import           Control.Monad           (mapM_, when, filterM)
 import           Control.Monad.Extra     (partitionM)
 import           System.FilePath         ((</>))
 import           Control.Monad.IO.Class  (liftIO)
@@ -25,6 +25,7 @@ import           Game.Loaders.Texture    (getAndCreateTexture)
 import           Game.Util.Move          (Moveable)
 import           Game.Util.Sprite        (loadSpriteSheet)
 import           Game.Util.BufferObjects (fromSource, replaceBuffer)
+import           Game.Util.CardinalDir   (fromDir, toOpposingDir, toRadAngle)
 import           Game.World.Hierarchy    (HierarchyCons(..), hNewEntity)
 import           Game.Types
   ( ProjectionMatrix(..)
@@ -74,6 +75,12 @@ type FloorCircleE =
   ( FloorCircleProto
   , Hierarchy )
 
+type FrustumProto =
+  ( Frustum
+  , ShaderProgram
+  , BufferResource
+  )
+
 defaultBufferResource :: BufferResource
 defaultBufferResource = BufferResource Nothing Nothing Nothing Nothing Nothing
 
@@ -111,6 +118,34 @@ uvVertices = [ L.V2 0 1 -- bottom left
              , L.V2 1 1 -- bottom right
              ]
 
+frustumVerts :: [L.V3 Float]
+frustumVerts =
+  [ -- square
+    L.V3 (-1) (-0.5) 0.0 -- bottom left
+  , L.V3 (-1)   0.5  0.0 -- top    left
+  , L.V3   1    0.5  0.0 -- top    right
+  , L.V3 (-1) (-0.5) 0.0 -- bottom left
+  , L.V3   1    0.5  0.0 -- top    right
+  , L.V3   1  (-0.5) 0.0 -- bottom right
+  -- four pyramids
+  -- right
+  , L.V3   1  (-0.5)   0
+  , L.V3   1    0.5    0
+  , L.V3   0    0    (-0.5)
+  -- left
+  , L.V3 (-1) (-0.5)   0
+  , L.V3 (-1)   0.5    0
+  , L.V3   0    0    (-0.5)
+  -- top
+  , L.V3 (-1)   0.5    0
+  , L.V3   1    0.5    0
+  , L.V3   0    0    (-0.5)
+  -- bottom
+  , L.V3 (-1) (-0.5)   0
+  , L.V3   1  (-0.5)   0
+  , L.V3   0    0    (-0.5)
+  ]
+
 texSizeToDims :: GL.TextureSize2D -> L.V2 Float
 texSizeToDims (GL.TextureSize2D w h) = L.V2 (realToFrac w) (realToFrac h)
 
@@ -136,8 +171,28 @@ initPlayerBillboard :: ECS ()
 initPlayerBillboard = do
   pb <- liftIO $ initPlayerB
   fc <- liftIO $ initFloorCircle
-  hNewEntity Nothing (HierarchyCons pb [HierarchyCons fc []])
+  fs <- liftIO $ initFrustum
+  hNewEntity
+    Nothing
+    (HierarchyCons pb [ HierarchyCons fc []
+                      , HierarchyCons fs [] ])
   return ()
+
+initFrustum :: IO FrustumProto
+initFrustum = do
+  let vertexShader   = shaderPath  </> "frustum_cone.v.glsl"
+      fragmentShader = shaderPath  </> "frustum_cone.f.glsl"
+  -- -- load in shaders
+  program <-
+    createProgram [ ShaderInfo GL.VertexShader   vertexShader
+                  , ShaderInfo GL.FragmentShader fragmentShader ]
+  -- -- create the buffer related data
+  vb  <- fromSource (GL.StaticDraw, GL.ArrayBuffer) frustumVerts
+  return
+    ( Frustum False
+    , program
+    , defaultBufferResource { _vertexBuffer = Just vb }
+    )
 
 initFloorCircle :: IO FloorCircleProto
 initFloorCircle = do
@@ -186,32 +241,51 @@ initPlayerB = do
       , Position3D  $ L.V3 0 1 0 )
     )
 
+-- createPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
+-- createPlayerFrustum (_, hierarchy, pEty) = do
+--   -- create frustum with hierarchy
+--   fEty <- newEntity
+--     ( Frustum
+--     , Hierarchy { _parent   = Just pEty
+--                 , _children = Nothing }
+--     )
+--   -- add frustum to player hierarchy
+--   let children' = (flip (++) $ [fEty]) <$> (_children hierarchy)
+--   set pEty $ hierarchy { _children = children' }
+--   return ()
+--
+--
+-- destroyPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
+-- destroyPlayerFrustum (_, hierarchy, pEty) = do
+--   let proxy = Proxy :: Proxy (Frustum, Hierarchy)
+--   case (_children hierarchy) of
+--     Nothing   -> return ()
+--     Just etys -> do
+--       -- partition into frustum entities & the rest
+--       (fcps, rest) <- partitionM (flip exists proxy) etys
+--       -- destroy the frustums
+--       mapM_ (flip destroy proxy) fcps
+--       -- remove the frustum from the player's hierarchy component
+--       set pEty $ hierarchy { _children = Just rest }
 
-createPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
-createPlayerFrustum (_, hierarchy, pEty) = do
-  -- create frustum with hierarchy
-  fEty <- newEntity
-    ( Frustum
-    , Hierarchy { _parent   = Just pEty
-                , _children = Nothing }
-    )
-  -- add frustum to player hierarchy
-  let children' = (flip (++) $ [fEty]) <$> (_children hierarchy)
-  set pEty $ hierarchy { _children = children' }
-  return ()
-
-destroyPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
-destroyPlayerFrustum (_, hierarchy, pEty) = do
-  let proxy = Proxy :: Proxy (Frustum, Hierarchy)
+modifyPlayerFrustum :: Bool -> (Player, Hierarchy, Entity) -> ECS ()
+modifyPlayerFrustum nextState (_, hierarchy, pEty) = do
+  let proxy = Proxy :: Proxy (FrustumProto, Hierarchy)
   case (_children hierarchy) of
     Nothing   -> return ()
     Just etys -> do
-      -- partition into frustum entities & the rest
-      (fcps, rest) <- partitionM (flip exists proxy) etys
-      -- destroy the frustums
-      mapM_ (flip destroy proxy) fcps
-      -- remove the frustum from the player's hierarchy component
-      set pEty $ hierarchy { _children = Just rest }
+      -- filter frustum entities & the rest
+      fcps <- filterM (flip exists proxy) etys
+      -- update the frustums
+      mapM_ (flip set $ Frustum nextState) fcps
+
+-- not actually create
+createPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
+createPlayerFrustum = modifyPlayerFrustum True
+
+-- not actually destroy
+destroyPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
+destroyPlayerFrustum = modifyPlayerFrustum False
 
 stepPlayerBillboard :: PlayerBAnim -> SpriteSheet
 stepPlayerBillboard (_, ss) =
@@ -256,6 +330,40 @@ drawFloorCircle (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.bindBuffer GL.ArrayBuffer    $= Nothing
   -- unset current program
   GL.currentProgram               $= Nothing
+
+
+drawFrustum :: (ProjectionMatrix, ViewMatrix) -> PlayerProto -> FrustumProto -> IO ()
+drawFrustum (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
+            (Player (Facing dir), _, _, _, (Orientation o, Position3D mPos))
+            (Frustum shouldRender, sProgram, bufferResource) = do
+  when shouldRender $ do
+    let frusPos     = mPos + (fromDir dir)
+        modelMatrix = L.mkTransformation (L.axisAngle (L.V3 0 1 0) (toRadAngle dir)) frusPos
+        -- attribs & uniforms
+        vertPosLoc  = getAttrib  sProgram "VertexPosition_modelspace"
+        modelMatLoc = getUniform sProgram "ModelMatrix"
+        viewMatLoc  = getUniform sProgram "ViewMatrix"
+        projMatLoc  = getUniform sProgram "ProjMatrix"
+    GL.currentProgram                 $= Just (_glProgram sProgram)
+    -- enable all attributes
+    GL.vertexAttribArray vertPosLoc   $= GL.Enabled
+    -- set uniforms
+    modelMatrix `U.asUniform` modelMatLoc
+    viewMatrix  `U.asUniform` viewMatLoc
+    projMatrix  `U.asUniform` projMatLoc
+    -- bind position VB ("VertexPosition_ModelSpace")
+    GL.bindBuffer GL.ArrayBuffer      $= (_vertexBuffer bufferResource)
+    GL.vertexAttribPointer vertPosLoc $=
+      ( GL.ToFloat
+      , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
+    GL.drawArrays GL.Triangles 0 (3 * 18)
+    -- disable all attributes
+    GL.vertexAttribArray vertPosLoc   $= GL.Disabled
+    -- unbind array buffer
+    GL.bindBuffer GL.ArrayBuffer      $= Nothing
+    -- unset current program
+    GL.currentProgram                 $= Nothing
+
 
 drawBillboardSprite :: (ProjectionMatrix, ViewMatrix) -> PlayerProto -> IO ()
 drawBillboardSprite (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
@@ -335,7 +443,7 @@ drawBillboardSprite (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   GL.currentProgram            $= Nothing
 
 
-type PlayerHRender = Either FloorCircleProto Frustum
+type PlayerHRender = Either FloorCircleProto FrustumProto
 
 drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> ECS ()
 drawPlayerBillboard pv (pp, hierarchy) = do
@@ -350,7 +458,7 @@ drawPlayerBillboard pv (pp, hierarchy) = do
       liftIO $ mapM_ (\c -> do
         case c of
           Left  e -> drawFloorCircle pv pp e
-          Right e -> putStrLn "frustum render!"
+          Right e -> drawFrustum     pv pp e
         ) fcps
       -- liftIO $ putStrLn $ show fcps
       -- liftIO $ mapM_ (drawFloorCircle pv pp) fcps

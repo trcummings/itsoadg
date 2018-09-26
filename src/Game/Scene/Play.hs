@@ -33,6 +33,8 @@ import           Game.Util.Constants  (frameDeltaSeconds, assetPath, shaderPath)
 import           Game.Loaders.Program (createProgram)
 import           Game.Util.BSP.Render (BSPRenderData, renderBSP)
 import           Game.Util.GLError    (printGLErrors)
+import           Game.Util.CardinalDir
+  (posX, posZ, negX, negZ, neutral, toDir)
 import           Game.Util.Camera
   ( cameraViewMatrix
   , cameraProjectionMatrix
@@ -133,30 +135,6 @@ initialize = do
       (Move'Translate $ Translation $ L.V3 0 2 4)
       (Move'Rotate      Pitch (Degrees (-15))) ) m
   return ()
-
-
-posX :: L.V3 Float
-posX = L.V3 1 0 0
-
-posZ :: L.V3 Float
-posZ = L.V3 0 0 (-1)
-
-negX :: L.V3 Float
-negX = L.V3 (-1) 0 0
-
-negZ :: L.V3 Float
-negZ = L.V3 0 0 1
-
-neutral :: L.V3 Float
-neutral = L.V3 0 0 0
-
-toDir :: CardinalDir -> L.V3 Float -> CardinalDir
-toDir dir vec
-  | vec == negX = CardinalDir'West
-  | vec == posX = CardinalDir'East
-  | vec == posZ = CardinalDir'North
-  | vec == negZ = CardinalDir'South
-  | otherwise   = dir
 
 playerEvents :: Inputs
              -> (Player, Moveable, Not HasMoveCommand)
