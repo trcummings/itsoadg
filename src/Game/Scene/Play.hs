@@ -63,6 +63,7 @@ import           Game.Types
   , Facing(..)
   , CardinalDir(..)
   , Terrain
+  , SimpleCube(..)
 
   , BSPMap
   , DebugHUD(..)
@@ -77,6 +78,11 @@ import Game.System.Scratch.ColorCube
   , initColorCube
   , stepColorCube
   , drawColorCube )
+import Game.System.Scratch.SimpleCube
+  ( SimpleCubeProto
+  , initCubeGLAttrs
+  , drawSimpleCube
+  )
 import Game.System.Scratch.PlayerBillboard
   ( PlayerB
   , initPlayerBillboard
@@ -119,6 +125,13 @@ initialize = do
   -- initColorCube
   -- initTextureCube
   initPlayerBillboard
+  -- create some bland normal cubes
+  let defaultQuat = L.Quaternion 1 (L.V3 0 0 0)
+      quatAt30deg = L.axisAngle (L.V3 0 1 0) (pi / 12)
+  programInfo <- liftIO $ initCubeGLAttrs
+  newEntity (SimpleCube, programInfo, (Orientation defaultQuat, Position3D $ L.V3   2  1 (-4)))
+  newEntity (SimpleCube, programInfo, (Orientation quatAt30deg, Position3D $ L.V3 (-2) 1 (-2)))
+
   -- create all billboards
   -- billboards <- liftIO $ initBillboards
   -- mapM_ newEntity billboards
@@ -251,6 +264,7 @@ render = do
         (_, (_, cPos)) = camera
     -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
     cmapM_ $ \(r :: TerrainE)        -> liftIO $ drawTerrain mats r
+    cmapM_ $ \(r :: SimpleCubeProto) -> liftIO $ drawSimpleCube mats r
     -- cmapM_ $ \(r :: RenderBillboard) -> liftIO $ drawBillboard mats r
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r

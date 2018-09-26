@@ -30,6 +30,8 @@ import Game.Types
   , FloorCircle
   , Frustum
 
+  , SimpleCube
+
   , Terrain
   , Billboard
 
@@ -117,6 +119,9 @@ instance Component FloorCircle where
 instance Component Frustum where
   type Storage Frustum = Map Frustum
 
+instance Component SimpleCube where
+  type Storage SimpleCube = Map SimpleCube
+
 instance Component Terrain where
   type Storage Terrain = Map Terrain
 
@@ -188,6 +193,7 @@ makeWorld "World" [
   , ''Billboard
   , ''Terrain
   , ''DebugHUD
+  , ''SimpleCube
 
   , ''Camera
 

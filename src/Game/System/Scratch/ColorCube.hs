@@ -118,8 +118,8 @@ cs = [
 
 initColorCube :: ECS ()
 initColorCube = do
-  let vertexShader   = shaderPath </> "cube.v.glsl"
-      fragmentShader = shaderPath </> "cube.f.glsl"
+  let vertexShader   = shaderPath </> "color_cube.v.glsl"
+      fragmentShader = shaderPath </> "color_cube.f.glsl"
   vertexBuffer  <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) vs
   colorBuffer   <- liftIO $ fromSource (GL.StaticDraw, GL.ArrayBuffer) cs
   program       <- liftIO $

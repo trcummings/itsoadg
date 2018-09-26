@@ -248,7 +248,7 @@ data Character = Character
   , _charAdvance :: Int }
   deriving Show
 
-
+data SimpleCube = SimpleCube
 
 newtype Player = Player Facing deriving Show
 
