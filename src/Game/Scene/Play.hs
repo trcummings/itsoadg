@@ -10,7 +10,7 @@ import qualified Graphics.GLUtil.Camera3D as U
 import qualified Graphics.Rendering.OpenGL as GL
 
 import qualified Data.Map as Map (empty, fromList, keys, elems)
-import           Data.Map ((!), keys)
+import           Data.Map ((!), keys, insert)
 import           Data.Text (singleton)
 import           Data.List (find, findIndex)
 import           Data.Coerce (coerce)
@@ -46,6 +46,7 @@ import           Game.Types
   , SceneControl(..)
   , PolygonMode(..)
   , PolygonModeType(..)
+  , ProgramMap(..)
 
   , HasMoveCommand(..)
   , MoveCommand(..)
@@ -105,6 +106,13 @@ import Game.System.Scratch.Billboard
   ( RenderBillboard
   , initBillboards
   , drawBillboard )
+import Game.System.Scratch.BoundingBoxes
+  ( RenderGlobals(..)
+  , makeProgram
+  , bbProgramName
+  , initBoundingBox
+  , drawBoundingBox
+  )
 
 
 initialize :: ECS ()
@@ -127,15 +135,20 @@ initialize = do
   -- initColorCube
   -- initTextureCube
   initPlayerBillboard
+  -- make simple cube program, add to program map
+  cubeProgram <- liftIO $ makeProgram bbProgramName
+  -- add program to map
+  pmap <- get global :: ECS ProgramMap
+  set global (pmap { _programMap = insert bbProgramName cubeProgram (_programMap pmap) })
   -- create some bland normal cubes
   let defaultCm   = CollisionModule { _collider = BoxCollider (L.V3 1 1 1) }
       defaultQuat = L.Quaternion 1 (L.V3 0 0 0)
       quatAt30deg = L.axisAngle (L.V3 0 1 0) (pi / 12)
       mov1        = (Orientation defaultQuat, Position3D $ L.V3   2  1 (-4))
       mov2        = (Orientation quatAt30deg, Position3D $ L.V3 (-2) 1 (-2))
-  programInfo <- liftIO $ initCubeGLAttrs
-  newEntity (SimpleCube, programInfo, mov1, defaultCm)
-  newEntity (SimpleCube, programInfo, mov2, defaultCm)
+  buf <- liftIO $ initCubeGLAttrs
+  newEntity (SimpleCube, (buf, cubeProgram), mov1, defaultCm)
+  newEntity (SimpleCube, (buf, cubeProgram), mov2, defaultCm)
 
   -- create all billboards
   -- billboards <- liftIO $ initBillboards
@@ -257,16 +270,22 @@ step = do
   --     ( cam, (Orientation pOr', Position3D cPos) )
   --   return (Player, pMov', Not :: Not HasMoveCommand)
 
+
 render :: ECS ()
 render = do
   -- render cube
   vc <- get global :: ECS VideoConfig
+  sm <- get global :: ECS ProgramMap
   dims <- liftIO $ getWindowDims vc
   cmapM_ $ \(camera :: CameraEntity) -> do
     let camProjMatrix  = cameraProjectionMatrix dims camera
         camViewMatrix  = cameraViewMatrix camera
         mats           = (camProjMatrix, camViewMatrix)
         (_, (_, cPos)) = camera
+        renderGlobals  = RenderGlobals { _rgCamera     = ( camProjMatrix
+                                                         , camViewMatrix
+                                                         , cPos )
+                                       , _rgProgramMap = sm }
     -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
     cmapM_ $ \(r :: TerrainE)        -> liftIO $ drawTerrain mats r
     cmapM_ $ \(r :: SimpleCubeProto) -> liftIO $ drawSimpleCube mats r
@@ -275,6 +294,8 @@ render = do
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: TexCube)       -> liftIO $ drawTextureCube     mats r
     cmapM_ $ (drawPlayerBillboard mats)
+    cmapM_ $ \(r :: (CollisionModule, Position3D)) ->
+      liftIO $ drawBoundingBox renderGlobals r
     return ()
   cmapM_ $ \(hud@(dHud, _, _) :: DebugHUDEntity) -> do
     let (HUDInfo dMap) = _hudInfo dHud

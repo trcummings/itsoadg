@@ -74,22 +74,28 @@ vs = [
 type SimpleCubeProto = (SimpleCube, ProgramInfo, Moveable, CollisionModule)
 type ProgramInfo = (BufferResource, ShaderProgram)
 
-initCubeGLAttrs :: IO ProgramInfo
+initCubeGLAttrs :: IO BufferResource
 initCubeGLAttrs = do
-  let vertexShader   = shaderPath </> "simple_cube.v.glsl"
-      fragmentShader = shaderPath </> "simple_cube.f.glsl"
-  vertexBuffer  <- fromSource (GL.StaticDraw, GL.ArrayBuffer) vs
-  program       <- createProgram
-                  [ ShaderInfo GL.VertexShader   vertexShader
-                  , ShaderInfo GL.FragmentShader fragmentShader ]
-  return
-    ( BufferResource { _vertexBuffer   = Just vertexBuffer
-                     , _texCoordBuffer = Nothing
-                     , _normalBuffer   = Nothing
-                     , _rgbCoordBuffer = Nothing
-                     , _indexBuffer    = Nothing  }
-    , program
-    )
+  vertexBuffer <- fromSource (GL.StaticDraw, GL.ArrayBuffer) vs
+  return $ BufferResource { _vertexBuffer   = Just vertexBuffer
+                          , _texCoordBuffer = Nothing
+                          , _normalBuffer   = Nothing
+                          , _rgbCoordBuffer = Nothing
+                          , _indexBuffer    = Nothing  }
+  -- let vertexShader   = shaderPath </> "simple_cube.v.glsl"
+  --     fragmentShader = shaderPath </> "simple_cube.f.glsl"
+  -- vertexBuffer  <- fromSource (GL.StaticDraw, GL.ArrayBuffer) vs
+  -- program       <- createProgram
+  --                 [ ShaderInfo GL.VertexShader   vertexShader
+  --                 , ShaderInfo GL.FragmentShader fragmentShader ]
+  -- return
+  --   ( BufferResource { _vertexBuffer   = Just vertexBuffer
+  --                    , _texCoordBuffer = Nothing
+  --                    , _normalBuffer   = Nothing
+  --                    , _rgbCoordBuffer = Nothing
+  --                    , _indexBuffer    = Nothing  }
+  --   , program
+  --   )
 
 drawSimpleCube :: (ProjectionMatrix, ViewMatrix) -> SimpleCubeProto -> IO ()
 drawSimpleCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)

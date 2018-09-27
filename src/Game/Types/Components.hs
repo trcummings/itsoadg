@@ -145,9 +145,9 @@ data Texture = Texture
   , _textureSize :: GL.TextureSize2D }
   deriving Show
 
-newtype ProgramName = ProgramName String
+newtype ProgramName = ProgramName String deriving (Show, Eq, Ord)
 newtype Renderable  = Renderable ProgramName
-newtype ProgramMap  = ProgramMap (Map ProgramName ShaderProgram)
+newtype ProgramMap  = ProgramMap { _programMap :: (Map ProgramName ShaderProgram) }
 
 instance Monoid ProgramMap where
   mempty  = ProgramMap empty
@@ -155,8 +155,8 @@ instance Monoid ProgramMap where
 
 
 
-newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
-newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
+newtype ProjectionMatrix = ProjectionMatrix { _projMatrix :: (L.M44 Float) }
+newtype ViewMatrix       = ViewMatrix       { _viewMatrix :: (L.M44 Float) }
 
 newtype Terrain = Terrain TerrainConfig
 
