@@ -300,7 +300,10 @@ newtype Frustum = Frustum Bool
 --   { bank       :: (Map.Map SFX'Key Mixer.Chunk)
 --   , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
 --   deriving Show
---
+data Collider =
+  BoxCollider (L.V3 Float)
+
+newtype CollisionModule = CollisionModule { _collider :: Collider }
 -- data CollisionModule = CollisionModule
 --  { layer :: CollisionLayer
 --  , layerCollisions :: [( CollisionLayer

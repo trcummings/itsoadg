@@ -26,6 +26,8 @@ import Game.Types
   , Orientation
   , HasMoveCommand
 
+  , CollisionModule
+
   , Player
   , FloorCircle
   , Frustum
@@ -86,6 +88,9 @@ instance Component Orientation where
 
 instance Component HasMoveCommand where
   type Storage HasMoveCommand = Map HasMoveCommand
+
+instance Component CollisionModule where
+  type Storage CollisionModule = Map CollisionModule
 
 instance Component RotatingCube where
   type Storage RotatingCube = Map RotatingCube
@@ -174,6 +179,7 @@ makeWorld "World" [
   , ''Position3D
   , ''Orientation
   , ''HasMoveCommand
+  , ''CollisionModule
   , ''RotatingCube
 
   , ''Door

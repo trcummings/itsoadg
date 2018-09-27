@@ -28,6 +28,7 @@ import           Game.Types
   , SimpleCube(..)
   , ProjectionMatrix(..)
   , ViewMatrix(..)
+  , CollisionModule(..)
   )
 
 vs :: [L.V3 Float]
@@ -70,7 +71,7 @@ vs = [
   , L.V3   1  (-1)   1
   ]
 
-type SimpleCubeProto = (SimpleCube, ProgramInfo, Moveable)
+type SimpleCubeProto = (SimpleCube, ProgramInfo, Moveable, CollisionModule)
 type ProgramInfo = (BufferResource, ShaderProgram)
 
 initCubeGLAttrs :: IO ProgramInfo
@@ -92,7 +93,7 @@ initCubeGLAttrs = do
 
 drawSimpleCube :: (ProjectionMatrix, ViewMatrix) -> SimpleCubeProto -> IO ()
 drawSimpleCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-               (_, (br, shaderProgram), (Orientation o, Position3D mPos)) = do
+               (_, (br, shaderProgram), (Orientation o, Position3D mPos), _) = do
   let modelMatrix   = L.mkTransformation o mPos
       vertexBuffer  = _vertexBuffer br
       program       = _glProgram shaderProgram

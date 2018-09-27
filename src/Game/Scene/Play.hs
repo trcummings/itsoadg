@@ -58,6 +58,8 @@ import           Game.Types
   , FieldOfView(..)
   , Orientation(..)
   , CameraAxes(..)
+  , Collider(..)
+  , CollisionModule(..)
 
   , Player(..)
   , Facing(..)
@@ -126,11 +128,14 @@ initialize = do
   -- initTextureCube
   initPlayerBillboard
   -- create some bland normal cubes
-  let defaultQuat = L.Quaternion 1 (L.V3 0 0 0)
+  let defaultCm   = CollisionModule { _collider = BoxCollider (L.V3 1 1 1) }
+      defaultQuat = L.Quaternion 1 (L.V3 0 0 0)
       quatAt30deg = L.axisAngle (L.V3 0 1 0) (pi / 12)
+      mov1        = (Orientation defaultQuat, Position3D $ L.V3   2  1 (-4))
+      mov2        = (Orientation quatAt30deg, Position3D $ L.V3 (-2) 1 (-2))
   programInfo <- liftIO $ initCubeGLAttrs
-  newEntity (SimpleCube, programInfo, (Orientation defaultQuat, Position3D $ L.V3   2  1 (-4)))
-  newEntity (SimpleCube, programInfo, (Orientation quatAt30deg, Position3D $ L.V3 (-2) 1 (-2)))
+  newEntity (SimpleCube, programInfo, mov1, defaultCm)
+  newEntity (SimpleCube, programInfo, mov2, defaultCm)
 
   -- create all billboards
   -- billboards <- liftIO $ initBillboards
@@ -242,7 +247,7 @@ step = do
   -- rotate da cubes!!!
   cmap stepColorCube
   -- update da sprites!!!
-  cmap stepPlayerBillboard
+  stepPlayerBillboard
   -- resolve movement based on movement events
   cmap $ \(HasMoveCommand e, c :: Moveable) ->
     (runMoveCommand e c, Not :: Not HasMoveCommand)

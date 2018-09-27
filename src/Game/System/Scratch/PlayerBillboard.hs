@@ -32,6 +32,8 @@ import           Game.Types
   , ViewMatrix(..)
   , Position3D(..)
   , Orientation(..)
+  , CollisionModule(..)
+  , Collider(..)
   , ShaderProgram(..)
   , Texture(..)
   , SpriteSheet(..)
@@ -58,6 +60,7 @@ type PlayerProto =
   , SpriteSheet
   , BufferResource
   , Moveable
+  , CollisionModule
   )
 
 type PlayerBAnim = (Player, SpriteSheet)
@@ -205,7 +208,7 @@ initFloorCircle = do
   -- -- create the buffer related data
   vb  <- fromSource (GL.StaticDraw, GL.ArrayBuffer) zverts
   return
-    ( FloorCircle 5
+    ( FloorCircle 0.5
     , program
     , defaultBufferResource { _vertexBuffer = Just vb }
     , Position3D (L.V3 0 (-0.99) (-0.25))
@@ -239,6 +242,7 @@ initPlayerB = do
                             , _texCoordBuffer = Just tx }
     , ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
       , Position3D  $ L.V3 0 1 0 )
+    , CollisionModule { _collider = BoxCollider (L.V3 1 1 1) }
     )
 
 -- createPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
@@ -287,19 +291,48 @@ createPlayerFrustum = modifyPlayerFrustum True
 destroyPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()
 destroyPlayerFrustum = modifyPlayerFrustum False
 
-stepPlayerBillboard :: PlayerBAnim -> SpriteSheet
-stepPlayerBillboard (_, ss) =
+stepPlayerAnimation :: (Player, SpriteSheet) -> SpriteSheet
+stepPlayerAnimation (_, ss) =
   let animations = A.ssAnimations $ _ssSheet ss
       frameInfo  = _ssPosition ss
       action     = _ssAction   ss
   in ss { _ssPosition = stepAction action animations frameInfo }
+
+foldCollider :: L.V3 Float
+             -> FloorCircleProto
+             -> CollisionModule
+             -> CollisionModule
+foldCollider (L.V3 w h _) (FloorCircle radius, _, _, _) cm =
+  let BoxCollider (L.V3 x y z) = _collider cm
+  in cm { _collider = BoxCollider (L.V3 w h (2 * radius)) }
+
+stepPlayerBoxCollider :: (PlayerProto, Hierarchy, Entity) -> ECS ()
+stepPlayerBoxCollider (pp, hierarchy, pEty) = do
+  let proxy                = Proxy :: Proxy (FloorCircleProto, Hierarchy)
+      (_, _, ss, _, _, cm) = pp
+      L.V2 tW tH           = texSizeToDims . _textureSize . A.ssImage . _ssSheet $ ss
+      bbSize               = L.V3 (tW / tH) 1 0
+  case (_children hierarchy) of
+    Nothing   -> return ()
+    Just etys -> do
+      -- filter floor circle entities & the rest
+      fcEtys <- filterM (flip exists proxy) etys
+      fcps   <- mapM get fcEtys :: ECS [FloorCircleProto]
+      -- update the player's collision module
+      set pEty $ foldr (foldCollider bbSize) cm fcps
+      return ()
+
+stepPlayerBillboard :: ECS ()
+stepPlayerBillboard = do
+  cmap   stepPlayerAnimation
+  cmapM_ stepPlayerBoxCollider
 
 drawFloorCircle :: (ProjectionMatrix, ViewMatrix)
                 -> PlayerProto
                 -> FloorCircleProto
                 -> IO ()
 drawFloorCircle (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                (_, _, _, _, (Orientation o, Position3D mPos))
+                (_, _, _, _, (Orientation o, Position3D mPos), _)
                 (FloorCircle radius, sProgram, bufferResource, Position3D fPos) = do
   let modelMatrix = L.mkTransformation o (mPos + fPos)
   -- attribs & uniforms
@@ -334,7 +367,7 @@ drawFloorCircle (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
 
 drawFrustum :: (ProjectionMatrix, ViewMatrix) -> PlayerProto -> FrustumProto -> IO ()
 drawFrustum (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-            (Player (Facing dir), _, _, _, (Orientation o, Position3D mPos))
+            (Player (Facing dir), _, _, _, (Orientation o, Position3D mPos), _)
             (Frustum shouldRender, sProgram, bufferResource) = do
   when shouldRender $ do
     let frusPos     = mPos + (fromDir dir)
@@ -367,7 +400,7 @@ drawFrustum (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
 
 drawBillboardSprite :: (ProjectionMatrix, ViewMatrix) -> PlayerProto -> IO ()
 drawBillboardSprite (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                    (_, sProgram, pSheet, br, (Orientation o, Position3D mPos)) = do
+                    (_, sProgram, pSheet, br, (Orientation o, Position3D mPos), _) = do
   let texObj      = A.ssImage      $ _ssSheet pSheet
       animations  = A.ssAnimations $ _ssSheet pSheet
       spriteClip  = A.currentLocation animations (_ssPosition pSheet)
@@ -449,8 +482,8 @@ drawPlayerBillboard :: (ProjectionMatrix, ViewMatrix) -> PlayerB -> ECS ()
 drawPlayerBillboard pv (pp, hierarchy) = do
   -- NB: you gotta draw back to front to maintain transparency
   -- traverse billboard children to draw floor circle
-  let (p, _, _, _, mv) = pp
-      fcEtys           = _children hierarchy
+  let (p, _, _, _, mv, _) = pp
+      fcEtys              = _children hierarchy
   case fcEtys of
     Nothing   -> return ()
     Just etys -> do
