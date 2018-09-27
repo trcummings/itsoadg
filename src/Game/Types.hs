@@ -4,6 +4,7 @@ module Game.Types
   , module Game.Types.Player
   , module Game.Types.Physics
   , module Game.Types.Components
+  , module Game.Types.Font
   , module Game.Types.Audio
   , module Game.Types.Animation
   , module Game.Types.GameState
@@ -17,6 +18,7 @@ import Game.Types.Util
 import Game.Types.Player
 import Game.Types.Physics
 import Game.Types.Components
+import Game.Types.Font
 import Game.Types.Audio
 import Game.Types.Animation
 import Game.Types.GameState
