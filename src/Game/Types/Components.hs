@@ -147,7 +147,8 @@ data Texture = Texture
 
 newtype ProgramName = ProgramName String deriving (Show, Eq, Ord)
 newtype Renderable  = Renderable ProgramName
-newtype ProgramMap  = ProgramMap { _programMap :: (Map ProgramName ShaderProgram) }
+newtype ProgramMap  = ProgramMap
+  { _programMap :: Map ProgramName (BufferResource, ShaderProgram) }
 
 instance Monoid ProgramMap where
   mempty  = ProgramMap empty

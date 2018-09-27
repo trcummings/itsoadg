@@ -27,6 +27,7 @@ import           Game.Types
   , ProjectionMatrix(..)
   , ViewMatrix(..)
   , CollisionModule(..)
+  , Collider(..)
   , ProgramMap(..)
   , ProgramName(..)
   )
@@ -53,30 +54,45 @@ makeProgram (ProgramName name) = do
 bbProgramName :: ProgramName
 bbProgramName = ProgramName "simple_cube"
 
-initBoundingBox :: IO ()
-initBoundingBox = do
-  return ()
-  -- let vertexShader   = shaderPath </> "simple_cube.v.glsl"
-  --     fragmentShader = shaderPath </> "simple_cube.f.glsl"
-  -- vertexBuffer  <- fromSource (GL.StaticDraw, GL.ArrayBuffer) vs
-  -- program       <- createProgram
-  --                 [ ShaderInfo GL.VertexShader   vertexShader
-  --                 , ShaderInfo GL.FragmentShader fragmentShader ]
-  -- return
-  --   ( BufferResource { _vertexBuffer   = Just vertexBuffer
-  --                    , _texCoordBuffer = Nothing
-  --                    , _normalBuffer   = Nothing
-  --                    , _rgbCoordBuffer = Nothing
-  --                    , _indexBuffer    = Nothing  }
-  --   , program
-  --   )
-
-
 drawBoundingBox :: RenderGlobals
                 -> (CollisionModule, Position3D)
                 -> IO ()
 drawBoundingBox globals (cm, Position3D mPos) = do
-  let viewMatrix = (_viewMatrix . _cVMat . _rgCamera) globals
-      projMatrix = (_projMatrix . _cPMat . _rgCamera) globals
-      sProgram   = (_programMap . _rgProgramMap ) globals ! bbProgramName
+  let BoxCollider scl = _collider cm
+      viewMatrix      = (_viewMatrix . _cVMat . _rgCamera) globals
+      projMatrix      = (_projMatrix . _cPMat . _rgCamera) globals
+      modelMatrix     =
+              L.mkTransformationMat L.identity mPos
+        -- L.!*! L.mkTransformationMat L.identity scl
+      (buf, sProgram) = (_programMap . _rgProgramMap ) globals ! bbProgramName
+      posLoc          = getAttrib  sProgram "VertexPosition_modelspace"
+      mLoc            = getUniform sProgram "ModelMatrix"
+      vLoc            = getUniform sProgram "ViewMatrix"
+      pLoc            = getUniform sProgram "ProjMatrix"
+      cLoc            = getUniform sProgram "BoxColor"
+  -- set current program to shaderProgram
+  GL.currentProgram             $= Just (_glProgram sProgram)
+  -- enable attribs
+  GL.vertexAttribArray   posLoc $= GL.Enabled
+  -- transform mvp uniform
+  (modelMatrix) `U.asUniform` mLoc
+  (viewMatrix ) `U.asUniform` vLoc
+  (projMatrix ) `U.asUniform` pLoc
+  -- box color
+  (L.V3 1 0 0 :: L.V3 Float) `U.asUniform` cLoc
+  -- bind to vertex buffer VB
+  GL.bindBuffer GL.ArrayBuffer  $= (_vertexBuffer buf)
+  GL.vertexAttribPointer posLoc $=
+    ( GL.ToFloat
+    , GL.VertexArrayDescriptor 3 GL.Float 0 U.offset0 )
+  -- draw as lines
+  GL.polygonMode $= (GL.Line, GL.Line)
+  -- draw vertex arrays
+  GL.drawArrays GL.Triangles 0 36
+  -- reset to fill mode
+  GL.polygonMode $= (GL.Fill, GL.Fill)
+  -- disable all attributes
+  GL.vertexAttribArray   posLoc $= GL.Disabled
+  -- unset current program
+  GL.currentProgram             $= Nothing
   return ()

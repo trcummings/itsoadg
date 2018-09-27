@@ -110,7 +110,6 @@ import Game.System.Scratch.BoundingBoxes
   ( RenderGlobals(..)
   , makeProgram
   , bbProgramName
-  , initBoundingBox
   , drawBoundingBox
   )
 
@@ -137,16 +136,16 @@ initialize = do
   initPlayerBillboard
   -- make simple cube program, add to program map
   cubeProgram <- liftIO $ makeProgram bbProgramName
+  buf         <- liftIO $ initCubeGLAttrs
   -- add program to map
   pmap <- get global :: ECS ProgramMap
-  set global (pmap { _programMap = insert bbProgramName cubeProgram (_programMap pmap) })
+  set global (pmap { _programMap = insert bbProgramName (buf, cubeProgram) (_programMap pmap) })
   -- create some bland normal cubes
   let defaultCm   = CollisionModule { _collider = BoxCollider (L.V3 1 1 1) }
       defaultQuat = L.Quaternion 1 (L.V3 0 0 0)
       quatAt30deg = L.axisAngle (L.V3 0 1 0) (pi / 12)
       mov1        = (Orientation defaultQuat, Position3D $ L.V3   2  1 (-4))
       mov2        = (Orientation quatAt30deg, Position3D $ L.V3 (-2) 1 (-2))
-  buf <- liftIO $ initCubeGLAttrs
   newEntity (SimpleCube, (buf, cubeProgram), mov1, defaultCm)
   newEntity (SimpleCube, (buf, cubeProgram), mov2, defaultCm)
 

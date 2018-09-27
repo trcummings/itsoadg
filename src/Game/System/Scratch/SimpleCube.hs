@@ -105,13 +105,20 @@ drawSimpleCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
       program       = _glProgram shaderProgram
       -- attribs & uniforms
       posLoc = getAttrib  shaderProgram "VertexPosition_modelspace"
-      mvpLoc = getUniform shaderProgram "MVP"
+      mLoc   = getUniform shaderProgram "ModelMatrix"
+      vLoc   = getUniform shaderProgram "ViewMatrix"
+      pLoc   = getUniform shaderProgram "ProjMatrix"
+      cLoc   = getUniform shaderProgram "BoxColor"
   -- set current program to shaderProgram
   GL.currentProgram             $= Just program
   -- enable attribs
   GL.vertexAttribArray   posLoc $= GL.Enabled
   -- transform mvp uniform
-  (projMatrix !*! viewMatrix !*! modelMatrix) `U.asUniform` mvpLoc
+  (modelMatrix) `U.asUniform` mLoc
+  (viewMatrix ) `U.asUniform` vLoc
+  (projMatrix ) `U.asUniform` pLoc
+  -- box color
+  (L.V3 0.702 0.729 0.655 :: L.V3 Float) `U.asUniform` cLoc
   -- bind to vertex buffer VB
   GL.bindBuffer GL.ArrayBuffer  $= vertexBuffer
   GL.vertexAttribPointer posLoc $=
