@@ -1,6 +1,57 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Game.System.Collision where
+
+import           Apecs
+
+import           Game.World.TH (ECS)
+import           Game.Types
+  ( CollisionModule(..)
+  , Position3D(..)
+  , Player
+  )
+
+type Collidable = (CollisionModule, Position3D)
+
+
+type Candidate a = (a, Collidable, Entity)
+
+-- toCandidate :: (a, Candidate) -> (Proxy )
+stepCollisionSystem :: ECS ()
+stepCollisionSystem = do
+  p <- getAll :: ECS [Candidate Player]
+  -- candidates <- cfold
+  return ()
+  -- clear collision layer map from collision modules
+  -- cmap $ \(cm@(CollisionModule _ _)) -> cm { layerCollisions = [] }
+  -- -- move x first
+  -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
+  --   Position $ p + ((v * V2 1 0) ^* Unit frameDeltaSeconds)
+  -- -- detect x collisions
+  -- -- get all collidable objects
+  -- allCollidables1 <- getAll :: System' [Collidable]
+  -- -- resolve x collisions
+
+  -- -- move y second
+  -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
+  --   Position $ p + ((v * V2 0 1) ^* Unit frameDeltaSeconds)
+  -- -- resolve y
+
+  -- get all entities with a collision module
+  -- allCollidables :: [Collidable] <- getAll
+  -- -- compute collisions, insert in entity-key collision-value map
+  -- cmap $ (processCollidable basicTilemap allCollidables)
+  -- cmapM_ $ \(Player _, cm@(CollisionModule _ _)) ->
+  --   when ((length $ layerCollisions cm) >= 2) $
+  --     liftIO $ putStrLn $ "Player: " ++ show cm
+  -- cmapM_ $ \(HardFlow, cm@(CollisionModule _ _)) -> liftIO $ putStrLn $ "HF: " ++ show cm
+  -- cmap $ \(CollisionModule _ _, Position p, Velocity v) ->
+  --   Position $ p + (v ^* Unit frameDeltaSeconds)
+  -- cmap $ \(HardFlow, cm@(CollisionModule _ _)) ->
+  -- jEvents <- qmap $ stepJump'
+  -- return $ events ++ jEvents
+
+
+
+
 
 -- import           Linear (V2(..), (^*), (*^), (^/), dot, _x, _y)
 -- import           Apecs (Entity, proxy)
