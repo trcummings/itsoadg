@@ -19,6 +19,7 @@ import Game.Types
   , Inputs
   , Clock
   , PolygonMode
+  , ProgramMap
 
   , Hierarchy
 
@@ -48,6 +49,7 @@ import Game.Types
   , BufferResource
   , RotatingCube
   , Texture
+  , Renderable
 
   , SpriteSheet
 
@@ -74,6 +76,9 @@ instance Component Clock where
 
 instance Component PolygonMode where
   type Storage PolygonMode = Global PolygonMode
+
+instance Component ProgramMap where
+  type Storage ProgramMap = Global ProgramMap
 
 
 -- Entity related Components
@@ -105,6 +110,9 @@ instance Component BufferResource where
 
 instance Component Texture where
   type Storage Texture = Map Texture
+
+instance Component Renderable where
+  type Storage Renderable = Map Renderable
 
 instance Component SpriteSheet where
   type Storage SpriteSheet = Map SpriteSheet
@@ -174,6 +182,7 @@ makeWorld "World" [
   , ''Inputs
   , ''Clock
   , ''PolygonMode
+  , ''ProgramMap
 
   , ''Hierarchy
   , ''Position3D
@@ -187,6 +196,7 @@ makeWorld "World" [
 
   , ''ShaderProgram
   , ''Texture
+  , ''Renderable
   , ''VAO
   , ''BufferResource
 

@@ -10,15 +10,20 @@ import           Data.Map (Map)
 -- import           Game.Util.FBO (FBO(..))
 
 -- data ShaderGalaxy t = ShaderGalaxy
---   { _shaderProgram :: ShaderProgram t
+--   { _shaderProgram :: ShaderProgram' t
 --   , _onDrawProgram :: t -> IO t
 --   , _global        :: t }
---
+-- --
 -- data ShaderUniverse t = ShaderUniverse
 --   { _galaxies    :: [ShaderGalaxy t]
 --   , _postShaders :: [ShaderProgram FBO] }
 
 data ShaderInfo = ShaderInfo GL.ShaderType FilePath
+
+-- data ShaderProgram' t = ShaderProgram'
+--   { _attribs'   :: Map String (AttribGPU t)
+--   , _uniforms'  :: Map String (UniformGPU t)
+--   , _glProgram' :: GL.Program }
 
 data ShaderProgram = ShaderProgram
   { _attribs   :: Map String (GL.AttribLocation,  GL.VariableType)
@@ -27,11 +32,13 @@ data ShaderProgram = ShaderProgram
 
 -- data UniformGPU t = UniformGPU
 --   { _uniformLocation :: GL.UniformLocation
+--   , _uniformVarType  :: GL.VariableType
 --   , _onBindUniform   :: t -> IO () }
-
--- data AttribGPU = AttribGPU
+--
+-- data AttribGPU t = AttribGPU
 --   { _buffer         :: GL.BufferObject
---   -- , _onBindAttrib   :: t -> IO ()
+--   , _onBindAttrib   :: t -> IO ()
 --   , _attribLocation :: GL.AttribLocation
+--   , _attribVarType  :: GL.VariableType
 --   , _descriptor     :: forall a. GL.VertexArrayDescriptor a
 --   , _length         :: GL.NumArrayIndices }

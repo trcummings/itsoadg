@@ -27,16 +27,6 @@ import           Game.Types.Shader      (ShaderProgram)
 --   , PlayerKey(..)
 --   , Player'SFX'Key(..) )
 
--- Aliases
--- type BoxEntity = (CollisionModule, BoundingBox, Position, Entity)
---
--- type AnimationKey =
---   PlayerKey
---
--- type Animations key =
---   Animate.Animations key (Animate.SpriteClip key) Seconds
---
---
 -- -- Component types
 -- newtype Position =
 --   Position (V2 Unit) -- center point
@@ -62,11 +52,6 @@ data Hierarchy = Hierarchy
   { _parent   :: Maybe Entity
   , _children :: Maybe [Entity] }
   deriving Show
-
--- data Camera = Camera
---   { size :: (V2 Unit)   -- camera height and width
---   , ppos :: (V2 Unit) } -- past position for verlet transform
---   deriving Show
 
 data PolygonModeType =
     PolygonMode'Wireframe
@@ -148,16 +133,27 @@ data Camera = Camera
 -- OpenGL types
 newtype VAO = VAO GL.VertexArrayObject
 
--- data Resource = Resource
---   { _shaderProgram :: ShaderProgram
---   , _vertexBuffer  :: GL.BufferObject
---   , _colorBuffer   :: GL.BufferObject }
+data BufferResource = BufferResource
+  { _vertexBuffer   :: Maybe GL.BufferObject
+  , _texCoordBuffer :: Maybe GL.BufferObject
+  , _normalBuffer   :: Maybe GL.BufferObject
+  , _rgbCoordBuffer :: Maybe GL.BufferObject
+  , _indexBuffer    :: Maybe GL.BufferObject }
 
--- data Model = Model
---   { _resource  :: Resource
---   , _vertices  :: [L.V3 Float]
---   , _colors    :: [L.V3 Float] }
---   -- , _elements  :: [L.V3 GL.GLuint] }
+data Texture = Texture
+  { _textureId   :: Maybe GL.TextureObject
+  , _textureSize :: GL.TextureSize2D }
+  deriving Show
+
+newtype ProgramName = ProgramName String
+newtype Renderable  = Renderable ProgramName
+newtype ProgramMap  = ProgramMap (Map ProgramName ShaderProgram)
+
+instance Monoid ProgramMap where
+  mempty  = ProgramMap empty
+  mappend = mappend
+
+
 
 newtype ProjectionMatrix = ProjectionMatrix (L.M44 Float)
 newtype ViewMatrix       = ViewMatrix       (L.M44 Float)
@@ -186,67 +182,12 @@ data DoorPanel =
   | DoorPanel'Bottom
   deriving Show
 
--- data TexResource = TexResource
---   { _sProgram   :: ShaderProgram
---   , _texObj     :: Maybe GL.TextureObject
---   , _vertBuffer :: GL.BufferObject
---   , _uvBuffer   :: GL.BufferObject
---   , _objData    :: ObjData }
-
--- data BBResource = BBResource
---   { _bbSProgram   :: ShaderProgram
---   , _bbTexObj     :: Maybe GL.TextureObject
---   , _bbVertBuffer :: GL.BufferObject }
 
 data RotatingCube = RotatingCube
   { _axis :: (L.V3 Float)
   , _deg  :: Degrees }
   deriving Show
 
-data BufferResource = BufferResource
-  { _vertexBuffer   :: Maybe GL.BufferObject
-  , _texCoordBuffer :: Maybe GL.BufferObject
-  , _normalBuffer   :: Maybe GL.BufferObject
-  , _rgbCoordBuffer :: Maybe GL.BufferObject
-  , _indexBuffer    :: Maybe GL.BufferObject }
-
--- newtype Texture = Texture (Maybe GL.TextureObject) deriving Show
-data Texture = Texture
-  { _textureId   :: Maybe GL.TextureObject
-  , _textureSize :: GL.TextureSize2D }
-  deriving Show
-
-
--- Font types
-data DebugHUD = DebugHUD
- { _hudInfo :: HUDInfo
- , _fontMap :: FontMap }
-
-data HUDType =
-    FPSCounter
-  | PositionTracker
-  | PlayerFacing
-  deriving (Eq, Ord)
-
-newtype HUDInfo = HUDInfo (Map HUDType FontInfo)
-newtype FontMap = FontMap (Map Char    Character)
-
-data FontInfo = FontInfo
-  { _fText :: String
-  , _fxPos :: Float
-  , _fyPos :: Float
-  , _fSize :: Float }
-
-data Character = Character
-  -- texture object for character
-  { _charTexture :: Texture
-  -- size of glyph
-  -- , _charSize    :: L.V2 Float
-  -- offset from baseline to left/top of glyph
-  , _charBearing :: L.V2 Float
-  -- offset to advance to next glyph
-  , _charAdvance :: Int }
-  deriving Show
 
 data SimpleCube = SimpleCube
 
@@ -273,16 +214,6 @@ newtype Frustum = Frustum Bool
 --   CameraTarget Entity
 --   deriving Show
 --
--- data Texture =
---   Texture SDL.Texture (V2 CInt)
---
---
--- -- type Animations key =
--- --   Animate.Animations key (Animate.SpriteClip key) Seconds
---
--- data SpriteSheet = SpriteSheet
---   (Animate.SpriteSheet AnimationKey Texture Seconds)
---   (Animate.Position AnimationKey Seconds)
 --
 -- data Gravity = Gravity
 --   { ascent  :: Unit
@@ -300,6 +231,7 @@ newtype Frustum = Frustum Bool
 --   { bank       :: (Map.Map SFX'Key Mixer.Chunk)
 --   , channelMap :: (Map.Map Entity (SFX'Key, Mixer.Channel)) }
 --   deriving Show
+
 data Collider =
   BoxCollider (L.V3 Float)
 
