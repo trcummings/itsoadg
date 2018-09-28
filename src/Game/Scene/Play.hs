@@ -24,14 +24,15 @@ import           Game.Effect.Clock    (getGlobalTime)
 import           Game.Effect.Input    (getInputs)
 import           Game.Effect.Renderer (getWindowDims)
 
-import           Game.World.TH        (ECS)
-import           Game.Loaders.Save    (saveDataFile, loadDataFile)
-import           Game.Loaders.Cfg     (readMapCfg, readMapMedia)
-import           Game.System.Camera   (cameraEvents)
-import           Game.Util.Constants  (frameDeltaSeconds, assetPath, shaderPath)
-import           Game.Loaders.Program (createProgram)
-import           Game.Util.BSP.Render (BSPRenderData, renderBSP)
-import           Game.Util.GLError    (printGLErrors)
+import           Game.World.TH         (ECS)
+import           Game.Loaders.Save     (saveDataFile, loadDataFile)
+import           Game.Loaders.Cfg      (readMapCfg, readMapMedia)
+import           Game.System.Camera    (cameraEvents)
+import           Game.System.Collision (stepCollisionSystem)
+import           Game.Util.Constants   (frameDeltaSeconds, assetPath, shaderPath)
+import           Game.Loaders.Program  (createProgram)
+import           Game.Util.BSP.Render  (BSPRenderData, renderBSP)
+import           Game.Util.GLError     (printGLErrors)
 import           Game.Util.CardinalDir
   (posX, posZ, negX, negZ, neutral, toDir)
 import           Game.Util.Camera
@@ -141,7 +142,8 @@ initialize = do
   pmap <- get global :: ECS ProgramMap
   set global (pmap { _programMap = insert bbProgramName (buf, cubeProgram) (_programMap pmap) })
   -- create some bland normal cubes
-  let defaultCm   = CollisionModule { _collider = BoxCollider (L.V3 1 1 1) }
+  let defaultCm   = CollisionModule { _collider     = BoxCollider (L.V3 1 1 1)
+                                    , _hasCollision = False }
       defaultQuat = L.Quaternion 1 (L.V3 0 0 0)
       quatAt30deg = L.axisAngle (L.V3 0 1 0) (pi / 12)
       mov1        = (Orientation defaultQuat, Position3D $ L.V3   2  1 (-4))
@@ -245,6 +247,7 @@ cleanUp = do
 step :: ECS ()
 step = do
   stepDebugHUD
+  stepCollisionSystem
   -- get inputs
   inputs <- getInputs
   -- if escape pressed, transition to quit

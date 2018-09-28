@@ -242,7 +242,8 @@ initPlayerB = do
                             , _texCoordBuffer = Just tx }
     , ( Orientation $ L.Quaternion 1 (L.V3 0 0 0)
       , Position3D  $ L.V3 0 1 0 )
-    , CollisionModule { _collider = BoxCollider (L.V3 1 1 1) }
+    , CollisionModule { _collider     = BoxCollider (L.V3 1 1 1)
+                      , _hasCollision = False }
     )
 
 -- createPlayerFrustum :: (Player, Hierarchy, Entity) -> ECS ()

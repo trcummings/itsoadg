@@ -1,6 +1,6 @@
 module Game.Loop where
 
-import Apecs                (runGC) 
+import Apecs                (runGC)
 
 import Game.World.TH        (ECS)
 import Game.Util.Constants  (dT)
@@ -56,4 +56,5 @@ mainLoop = do
   -- decide if a scene transition needs to happen
   stepSceneControl
   -- loop if game still running
+  -- NB: thunk buildup happening here, need to do something about it
   ifNotQuitting mainLoop

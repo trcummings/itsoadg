@@ -79,7 +79,10 @@ drawBoundingBox globals (cm, Position3D mPos) = do
   (viewMatrix ) `U.asUniform` vLoc
   (projMatrix ) `U.asUniform` pLoc
   -- box color
-  (L.V3 1 0 0 :: L.V3 Float) `U.asUniform` cLoc
+  let boxColor = if   _hasCollision cm
+                 then L.V3 0 1 0 :: L.V3 Float
+                 else L.V3 1 0 0 :: L.V3 Float
+  boxColor `U.asUniform` cLoc
   -- bind to vertex buffer VB
   GL.bindBuffer GL.ArrayBuffer  $= (_vertexBuffer buf)
   GL.vertexAttribPointer posLoc $=

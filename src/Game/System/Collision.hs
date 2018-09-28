@@ -1,25 +1,58 @@
 module Game.System.Collision where
 
+import           Control.Monad (when)
+import           Linear (V3(..))
 import           Apecs
+-- import           Data.List (any)
 
 import           Game.World.TH (ECS)
 import           Game.Types
   ( CollisionModule(..)
+  , Collider(..)
   , Position3D(..)
   , Player
+  , SimpleCube
+  , AABB(..)
   )
 
 type Collidable = (CollisionModule, Position3D)
 
+toBox :: (Collidable, Entity) -> (AABB, Entity)
+toBox ((cm, Position3D cPos), ety) =
+  let (BoxCollider dims) = _collider cm
+      minPt = cPos - (dims / 2)
+      maxPt = cPos + (dims / 2)
+      aabb  = AABB { _bbMin = minPt
+                   , _bbMax = maxPt }
+  in (aabb, ety)
 
-type Candidate a = (a, Collidable, Entity)
+aabbCheck :: AABB -> AABB -> Bool
+aabbCheck a b =
+  let (V3 aMinX aMinY aMinZ) = _bbMin a
+      (V3 aMaxX aMaxY aMaxZ) = _bbMax a
+      (V3 bMinX bMinY bMinZ) = _bbMin b
+      (V3 bMaxX bMaxY bMaxZ) = _bbMax b
+  in   (aMinX <= bMaxX && aMaxX >= bMinX)
+    && (aMinY <= bMaxY && aMaxY >= bMinY)
+    && (aMinZ <= bMaxZ && aMaxZ >= bMinZ)
 
--- toCandidate :: (a, Candidate) -> (Proxy )
+
+checkForCollision :: (AABB, Entity) -> (AABB, Entity) -> Bool
+checkForCollision (box1, ety1) (box2, ety2) =
+  (not $ ety1 == ety2) && (aabbCheck box1 box2)
+
+processCollidable :: [(AABB, Entity)] -> (Collidable, Entity) -> CollisionModule
+processCollidable candidates candidate@((cm, _), _) =
+  if any (checkForCollision $ toBox candidate) candidates
+  then cm { _hasCollision = True }
+  else cm
+
 stepCollisionSystem :: ECS ()
 stepCollisionSystem = do
-  p <- getAll :: ECS [Candidate Player]
-  -- candidates <- cfold
-  return ()
+  cmap $ \(cm :: CollisionModule) -> cm { _hasCollision = False }
+  collidables <- getAll :: ECS [(Collidable, Entity)]
+  let candidates = map toBox collidables
+  cmap $ processCollidable candidates
   -- clear collision layer map from collision modules
   -- cmap $ \(cm@(CollisionModule _ _)) -> cm { layerCollisions = [] }
   -- -- move x first

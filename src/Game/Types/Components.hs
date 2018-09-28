@@ -235,8 +235,12 @@ newtype Frustum = Frustum Bool
 
 data Collider =
   BoxCollider (L.V3 Float)
+  deriving Show
 
-newtype CollisionModule = CollisionModule { _collider :: Collider }
+data CollisionModule = CollisionModule
+  { _collider     :: Collider
+  , _hasCollision :: Bool }
+  deriving Show
 -- data CollisionModule = CollisionModule
 --  { layer :: CollisionLayer
 --  , layerCollisions :: [( CollisionLayer
