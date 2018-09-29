@@ -212,18 +212,18 @@ quitOnEsc inputs = do
     sc <- get global :: ECS SceneControl
     set global $ sc { _nextScene = Scene'Quit }
 
-toggleWireframeOnP :: Inputs -> ECS ()
-toggleWireframeOnP inputs = do
-  let m = _inputs . _keyboardInput $ inputs
-  when (isPressed $ m ! SDL.KeycodeP) $ do
-    PolygonMode pm <- get global
-    case pm of
-      PolygonMode'Normal    -> do
-        liftIO $ GL.polygonMode $= (GL.Line, GL.Line)
-        set global (PolygonMode PolygonMode'Wireframe)
-      PolygonMode'Wireframe -> do
-        liftIO $ GL.polygonMode $= (GL.Fill, GL.Fill)
-        set global (PolygonMode PolygonMode'Normal)
+-- toggleWireframeOnP :: Inputs -> ECS ()
+-- toggleWireframeOnP inputs = do
+--   let m = _inputs . _keyboardInput $ inputs
+--   when (isPressed $ m ! SDL.KeycodeP) $ do
+--     PolygonMode pm <- get global
+--     case pm of
+--       PolygonMode'Normal    -> do
+--         liftIO $ GL.polygonMode $= (GL.Line, GL.Line)
+--         set global (PolygonMode PolygonMode'Wireframe)
+--       PolygonMode'Wireframe -> do
+--         liftIO $ GL.polygonMode $= (GL.Fill, GL.Fill)
+--         set global (PolygonMode PolygonMode'Normal)
 
 handlePlayerFrustum :: Inputs -> ECS ()
 handlePlayerFrustum inputs = do
@@ -253,7 +253,7 @@ step = do
   -- if escape pressed, transition to quit
   quitOnEsc          inputs
   -- toggle wireframe on press "p"
-  toggleWireframeOnP inputs
+  -- toggleWireframeOnP inputs
   -- send player events based on WASD presses
   -- cmap $ cameraEvents inputs
   cmap $ playerEvents inputs
@@ -290,7 +290,7 @@ render = do
                                        , _rgProgramMap = sm }
     -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
     cmapM_ $ \(r :: TerrainE)        -> liftIO $ drawTerrain mats r
-    cmapM_ $ \(r :: SimpleCubeProto) -> liftIO $ drawSimpleCube mats r
+    -- cmapM_ $ \(r :: SimpleCubeProto) -> liftIO $ drawSimpleCube mats r
     -- cmapM_ $ \(r :: RenderBillboard) -> liftIO $ drawBillboard mats r
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r
     -- cmapM_ $ \(r :: PlayerCube) -> liftIO $ drawColorCube mats r

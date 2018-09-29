@@ -3,7 +3,6 @@ module Game.System.Collision where
 import           Control.Monad (when)
 import           Linear (V3(..))
 import           Apecs
--- import           Data.List (any)
 
 import           Game.World.TH (ECS)
 import           Game.Types

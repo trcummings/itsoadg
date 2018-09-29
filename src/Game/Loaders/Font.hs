@@ -88,20 +88,20 @@ loadCharacters path pxWidth texUnit chars = do
     slot <- peek $ glyph ff
     -- print out number of glyphs
     n <- peek $ num_glyphs ff
-    putStrLn $ "number of glyphs:" ++ show n
+    -- putStrLn $ "number of glyphs:" ++ show n
     --
     fmt <- peek $ format slot
-    putStrLn $ "glyph format:" ++ glyphFormatString fmt
+    -- putStrLn $ "glyph format:" ++ glyphFormatString fmt
 
     -- This is [] for Ubuntu Mono, but I'm guessing for bitmap
     -- fonts this would be populated with the different font
     -- sizes.
-    putStr "Sizes:"
+    -- putStr "Sizes:"
     numSizes <- peek $ num_fixed_sizes ff
     sizesPtr <- peek $ available_sizes ff
     sizes    <- forM [0..(numSizes - 1)] $ \i ->
       peek $ sizesPtr `plusPtr` fromIntegral i :: IO FT_Bitmap_Size
-    print sizes
+    -- print sizes
 
     -- create all characters
     charMap <- mapM (loadCharacter ff slot) chars
@@ -115,7 +115,7 @@ loadCharacters path pxWidth texUnit chars = do
 
 loadCharacter :: FT_Face -> FT_GlyphSlot -> Char -> IO (Char, Character)
 loadCharacter ff slot char = do
-    putStrLn $ "Loading glyph for letter \"" ++ [char] ++ "\""
+    -- putStrLn $ "Loading glyph for letter \"" ++ [char] ++ "\""
     -- Get the unicode char index.
     chNdx <- ft_Get_Char_Index ff $ fromIntegral $ fromEnum char
 
@@ -128,33 +128,33 @@ loadCharacter ff slot char = do
     -- get the bitmap glyph top & left coordinates
     left <- peek $ bitmap_left slot
     top  <- peek $ bitmap_top  slot
-    putStrLn $ concat
-      [ "left:"
-      , show left
-      , "\ntop:"
-      , show top
-      ]
+    -- putStrLn $ concat
+    --   [ "left:"
+    --   , show left
+    --   , "\ntop:"
+    --   , show top
+    --   ]
 
     -- Get the char bitmap.
     bmp <- peek $ bitmap slot
     -- get glyph slot advance
     adv <- peek $ advance slot
-    putStrLn $ concat
-      [ "width:"
-      , show $ width bmp
-      , " rows:"
-      , show $ rows bmp
-      , " pitch:"
-      , show $ pitch bmp
-      , " num_grays:"
-      , show $ num_grays bmp
-      , " pixel_mode:"
-      , show $ pixel_mode bmp
-      , " palette_mode:"
-      , show $ palette_mode bmp
-      , " advance:"
-      , show adv
-      ]
+    -- putStrLn $ concat
+    --   [ "width:"
+    --   , show $ width bmp
+    --   , " rows:"
+    --   , show $ rows bmp
+    --   , " pitch:"
+    --   , show $ pitch bmp
+    --   , " num_grays:"
+    --   , show $ num_grays bmp
+    --   , " pixel_mode:"
+    --   , show $ pixel_mode bmp
+    --   , " palette_mode:"
+    --   , show $ palette_mode bmp
+    --   , " advance:"
+    --   , show adv
+    --   ]
 
     let w         = fromIntegral $ width bmp
         h         = fromIntegral $ rows bmp
@@ -173,10 +173,10 @@ loadCharacter ff slot char = do
     GL.textureWrapMode GL.Texture2D GL.T $= (GL.Repeated, GL.ClampToEdge)
     printGLErrors "Game.Loaders.Font.loadCharacter, GL.textureWrapMode"
 
-    putStrLn "Buffering glyph bitmap into texture."
+    -- putStrLn "Buffering glyph bitmap into texture."
     GL.texImage2D GL.Texture2D GL.NoProxy 0 GL.R8 size 0 pixelData
     printGLErrors "Game.Loaders.Font.loadCharacter, GL.texImage2D"
-    putStrLn "Texture loaded."
+    -- putStrLn "Texture loaded."
 
     GL.textureFilter GL.Texture2D $= ((GL.Linear', Nothing), GL.Linear')
     printGLErrors "Game.Loaders.Font.loadCharacter, GL.textureFilter"

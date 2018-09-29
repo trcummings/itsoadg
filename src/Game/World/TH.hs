@@ -12,6 +12,7 @@ module Game.World.TH (ECS, World, initWorld) where
 
 import Apecs
 
+import Game.World.History
 import Game.Types
   ( VideoConfig
 

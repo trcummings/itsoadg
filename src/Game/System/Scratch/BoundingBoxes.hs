@@ -51,6 +51,15 @@ makeProgram (ProgramName name) = do
   createProgram [ ShaderInfo GL.VertexShader   vertexShader
                 , ShaderInfo GL.FragmentShader fragmentShader ]
 
+toScalingMatrix :: L.V3 Float -> L.M44 Float
+toScalingMatrix (L.V3 x y z) = L.V4
+  (L.V4 x 0 0 0)
+  (L.V4 0 y 0 0)
+  (L.V4 0 0 z 0)
+  (L.V4 0 0 0 1)
+
+
+
 bbProgramName :: ProgramName
 bbProgramName = ProgramName "simple_cube"
 
@@ -58,26 +67,27 @@ drawBoundingBox :: RenderGlobals
                 -> (CollisionModule, Position3D)
                 -> IO ()
 drawBoundingBox globals (cm, Position3D mPos) = do
-  let BoxCollider scl = _collider cm
-      viewMatrix      = (_viewMatrix . _cVMat . _rgCamera) globals
-      projMatrix      = (_projMatrix . _cPMat . _rgCamera) globals
-      modelMatrix     =
-              L.mkTransformationMat L.identity mPos
-        -- L.!*! L.mkTransformationMat L.identity scl
-      (buf, sProgram) = (_programMap . _rgProgramMap ) globals ! bbProgramName
-      posLoc          = getAttrib  sProgram "VertexPosition_modelspace"
-      mLoc            = getUniform sProgram "ModelMatrix"
-      vLoc            = getUniform sProgram "ViewMatrix"
-      pLoc            = getUniform sProgram "ProjMatrix"
-      cLoc            = getUniform sProgram "BoxColor"
+  let BoxCollider dims = _collider cm
+      viewMatrix       = (_viewMatrix . _cVMat . _rgCamera) globals
+      projMatrix       = (_projMatrix . _cPMat . _rgCamera) globals
+      scaleMatrix      = toScalingMatrix
+      modelMatrix      =
+        L.mkTransformationMat L.identity mPos
+        L.!*! toScalingMatrix (dims / 2)
+      (buf, sProgram)  = (_programMap . _rgProgramMap ) globals ! bbProgramName
+      posLoc           = getAttrib  sProgram "VertexPosition_modelspace"
+      mLoc             = getUniform sProgram "ModelMatrix"
+      vLoc             = getUniform sProgram "ViewMatrix"
+      pLoc             = getUniform sProgram "ProjMatrix"
+      cLoc             = getUniform sProgram "BoxColor"
   -- set current program to shaderProgram
   GL.currentProgram             $= Just (_glProgram sProgram)
   -- enable attribs
   GL.vertexAttribArray   posLoc $= GL.Enabled
   -- transform mvp uniform
-  (modelMatrix) `U.asUniform` mLoc
-  (viewMatrix ) `U.asUniform` vLoc
-  (projMatrix ) `U.asUniform` pLoc
+  modelMatrix `U.asUniform` mLoc
+  viewMatrix  `U.asUniform` vLoc
+  projMatrix  `U.asUniform` pLoc
   -- box color
   let boxColor = if   _hasCollision cm
                  then L.V3 0 1 0 :: L.V3 Float
