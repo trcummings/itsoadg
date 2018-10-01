@@ -13,12 +13,11 @@ module Game.World.History where
 
 import qualified Data.IntMap.Strict  as M
 import qualified Data.Vector.Unboxed as U
-import           Control.Concurrent.STM
-  ( TVar
-  , newTVarIO
-  , readTVarIO
-  , writeTVar
-  , atomically
+import           Data.IORef
+  ( IORef
+  , newIORef
+  , readIORef
+  , writeIORef
   )
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Maybe             (fromJust)
@@ -39,14 +38,14 @@ import           Apecs.Stores
 --  type Storage c
 
 
-data History s = History (TVar (M.IntMap (TVar (Elem s)))) s
+data History s = History (IORef (M.IntMap (IORef (Elem s)))) s
 
 type instance Elem (History s) = Elem s
 
-instance ExplInit s => ExplInit (History s) where
+instance ExplInit IO s => ExplInit IO (History s) where
   explInit = do
     -- create empty intmap to represent history store
-    history <- newTVarIO mempty
+    history <- newIORef mempty
     -- initialize wrapped storage
     wrapped <- explInit
     return $ History history wrapped
@@ -58,7 +57,7 @@ instance ExplGet IO s => ExplGet IO (History s) where
   {-# INLINE explGet    #-}
   explGet    (History _ s) ety = explGet    s ety
 
-instance (Show (Elem s), ExplGet IO s, ExplSet IO s) => ExplSet IO (History s) where
+instance (ExplGet IO s, ExplSet IO s) => ExplSet IO (History s) where
   {-# INLINE explSet #-}
   explSet (History ref s) ety x = do
     -- check that it exists in the wrapped map
@@ -67,15 +66,15 @@ instance (Show (Elem s), ExplGet IO s, ExplSet IO s) => ExplSet IO (History s) w
       -- get current value
       val <- explGet s ety
       -- get the wrapper's intmap
-      m   <- readTVarIO ref
+      m   <- readIORef ref
       case M.lookup ety m of
         -- if it does not currently exist in the history
         Nothing -> do
-          -- create new TVar to insert into the map
-          rInsert   <- newTVarIO val
-          atomically . writeTVar ref $ M.insert ety rInsert m
+          -- create new IORef to insert into the map
+          rInsert   <- newIORef val
+          writeIORef ref $ M.insert ety rInsert m
         -- if lookup yields a value, step the values
-        Just cref -> atomically $ writeTVar cref val
+        Just cref -> writeIORef cref val
     -- also do it to the wrapped store
     explSet s ety x
 
@@ -86,14 +85,13 @@ instance (ExplGet IO s, ExplDestroy IO s) => ExplDestroy IO (History s) where
     e <- explExists s ety
     when e $ do
     -- delete it in the history
-      readTVarIO ref >>= atomically . writeTVar ref . M.delete ety
+      readIORef ref >>= writeIORef ref . M.delete ety
     -- delete it in wrapped map
     explDestroy s ety
 
 instance ExplMembers IO s => ExplMembers IO (History s) where
   {-# INLINE explMembers #-}
   explMembers (History _ s) = explMembers s
-  -- explMembers (History ref _) = U.fromList . M.keys <$> readTVarIO ref
 
 getHistory :: forall w s c.
   ( Component c
@@ -105,9 +103,9 @@ getHistory :: forall w s c.
 getHistory (Entity ety) = do
   History ref _ :: History s <- getStore
   -- get intmap from history store ref
-  m                          <- liftIO $ readTVarIO ref
+  m                          <- liftIO $ readIORef ref
   case M.lookup ety m of
     Nothing   -> return Nothing
     Just cref -> do
-      val <- liftIO $ readTVarIO cref
+      val <- liftIO $ readIORef cref
       return $ Just val

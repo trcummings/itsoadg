@@ -87,7 +87,7 @@ instance Component Hierarchy where
   type Storage Hierarchy = Map Hierarchy
 
 instance Component Position3D where
-  type Storage Position3D = Map Position3D
+  type Storage Position3D = History (Map Position3D)
 
 instance Component Orientation where
   type Storage Orientation = Map Orientation
