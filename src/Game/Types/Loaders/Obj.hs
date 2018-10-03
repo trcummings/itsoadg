@@ -5,7 +5,7 @@ module Game.Types.Loaders.Obj
 
 import Graphics.Rendering.OpenGL (GLfloat, TextureObject, GLint)
 import Data.ByteString.Char8     (ByteString)
-import Data.Sequence             (empty, Seq, (|>), (><))
+import Data.Sequence             (Seq, empty, (|>), (><))
 import Data.Monoid               (Monoid(..), (<>))
 import Linear                    (V2, V3)
 
