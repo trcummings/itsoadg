@@ -29,8 +29,9 @@ import           Game.Loaders.Save     (saveDataFile, loadDataFile)
 import           Game.Loaders.Cfg      (readMapCfg, readMapMedia)
 import           Game.System.Camera    (cameraEvents)
 import           Game.System.Collision (stepCollisionSystem)
-import           Game.Util.Constants   (frameDeltaSeconds, assetPath, shaderPath)
+import           Game.Util.Constants   (frameDeltaSeconds, assetPath, shaderPath, objPath)
 import           Game.Loaders.Program  (createProgram)
+import           Game.Loaders.Obj.Loader  (loadObjFile)
 import           Game.Util.BSP.Render  (BSPRenderData, renderBSP)
 import           Game.Util.GLError     (printGLErrors)
 import           Game.Util.CardinalDir
@@ -113,12 +114,23 @@ import Game.System.Scratch.BoundingBoxes
   , bbProgramName
   , drawBoundingBox
   )
-
+import Game.System.Scratch.PlayerModel
+  ( PlayerModel(..)
+  , initPlayerModel
+  , drawPlayerModel
+  )
 
 initialize :: ECS ()
 initialize = do
   -- init VAO
   initVAO
+
+  initPlayerModel
+  -- pModel <- liftIO initPlayerModel
+  -- newEntity pModel
+  -- humanObj <- liftIO $ loadObjFile $ objPath </> "human.obj"
+  -- liftIO $ putStrLn $ show humanObj
+
   -- -- load config data
   -- liftIO $ readMapCfg $ assetPath </> "leveleg.cfg"
   -- bsp     <- liftIO $ readMapMedia $ assetPath </> "leveleg.med"
@@ -132,8 +144,6 @@ initialize = do
   -- terrain
   initTerrain
   -- entities
-  -- initColorCube
-  -- initTextureCube
   initPlayerBillboard
   -- make simple cube program, add to program map
   cubeProgram <- liftIO $ makeProgram bbProgramName
@@ -290,6 +300,7 @@ render = do
                                        , _rgProgramMap = sm }
     -- cmapM_ $ \(r :: BSPRenderData) -> liftIO $ renderBSP mats cPos r
     cmapM_ $ \(r :: TerrainE)        -> liftIO $ drawTerrain mats r
+    cmapM_ $ \(r :: PlayerModel)     -> liftIO $ drawPlayerModel mats r
     -- cmapM_ $ \(r :: SimpleCubeProto) -> liftIO $ drawSimpleCube mats r
     -- cmapM_ $ \(r :: RenderBillboard) -> liftIO $ drawBillboard mats r
     -- cmapM_ $ \(r :: ColorCube)  -> liftIO $ drawColorCube mats r

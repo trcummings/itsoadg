@@ -11,6 +11,8 @@
 module Game.World.TH (ECS, World, initWorld) where
 
 import Apecs
+import Codec.Wavefront (WavefrontOBJ)
+
 
 import Game.World.History
 import Game.Types
@@ -50,6 +52,7 @@ import Game.Types
   , BufferResource
   , RotatingCube
   , Texture
+  , ObjData
   , Renderable
 
   , SpriteSheet
@@ -111,6 +114,9 @@ instance Component BufferResource where
 
 instance Component Texture where
   type Storage Texture = Map Texture
+
+instance Component WavefrontOBJ where
+  type Storage WavefrontOBJ = Map WavefrontOBJ
 
 instance Component Renderable where
   type Storage Renderable = Map Renderable
@@ -176,6 +182,8 @@ instance Component HasOptionMenuEvent where
 instance Component ActiveOptionList where
   type Storage ActiveOptionList = Map ActiveOptionList
 
+
+
 makeWorld "World" [
     ''VideoConfig
 
@@ -197,6 +205,7 @@ makeWorld "World" [
 
   , ''ShaderProgram
   , ''Texture
+  , ''WavefrontOBJ
   , ''Renderable
   , ''VAO
   , ''BufferResource

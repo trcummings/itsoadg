@@ -114,9 +114,9 @@ drawSimpleCube (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
   -- enable attribs
   GL.vertexAttribArray   posLoc $= GL.Enabled
   -- transform mvp uniform
-  (modelMatrix) `U.asUniform` mLoc
-  (viewMatrix ) `U.asUniform` vLoc
-  (projMatrix ) `U.asUniform` pLoc
+  modelMatrix `U.asUniform` mLoc
+  viewMatrix  `U.asUniform` vLoc
+  projMatrix  `U.asUniform` pLoc
   -- box color
   (L.V3 0.702 0.729 0.655 :: L.V3 Float) `U.asUniform` cLoc
   -- bind to vertex buffer VB

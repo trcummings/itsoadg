@@ -64,6 +64,7 @@ dependencies:
 - OpenGL >= 3.0.2.2
 - GLUtil >= 0.10.1
 - OpenGLRaw >= 3.3.1.0
+- wavefront >= 0.7.1.2
 
 library:
   source-dirs: src

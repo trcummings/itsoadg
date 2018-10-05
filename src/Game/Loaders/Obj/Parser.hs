@@ -25,6 +25,7 @@ runObjParser contents =
 -- parse functions
 parseObj :: Parser [ObjLine]
 parseObj = many $ parseObjLine <* endOfLine
+{-# INLINE parseObj #-}
 
 parseObjLine :: Parser ObjLine
 parseObjLine =
@@ -33,19 +34,23 @@ parseObjLine =
     <|> parseTexLine
     <|> parseFaceLine
     <|> parseInvalid
-
+{-# INLINE parseObjLine #-}
 
 parseVertLine :: Parser ObjLine
 parseVertLine = char 'v' *> skipSpace *> (LineVert <$> parseV3)
+{-# INLINE parseVertLine #-}
 
 parseNormLine :: Parser ObjLine
 parseNormLine = "vn" *> skipSpace *> (LineNorm <$> parseV3)
+{-# INLINE parseNormLine #-}
 
 parseTexLine :: Parser ObjLine
 parseTexLine = "vt" *> skipSpace *> (LineTex . texCoordToGLFormat <$> parseV2)
+{-# INLINE parseTexLine #-}
 
 parseFaceLine :: Parser ObjLine
 parseFaceLine = char 'f' *> skipSpace *> (LineFace <$> parseFaceDat)
+{-# INLINE parseFaceLine #-}
 
 parseFaceDat :: Parser (V3 (V3 Int))
 parseFaceDat = toV3 <$> timesSep 3 parseFaceGroup skipSpace
@@ -80,6 +85,8 @@ parseV2 = do
 
 parseInvalid :: Parser ObjLine
 parseInvalid = Invalid <$> A.takeWhile (/='\n')
+{-# INLINE parseInvalid #-}
+
 
 -- helper functions
 
@@ -98,6 +105,7 @@ timesSep = times' 0
       | i + 1 <  total = liftA2 (:) (parser <* sep) (times' (i + 1) total parser sep)
       | i + 1 == total = liftA2 (:) parser (times' (i + 1) total parser sep)
       | otherwise = return []
+{-# NOINLINE timesSep #-}
 
 -- fromJustSafe :: Num a => Maybe a -> a
 -- fromJustSafe (Just x) = x
