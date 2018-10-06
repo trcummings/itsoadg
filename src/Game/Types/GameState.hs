@@ -13,6 +13,7 @@ import           Game.Types.Components
   , ViewMatrix
   , Position3D
   , ProgramMap )
+import           Game.Types.Font (FontMap)
 
 -- Video Config
 data VideoConfig = VideoConfig
@@ -101,4 +102,6 @@ type CamInfo = (ProjectionMatrix, ViewMatrix, Position3D)
 
 data RenderGlobals = RenderGlobals
   { _rgCamera     :: CamInfo
-  , _rgProgramMap :: ProgramMap }
+  , _rgProgramMap :: ProgramMap
+  , _rgFontMap    :: FontMap
+  , _rgDims      :: (V2 Int32) }

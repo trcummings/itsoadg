@@ -76,6 +76,7 @@ import           Game.Types
   , BSPMap
   , DebugHUD(..)
   , HUDInfo(..)
+  , HUDType(..)
   , FontInfo(..)
   , FontMap(..)
   , ShaderInfo(..)
@@ -107,10 +108,13 @@ import Game.System.Scratch.Terrain
   , initTerrain
   , drawTerrain )
 import Game.System.Scratch.DebugHUD
-  ( DebugHUDEntity
+  ( HUDEntity
   , initDebugHUD
+  , hudProgramName
+  , loadFontMap
   , drawDebugHUD
-  , stepDebugHUD )
+  , stepDebugHUD
+  )
 import Game.System.Scratch.Billboard
   ( RenderBillboard
   , initBillboards
@@ -153,6 +157,8 @@ initialize = do
   newEntity (SimpleCube, (buf, cubeProgram), mov2, defaultCm)
 
   -- initialize HUD
+  -- note, x & y positions are [-1/2 screen, 1/2 screen] both axes,
+  -- 0,0 is the center
   let fpsInfo = FontInfo { _fText = "Fps: "
                          , _fxPos = 10
                          , _fyPos = 550
@@ -165,8 +171,19 @@ initialize = do
                          , _fxPos = 10
                          , _fyPos = 600
                          , _fSize = 0.5 }
-  hud <- liftIO $ initDebugHUD
-  mapM_ newEntity hud
+
+  newEntity (FPSCounter,      fpsInfo, Position3D $ L.V3 10 550 0)
+  newEntity (PositionTracker, posInfo, Position3D $ L.V3 10 500 0)
+  newEntity (PlayerFacing,    facInfo, Position3D $ L.V3 10 600 0)
+
+  (fbuf, fprog) <- liftIO $ initDebugHUD
+  -- add program to map
+  pmap' <- get global :: ECS ProgramMap
+  set global (pmap' { _programMap = insert hudProgramName (fbuf, fprog) (_programMap pmap') })
+
+  fontMap <- liftIO $ loadFontMap
+  set global fontMap
+  -- mapM_ newEntity hud
 
   -- camera
   (c, p, o) :: (Camera, Position3D, Orientation) <- liftIO $ loadDataFile "test.json"
@@ -255,7 +272,9 @@ render = do
         renderGlobals  = RenderGlobals { _rgCamera     = ( camProjMatrix
                                                          , camViewMatrix
                                                          , cPos )
-                                       , _rgProgramMap = sm }
+                                       , _rgProgramMap = sm
+                                       , _rgFontMap    = fm
+                                       , _rgDims       = dims }
     cmapM_ $ \(r :: TerrainE)        ->
       liftIO $ drawTerrain renderGlobals r
     cmapM_ $ \(r :: PlayerModel)     ->
@@ -263,7 +282,5 @@ render = do
     cmapM_ $ (drawPlayerBillboard mats)
     cmapM_ $ \(r :: (CollisionModule, Position3D)) ->
       liftIO $ drawBoundingBox renderGlobals r
-    return ()
-  cmapM_ $ \(hud@(dHud, _, _) :: DebugHUDEntity) -> do
-    let (HUDInfo dMap) = _hudInfo dHud
-    liftIO $ mapM_ (drawDebugHUD hud dims) $ Map.keys dMap
+    cmapM_ $ \(r :: HUDEntity) ->
+      liftIO $ drawDebugHUD renderGlobals r

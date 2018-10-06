@@ -49,7 +49,9 @@ import Game.Types
 
   , BSPMap
   , DebugHUD
+  , HUDType
   , FontMap
+  , FontInfo
 
   , VAO
   , ShaderProgram
@@ -133,6 +135,12 @@ instance Component WavefrontOBJ where
 
 instance Component Renderable where
   type Storage Renderable = Map Renderable
+
+instance Component HUDType where
+  type Storage HUDType = Map HUDType
+
+instance Component FontInfo where
+  type Storage FontInfo = Map FontInfo
 
 instance Component SpriteSheet where
   type Storage SpriteSheet = Map SpriteSheet
@@ -225,6 +233,8 @@ makeWorld "World" [
   , ''Texture
   , ''WavefrontOBJ
   , ''Renderable
+  , ''HUDType
+  , ''FontInfo
   , ''VAO
   , ''BufferResource
 
