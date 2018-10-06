@@ -115,6 +115,7 @@ updateHUDText :: String -> Facing -> Position3D -> (FontInfo, HUDType) -> FontIn
 updateHUDText fps fac pos (fi, PositionTracker) = updatePosText    pos fi
 updateHUDText fps fac pos (fi, FPSCounter     ) = updateFpsText    fps fi
 updateHUDText fps fac pos (fi, PlayerFacing   ) = updateFacingText fac fi
+updateHUDText fps fac pos (fi, _              ) = fi
 
 stepDebugHUD :: ECS ()
 stepDebugHUD = do
@@ -211,88 +212,3 @@ drawDebugHUD globals (fontInfo, _, Position3D cPos) = do
   GL.bindBuffer GL.ArrayBuffer $= Nothing
   -- unset current program
   GL.currentProgram            $= Nothing
-
--- drawDebugHUD :: DebugHUDEntity -> (L.V2 Int32) -> HUDType -> IO ()
--- drawDebugHUD (hud, sProgram, br) dims hudType = do
---   let (HUDInfo hudInfo) = _hudInfo hud
---       (FontMap fontMap) = _fontMap hud
---       fontInfo          = hudInfo ! hudType
---       program           = _glProgram sProgram
---       vpLocation        = getAttrib  sProgram "vertexPosition_screenSpace"
---       uvLocation        = getAttrib  sProgram "vertexUV"
---       sampLocation      = getUniform sProgram "fontTextureSampler"
---       dimsLocation      = getUniform sProgram "dims"
---       posBuffer         = _vertexBuffer   br
---       uvBuffer          = _texCoordBuffer br
---   -- clear the depth buffer
---   GL.clear [GL.DepthBuffer]
---   -- set current program to shaderProgram
---   GL.currentProgram               $= Just program
---   -- enable all attributes
---   GL.vertexAttribArray vpLocation $= GL.Enabled
---   GL.vertexAttribArray uvLocation $= GL.Enabled
---   -- handle uniforms
---   -- set "dims" to viewport dims
---   (realToFrac <$> dims :: L.V2 Float) `U.asUniform` dimsLocation
---
---   -- enable blending func
---   GL.blend     $= GL.Enabled
---   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
---
---   -- set "fontTextureSampler" uniform
---   GL.activeTexture               $= textureUnit
---   GL.uniform sampLocation        $= GL.Index1 (2 :: GL.GLint)
---
---   foldM_ (\advAcc chr -> do
---     let character              = fontMap ! chr
---         scale                  = _fSize fontInfo
---         texture                = _charTexture character
---         GL.TextureSize2D sW sH = _textureSize texture
---         L.V2 bX bY             = _charBearing character
---     -- generate new buffer coordinates here
---         sX                     = realToFrac sW
---         sY                     = realToFrac sH
---         xPos                   = (_fxPos fontInfo + advAcc) + (bX * scale)
---         yPos                   = (_fyPos fontInfo) - ((sY - bY) * scale)
---         w                      = sX * scale
---         h                      = sY * scale
---     -- new VBO vertices
---         verts                  = [ L.V2 xPos       (yPos + h)   -- bottom left
---                                  , L.V2 xPos       yPos         -- top left
---                                  , L.V2 (xPos + w) yPos         -- top right
---                                  , L.V2 xPos       (yPos + h)   -- bottom left
---                                  , L.V2 (xPos + w) yPos         -- top right
---                                  , L.V2 (xPos + w) (yPos + h) ] -- bottom right
---
---     -- bind to current letter texture
---     GL.textureBinding GL.Texture2D $= (_textureId texture)
---
---     -- replace vertex buffer with new coords
---     GL.bindBuffer GL.ArrayBuffer      $= posBuffer
---     replaceBuffer (GL.DynamicDraw, GL.ArrayBuffer) verts
---     GL.vertexAttribPointer vpLocation $=
---       ( GL.ToFloat
---       , GL.VertexArrayDescriptor 2 GL.Float 0 offset0 )
---
---     -- replace UV buffer with new coords
---     GL.bindBuffer GL.ArrayBuffer      $= uvBuffer
---     GL.vertexAttribPointer uvLocation $=
---       ( GL.ToFloat
---       , GL.VertexArrayDescriptor 2 GL.Float 0 offset0 )
---     -- -- draw indexed triangles
---     GL.drawArrays GL.Triangles 0 6
---     -- accumulate advance offset (remember it's in 1/64 pixels, so divide it)
---     return $ advAcc + (((realToFrac $ _charAdvance character) / 64) * scale)
---     ) 0 $ _fText fontInfo
---
---   -- disable blending func
---   GL.blend     $= GL.Disabled
---
---   -- disable all attributes
---   GL.vertexAttribArray vpLocation $= GL.Disabled
---   GL.vertexAttribArray uvLocation $= GL.Disabled
---   -- unbind array buffer
---   GL.bindBuffer GL.ArrayBuffer $= Nothing
---   -- unset current program
---   GL.currentProgram            $= Nothing
---   return ()
