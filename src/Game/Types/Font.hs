@@ -1,7 +1,7 @@
 module Game.Types.Font where
 
 import Linear   (V2)
-import Data.Map (Map)
+import Data.Map.Strict (Map, empty, union)
 
 import Game.Types.Components (Texture)
 
@@ -19,6 +19,10 @@ data HUDType =
 
 newtype HUDInfo = HUDInfo (Map HUDType FontInfo)
 newtype FontMap = FontMap (Map Char    Character)
+
+instance Monoid FontMap where
+  mempty  = FontMap empty
+  mappend (FontMap m1) (FontMap m2) = FontMap $ union m1 m2
 
 data FontInfo = FontInfo
   { _fText :: String

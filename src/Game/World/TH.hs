@@ -26,6 +26,9 @@ import Game.Types
 
   , Hierarchy
 
+  , StaminaMeter
+  , SanityMeter
+
   , Position3D
   , Orientation
   , HasMoveCommand
@@ -46,6 +49,7 @@ import Game.Types
 
   , BSPMap
   , DebugHUD
+  , FontMap
 
   , VAO
   , ShaderProgram
@@ -84,10 +88,19 @@ instance Component PolygonMode where
 instance Component ProgramMap where
   type Storage ProgramMap = Global ProgramMap
 
+instance Component FontMap where
+  type Storage FontMap = Global FontMap
+
 
 -- Entity related Components
 instance Component Hierarchy where
   type Storage Hierarchy = Map Hierarchy
+
+instance Component SanityMeter where
+  type Storage SanityMeter = Global SanityMeter
+
+instance Component StaminaMeter where
+  type Storage StaminaMeter = Global StaminaMeter
 
 instance Component Position3D where
   type Storage Position3D = History (Map Position3D)
@@ -192,8 +205,13 @@ makeWorld "World" [
   , ''Clock
   , ''PolygonMode
   , ''ProgramMap
+  , ''FontMap
 
   , ''Hierarchy
+
+  , ''SanityMeter
+  , ''StaminaMeter
+
   , ''Position3D
   , ''Orientation
   , ''HasMoveCommand

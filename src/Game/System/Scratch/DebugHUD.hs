@@ -24,6 +24,7 @@ import           Game.Util.Camera        (CameraEntity)
 import           Game.Types
   ( GlobalTime(..)
   , ShaderProgram(..)
+  , ProgramName(..)
   , DebugHUD(..)
   , HUDType(..)
   , HUDInfo(..)
@@ -134,37 +135,6 @@ stepDebugHUD = do
                                      . (update (updateFpsText    fpsDt)  FPSCounter)
                                      . (update (updateFacingText facing) PlayerFacing)
                                      $ dMap }
-
--- makeFontVertices :: FontInfo -> ([L.V2 Float], [L.V2 Float])
--- makeFontVertices fontInfo =
---   let text          = _fText fontInfo
---       x             = _fxPos fontInfo
---       y             = _fyPos fontInfo
---       size          = _fSize fontInfo
---       length'       = length $ _fText fontInfo
---       (verts, uvxs) = unzip
---         [ (map (fmap realToFrac) vertices, uvs)
---         | i <- [0..(length text - 1)]
---         -- for vertex coords
---         , let iSize      = i * size
---               vtxUpLeft  = L.V2 (x + iSize)        (y + size)
---               vtxUpRight = L.V2 (x + iSize + size) (y + size)
---               vtxDnRight = L.V2 (x + iSize + size) (y)
---               vtxDnLeft  = L.V2 (x + iSize)        (y)
---               vertices   = [ vtxUpLeft,  vtxDnLeft,  vtxUpRight
---                            , vtxDnRight, vtxUpRight, vtxDnLeft ]
---         -- for uv coords
---               chr       = ord $ text !! i
---               i16       = 1 / 16 :: Float
---               uxX       = (realToFrac $ chr `mod` 16 :: Float) / 16
---               uvY       = (realToFrac $ chr `div` 16 :: Float) / 16
---               uvUpLeft  = L.V2 (uxX)       (uvY)
---               uvUpRight = L.V2 (uxX + i16) (uvY)
---               uvDnRight = L.V2 (uxX + i16) (uvY + i16)
---               uvDnLeft  = L.V2 (uxX)       (uvY + i16)
---               uvs       = [ uvUpLeft,  uvDnLeft,  uvUpRight
---                           , uvDnRight, uvUpRight, uvDnLeft ] ]
---   in (concat verts, concat uvxs)
 
 drawDebugHUD :: DebugHUDEntity -> (L.V2 Int32) -> HUDType -> IO ()
 drawDebugHUD (hud, sProgram, br) dims hudType = do

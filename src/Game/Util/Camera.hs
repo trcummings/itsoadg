@@ -1,7 +1,4 @@
-module Game.Util.Camera
-  ( CameraEntity
-  , cameraViewMatrix
-  , cameraProjectionMatrix ) where
+module Game.Util.Camera where
 
 import qualified Graphics.GLUtil as U
 import qualified Graphics.GLUtil.Camera3D as U
@@ -16,9 +13,20 @@ import Game.Types
   , Orientation(..)
   , Position3D(..)
   , ProjectionMatrix(..)
-  , ViewMatrix(..) )
+  , ViewMatrix(..)
+  , CamInfo
+  )
 
 type CameraEntity = (Camera, Moveable)
+
+_cPos  :: CamInfo -> Position3D
+_cPos  (_, _, x) = x
+
+_cPMat :: CamInfo -> ProjectionMatrix
+_cPMat (x, _, _) = x
+
+_cVMat :: CamInfo -> ViewMatrix
+_cVMat (_, x, _) = x
 
 -- transformations to camera perspective
 cameraViewMatrix :: CameraEntity -> ViewMatrix

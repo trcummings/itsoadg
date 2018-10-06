@@ -8,6 +8,12 @@ import           KeyState (KeyState, initKeyState)
 import           GHC.Int (Int32)
 import           Data.Map (Map, empty, fromList)
 
+import           Game.Types.Components
+  ( ProjectionMatrix
+  , ViewMatrix
+  , Position3D
+  , ProgramMap )
+
 -- Video Config
 data VideoConfig = VideoConfig
   { _window    :: SDL.Window
@@ -88,3 +94,11 @@ allKeys = [ SDL.KeycodeA
 
 keycodes :: PlayerInputMap
 keycodes = fromList $ map (\k -> (k, initKeyState)) allKeys
+
+-- render globals
+
+type CamInfo = (ProjectionMatrix, ViewMatrix, Position3D)
+
+data RenderGlobals = RenderGlobals
+  { _rgCamera     :: CamInfo
+  , _rgProgramMap :: ProgramMap }

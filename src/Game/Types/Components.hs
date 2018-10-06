@@ -249,3 +249,23 @@ data CollisionModule = CollisionModule
 --  deriving Show
 --
 -- data Commandable = Commandable
+
+data SanityMeter = SanityMeter
+  { _currentSanity :: Float
+  , _maxSanity     :: Float }
+
+instance Monoid SanityMeter where
+  mempty = SanityMeter 100 100
+  mappend (SanityMeter cs1 ms1) (SanityMeter cs2 ms2) =
+    SanityMeter { _currentSanity = cs1 + cs2
+                , _maxSanity     = ms1 + ms2 }
+
+data StaminaMeter = StaminaMeter
+  { _currentStamina :: Float
+  , _maxStamina     :: Float }
+
+instance Monoid StaminaMeter where
+  mempty = StaminaMeter 100 100
+  mappend (StaminaMeter cs1 ms1) (StaminaMeter cs2 ms2) =
+    StaminaMeter { _currentStamina = cs1 + cs2
+                 , _maxStamina     = ms1 + ms2 }

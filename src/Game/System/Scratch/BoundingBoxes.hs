@@ -16,6 +16,7 @@ import           Game.World.TH            (ECS)
 import           Game.Util.Move           (Moveable)
 import           Game.Util.Constants      (shaderPath)
 import           Game.Util.BufferObjects  (fromSource)
+import           Game.Util.Camera         (_cPos, _cPMat, _cVMat)
 import           Game.Loaders.Program     (createProgram, getUniform, getAttrib)
 import           Game.Types
   ( Orientation(..)
@@ -30,19 +31,10 @@ import           Game.Types
   , Collider(..)
   , ProgramMap(..)
   , ProgramName(..)
+  , CamInfo
+  , RenderGlobals(..)
   )
 
-type CamInfo = (ProjectionMatrix, ViewMatrix, Position3D)
-data RenderGlobals = RenderGlobals
-  { _rgCamera     :: CamInfo
-  , _rgProgramMap :: ProgramMap }
-
-_cPos  :: CamInfo -> Position3D
-_cPos  (_, _, x) = x
-_cPMat :: CamInfo -> ProjectionMatrix
-_cPMat (x, _, _) = x
-_cVMat :: CamInfo -> ViewMatrix
-_cVMat (_, x, _) = x
 
 makeProgram :: ProgramName -> IO ShaderProgram
 makeProgram (ProgramName name) = do
@@ -57,7 +49,6 @@ toScalingMatrix (L.V3 x y z) = L.V4
   (L.V4 0 y 0 0)
   (L.V4 0 0 z 0)
   (L.V4 0 0 0 1)
-
 
 
 bbProgramName :: ProgramName
