@@ -23,12 +23,12 @@ import           Apecs
 
 import           Game.World.TH           (ECS)
 import           Game.Util.Constants     (objPath, shaderPath)
--- import           Game.Loaders.Obj.Loader (loadObjFile)
 import           Game.Loaders.Program    (createProgram, getAttrib, getUniform)
 import           Game.Loaders.Texture    (getAndCreateTexture)
 import           Game.Util.GLError       (printGLErrors)
 import           Game.Util.Move          (Moveable)
 import           Game.Util.Sprite        (loadSpriteSheet)
+import           Game.Util.Camera        (_cPos, _cPMat, _cVMat)
 import           Game.Util.BufferObjects (fromSource, replaceBuffer)
 import           Game.Util.CardinalDir   (fromDir, toOpposingDir, toRadAngle)
 import           Game.Types
@@ -48,6 +48,7 @@ import           Game.Types
   , FloorCircle(..)
   , Seconds(..)
   , Step(..)
+  , RenderGlobals(..)
   )
 
 type PlayerModel =
@@ -126,21 +127,22 @@ initPlayerModel = do
       return ()
 
 
-drawPlayerModel :: (ProjectionMatrix, ViewMatrix) -> PlayerModel -> IO ()
-drawPlayerModel (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-                (_, sProgram, br, (Orientation o, Position3D mPos), _, obj) = do
+drawPlayerModel :: RenderGlobals -> PlayerModel -> IO ()
+drawPlayerModel globals (_, sProgram, br, (Orientation o, Position3D mPos), _, obj) = do
       -- vertex shader
-  let posLoc        = getAttrib  sProgram "v_coord"
-      nrmLoc        = getAttrib  sProgram "v_normal"
-      mLoc          = getUniform sProgram "ModelMatrix"
-      vLoc          = getUniform sProgram "ViewMatrix"
-      pLoc          = getUniform sProgram "ProjMatrix"
-      iLoc          = getUniform sProgram "m_3x3_inv_transp"
-      ivLoc         = getUniform sProgram "v_inv"
+  let viewMatrix  = (_viewMatrix . _cVMat . _rgCamera) globals
+      projMatrix  = (_projMatrix . _cPMat . _rgCamera) globals
+      posLoc      = getAttrib  sProgram "v_coord"
+      nrmLoc      = getAttrib  sProgram "v_normal"
+      mLoc        = getUniform sProgram "ModelMatrix"
+      vLoc        = getUniform sProgram "ViewMatrix"
+      pLoc        = getUniform sProgram "ProjMatrix"
+      iLoc        = getUniform sProgram "m_3x3_inv_transp"
+      ivLoc       = getUniform sProgram "v_inv"
 
-      modelMatrix   = L.mkTransformation o mPos
-      invTrans      = L.transpose $ L.inv33 $ modelMatrix ^. L._m33
-      vInv          = L.inv33 $ viewMatrix ^. L._m33
+      modelMatrix = L.mkTransformation o mPos
+      invTrans    = L.transpose $ L.inv33 $ modelMatrix ^. L._m33
+      vInv        = L.inv33 $ viewMatrix ^. L._m33
 
   -- set current program to shaderProgram
   GL.currentProgram             $= Just (_glProgram sProgram)

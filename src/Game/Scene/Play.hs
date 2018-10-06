@@ -256,8 +256,10 @@ render = do
                                                          , camViewMatrix
                                                          , cPos )
                                        , _rgProgramMap = sm }
-    cmapM_ $ \(r :: TerrainE)        -> liftIO $ drawTerrain mats r
-    cmapM_ $ \(r :: PlayerModel)     -> liftIO $ drawPlayerModel mats r
+    cmapM_ $ \(r :: TerrainE)        ->
+      liftIO $ drawTerrain renderGlobals r
+    cmapM_ $ \(r :: PlayerModel)     ->
+      liftIO $ drawPlayerModel renderGlobals r
     cmapM_ $ (drawPlayerBillboard mats)
     cmapM_ $ \(r :: (CollisionModule, Position3D)) ->
       liftIO $ drawBoundingBox renderGlobals r

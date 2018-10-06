@@ -17,6 +17,7 @@ import           Game.Util.Constants     (shaderPath, texturePath)
 import           Game.Loaders.Texture    (getAndCreateTexture)
 import           Game.Util.GLError       (printGLErrors)
 import           Game.Util.BufferObjects (fromSource)
+import           Game.Util.Camera        (_cPos, _cPMat, _cVMat)
 import           Game.Loaders.Program    (createProgram, getAttrib, getUniform)
 import           Game.Util.Move          (Moveable)
 import           Game.Util.Terrain       (generateTerrain)
@@ -32,7 +33,9 @@ import           Game.Types
   , Terrain(..)
   , TerrainInfo(..)
   , TerrainConfig(..)
-  , Player(..) )
+  , Player(..)
+  , RenderGlobals(..)
+  )
 
 type TerrainE = (Terrain, Texture, ShaderProgram, BufferResource, Moveable)
 
@@ -87,10 +90,11 @@ shineDamper = 1
 reflectivity :: Float
 reflectivity = 0
 
-drawTerrain :: (ProjectionMatrix, ViewMatrix) -> TerrainE -> IO ()
-drawTerrain (ProjectionMatrix projMatrix, ViewMatrix viewMatrix)
-            (tr, texture, sProgram, br, (Orientation o, Position3D mPos)) = do
-  let transMatrix      = L.mkTransformationMat L.identity mPos
+drawTerrain :: RenderGlobals -> TerrainE -> IO ()
+drawTerrain globals (tr, texture, sProgram, br, (Orientation o, Position3D mPos)) = do
+  let viewMatrix       = (_viewMatrix . _cVMat . _rgCamera) globals
+      projMatrix       = (_projMatrix . _cPMat . _rgCamera) globals
+      transMatrix      = L.mkTransformationMat L.identity mPos
       -- vertex shader attrib locations
       positionLocation = getAttrib sProgram "position"
       texCoordLocation = getAttrib sProgram "texCoords"
